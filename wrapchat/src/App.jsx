@@ -855,26 +855,10 @@ async function aiAnalysis(messages, math, relationshipType) {
 }`;
 
   try {
-    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("No API key found. Add VITE_ANTHROPIC_API_KEY to your .env file.");
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1500,
-        system: `You are WrapChat — a sharp, observant chat analyst who reads WhatsApp conversations and gives specific, grounded analysis. Be specific — reference real patterns, real phrases, and real moments from the chat. Avoid generic observations. For red-flag style fields such as relationshipStatusWhy, statusEvidence, evidenceTimeline, redFlags, toxicReason, and toxicityReport, be objective and evidence-led: mention concrete behaviour, quotes, and dates when available, and do not use mocking or insulting language. Return ONLY valid JSON with no markdown fences and no explanation outside the JSON. IMPORTANT: For funniestPerson, look at who CAUSES laugh reactions from the other person — whose messages are followed by "haha", "lol", "lmaooo", keyboard smash laughs, 😂, 💀, 🤣, "IM DEAD", "dying" — whoever causes these reactions most is the funniest. For all "name" fields return ONLY the persons first name, no explanation. CRITICAL: Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — use this directly, never calculate the day yourself. Only report findings you can directly cite from the chat — if evidence is weak or absent for a field, write "None clearly identified" rather than guessing. When quoting messages in any language, quote them as-is — do not translate or add translations in parentheses.${relCtxBlock}`,
-        messages: [{ role: "user", content: `Here is a ${isGroup?"group":"two-person"} WhatsApp chat between ${names.slice(0,6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages — this is a representative sample spread across the full history.\n\nIMPORTANT CONTEXT: ${isGroup ? `The least active member (the ghost) is ${math.ghost}. The conversation starter is ${math.convStarter}.` : `By reply time, ${math.ghostName} is slower to respond. The conversation starter is ${math.convStarter}. Local analysis found that ${math.funniestPerson} caused the most laugh reactions from the other person (${math.laughCausedBy?.[math.funniestPerson]||0} times) — confirm or correct this based on the chat.`}\n\n${chatText}\n\nAnalyse this deeply and return exactly this JSON structure:\n${isGroup?groupFields:duoFields}\n\nBe specific, funny, and reference real things from the chat.` }],
-      }),
-    });
-    const data = await res.json();
-    const raw  = data.content?.[0]?.text?.trim() || "{}";
-    return JSON.parse(raw.replace(/^```json\n?/,"").replace(/\n?```$/,"").trim());
+    return await callClaude(
+      `You are WrapChat — a sharp, observant chat analyst who reads WhatsApp conversations and gives specific, grounded analysis. Be specific — reference real patterns, real phrases, and real moments from the chat. Avoid generic observations. For red-flag style fields such as relationshipStatusWhy, statusEvidence, evidenceTimeline, redFlags, toxicReason, and toxicityReport, be objective and evidence-led: mention concrete behaviour, quotes, and dates when available, and do not use mocking or insulting language. Return ONLY valid JSON with no markdown fences and no explanation outside the JSON. IMPORTANT: For funniestPerson, look at who CAUSES laugh reactions from the other person — whose messages are followed by "haha", "lol", "lmaooo", keyboard smash laughs, 😂, 💀, 🤣, "IM DEAD", "dying" — whoever causes these reactions most is the funniest. For all "name" fields return ONLY the persons first name, no explanation. CRITICAL: Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — use this directly, never calculate the day yourself. Only report findings you can directly cite from the chat — if evidence is weak or absent for a field, write "None clearly identified" rather than guessing. When quoting messages in any language, quote them as-is — do not translate or add translations in parentheses. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`,
+      `Here is a ${isGroup?"group":"two-person"} WhatsApp chat between ${names.slice(0,6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages — this is a representative sample spread across the full history.\n\nIMPORTANT CONTEXT: ${isGroup ? `The least active member (the ghost) is ${math.ghost}. The conversation starter is ${math.convStarter}.` : `By reply time, ${math.ghostName} is slower to respond. The conversation starter is ${math.convStarter}. Local analysis found that ${math.funniestPerson} caused the most laugh reactions from the other person (${math.laughCausedBy?.[math.funniestPerson]||0} times) — confirm or correct this based on the chat.`}\n\n${chatText}\n\nAnalyse this deeply and return exactly this JSON structure:\n${isGroup?groupFields:duoFields}\n\nBe specific, funny, and reference real things from the chat.`
+    );
   } catch(e) {
     console.error("AI failed:", e);
     return {};
@@ -885,26 +869,16 @@ async function aiAnalysis(messages, math, relationshipType) {
 // AI HELPERS FOR PREMIUM REPORTS
 // ─────────────────────────────────────────────────────────────────
 async function callClaude(systemPrompt, userContent) {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("No API key found.");
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1500,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userContent }],
-    }),
-  });
-  const data = await res.json();
-  const raw = data.content?.[0]?.text?.trim() || "{}";
-  return JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim());
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-chat`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system: systemPrompt, userContent }),
+    }
+  );
+  if (!res.ok) throw new Error(`Edge function error ${res.status}`);
+  return res.json();
 }
 
 async function aiToxicityAnalysis(messages, math, relationshipType) {
@@ -913,7 +887,7 @@ async function aiToxicityAnalysis(messages, math, relationshipType) {
   const names = math.names;
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert relationship and communication analyst. Analyse the provided WhatsApp chat for toxicity, power dynamics, and conflict patterns. Be specific, evidence-led, and objective — reference real moments and quotes from the chat. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only include findings you can directly cite from the chat. If evidence is weak or absent for a field, write "None clearly identified" rather than guessing. (3) Be conservative — one or two examples of a behaviour do not constitute a pattern. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences or explanation outside the JSON.${relCtxBlock}`;
+  const system = `You are WrapChat, an expert relationship and communication analyst. Analyse the provided WhatsApp chat for toxicity, power dynamics, and conflict patterns. Be specific, evidence-led, and objective — reference real moments and quotes from the chat. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only include findings you can directly cite from the chat. If evidence is weak or absent for a field, write "None clearly identified" rather than guessing. (3) Be conservative — one or two examples of a behaviour do not constitute a pattern. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences or explanation outside the JSON. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
   const fields = `{
   "chatHealthScore": [integer 1-10, overall health of this chat],
   "healthScores": [
@@ -942,7 +916,7 @@ async function aiLoveLangAnalysis(messages, math, relationshipType) {
   const names = math.names;
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert in relationship dynamics and love languages. Analyse how each person in this chat expresses affection or care — this could be romantic, a friendship, or family. Map their behaviour to the 5 love languages: Words of Affirmation, Acts of Service, Receiving Gifts, Quality Time, Physical Touch. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only assign a love language if you can cite at least 2-3 real examples from the chat. If evidence is thin, pick the closest match and note it is inferred. (3) For the mismatch field — if they actually speak the same language, say so honestly rather than inventing a gap. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences.${relCtxBlock}`;
+  const system = `You are WrapChat, an expert in relationship dynamics and love languages. Analyse how each person in this chat expresses affection or care — this could be romantic, a friendship, or family. Map their behaviour to the 5 love languages: Words of Affirmation, Acts of Service, Receiving Gifts, Quality Time, Physical Touch. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only assign a love language if you can cite at least 2-3 real examples from the chat. If evidence is thin, pick the closest match and note it is inferred. (3) For the mismatch field — if they actually speak the same language, say so honestly rather than inventing a gap. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
   const fields = `{
   "personA": {
     "name": "${names[0]}",
@@ -977,7 +951,7 @@ async function aiGrowthAnalysis(messages, math, relationshipType) {
   const lateText  = formatForAI(lateMsgs);
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert relationship analyst specialising in how relationships evolve over time. Compare the early messages to the recent messages to detect growth, drift, or change. Be specific — mention actual topics, tone shifts, and patterns you observe. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only describe changes you can actually see in the two sets of messages. Do not invent growth or drift — if the tone is similar, say "about the same" honestly. (3) For topicsAppeared and topicsDisappeared — only list topics with clear evidence in both periods, not single mentions. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences.${relCtxBlock}`;
+  const system = `You are WrapChat, an expert relationship analyst specialising in how relationships evolve over time. Compare the early messages to the recent messages to detect growth, drift, or change. Be specific — mention actual topics, tone shifts, and patterns you observe. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only describe changes you can actually see in the two sets of messages. Do not invent growth or drift — if the tone is similar, say "about the same" honestly. (3) For topicsAppeared and topicsDisappeared — only list topics with clear evidence in both periods, not single mentions. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
   const fields = `{
   "thenDepth": "2 sentences describing the conversation style and topics in the EARLY messages",
   "nowDepth": "2 sentences describing the conversation style and topics in the RECENT messages",
@@ -1000,7 +974,7 @@ async function aiAccountaAnalysis(messages, math, relationshipType) {
   const names = math.names;
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an analyst who tracks promises, commitments, and follow-throughs in conversations. Find all instances of someone saying they'll do something ("I'll call you", "let's meet", "I'll send that", "I promise", "I'll be there", etc.) and determine whether they followed through based on later messages. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) DEFINITION — a promise is BROKEN only if there is clear evidence it was never fulfilled, or the person explicitly backed out. A promise fulfilled late (even a few days) is still KEPT — do not mark it as broken. When unsure, mark it as kept. (3) Do not count casual expressions like "we should hang out sometime" as promises — only count specific, time-bound or action-bound commitments. (4) If you cannot find clear evidence of a broken or kept promise, write "None clearly identified" for that field. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences.${relCtxBlock}`;
+  const system = `You are WrapChat, an analyst who tracks promises, commitments, and follow-throughs in conversations. Find all instances of someone saying they'll do something ("I'll call you", "let's meet", "I'll send that", "I promise", "I'll be there", etc.) and determine whether they followed through based on later messages. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) DEFINITION — a promise is BROKEN only if there is clear evidence it was never fulfilled, or the person explicitly backed out. A promise fulfilled late (even a few days) is still KEPT — do not mark it as broken. When unsure, mark it as kept. (3) Do not count casual expressions like "we should hang out sometime" as promises — only count specific, time-bound or action-bound commitments. (4) If you cannot find clear evidence of a broken or kept promise, write "None clearly identified" for that field. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
   const fields = `{
   "personA": {
     "name": "${names[0]}",
@@ -1042,7 +1016,7 @@ async function aiEnergyAnalysis(messages, math, relationshipType) {
   const names = math.names;
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an analyst of conversational energy — who brings positivity, enthusiasm, and good vibes vs who vents, complains, or drains the conversation. Look at who shares good news, who hypes the other person up, who tends to vent or be negative, and the overall energy balance. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only report what you can directly cite from the chat — if someone rarely vents, say so honestly rather than inventing draining patterns. (3) A single vent session does not make someone "net draining" — look at the overall pattern across the full sample. (4) For hypeQuote — use a real verbatim or near-verbatim quote from the chat, not a paraphrase. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences.${relCtxBlock}`;
+  const system = `You are WrapChat, an analyst of conversational energy — who brings positivity, enthusiasm, and good vibes vs who vents, complains, or drains the conversation. Look at who shares good news, who hypes the other person up, who tends to vent or be negative, and the overall energy balance. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only report what you can directly cite from the chat — if someone rarely vents, say so honestly rather than inventing draining patterns. (3) A single vent session does not make someone "net draining" — look at the overall pattern across the full sample. (4) For hypeQuote — use a real verbatim or near-verbatim quote from the chat, not a paraphrase. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
   const fields = `{
   "personA": {
     "name": "${names[0]}",
@@ -2564,11 +2538,10 @@ function Auth() {
   );
 }
 
-function Upload({ onParsed, onLogout }) {
+function Upload({ onParsed, onLogout, onHistory }) {
   const fileRef = useRef();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const hasKey = !!import.meta.env.VITE_ANTHROPIC_API_KEY;
   const handle = file => {
     if (!file) return;
     setBusy(true); setErr("");
@@ -2599,13 +2572,19 @@ function Upload({ onParsed, onLogout }) {
         <input ref={fileRef} type="file" accept=".txt" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
       </div>
       {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
-      {!hasKey && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, background:"rgba(200,60,20,0.2)", padding:"12px 16px", borderRadius:16, width:"100%", lineHeight:1.6, textAlign:"center" }}>No API key found. Add <strong style={{ color:"#fff" }}>VITE_ANTHROPIC_API_KEY</strong> to your .env file.</div>}
       <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>Group or duo detected automatically. Nothing leaves your device.</div>
-      {onLogout && (
-        <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
-          Log out
-        </button>
-      )}
+      <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
+        {onHistory && (
+          <button onClick={onHistory} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
+            My Results
+          </button>
+        )}
+        {onLogout && (
+          <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
+            Log out
+          </button>
+        )}
+      </div>
     </Shell>
   );
 }
@@ -2694,6 +2673,97 @@ function Slide({ children, dir, id }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// SAVE RESULT
+// ─────────────────────────────────────────────────────────────────
+async function saveResult(type, result, mathData) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("results").insert({
+      user_id:     user.id,
+      report_type: type,
+      chat_type:   mathData.isGroup ? "group" : "duo",
+      names:       mathData.names,
+      result_data: result,
+      math_data:   mathData,
+    });
+  } catch { /* silent — never interrupt the user flow */ }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MY RESULTS
+// ─────────────────────────────────────────────────────────────────
+function MyResults({ onBack, onRestoreResult }) {
+  const [rows, setRows] = useState(null);
+  const [err,  setErr]  = useState("");
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { setRows([]); return; }
+      const { data, error } = await supabase
+        .from("results")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) setErr("Couldn't load results. Try again.");
+      else setRows(data || []);
+    });
+  }, []);
+
+  const headline = (row) => {
+    const ai   = row.result_data || {};
+    const math = row.math_data   || {};
+    switch (row.report_type) {
+      case "general":  return `${(math.totalMessages || 0).toLocaleString()} messages`;
+      case "toxicity": return math.toxicityLevel || ai.toxicityLevel || "—";
+      case "lovelang": return ai.compatibilityScore != null ? `${ai.compatibilityScore}/10 compatibility` : "—";
+      case "growth":   return ai.trajectory   || "—";
+      case "accounta": return ai.overallVerdict || "—";
+      case "energy":   return ai.compatibility  || "—";
+      default:         return "—";
+    }
+  };
+
+  return (
+    <Shell sec="upload" prog={0} total={0}>
+      <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1, textAlign:"center", width:"100%" }}>My Results</div>
+      <Sub mt={2}>Tap any result to view it again.</Sub>
+
+      {rows === null && !err && (
+        <div style={{ width:"100%", display:"flex", justifyContent:"center", padding:"24px 0" }}><Dots /></div>
+      )}
+      {err && (
+        <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center" }}>{err}</div>
+      )}
+      {rows?.length === 0 && (
+        <div style={{ fontSize:14, color:"rgba(255,255,255,0.38)", textAlign:"center", padding:"24px 0", lineHeight:1.6 }}>No saved results yet.<br/>Run an analysis to see it here.</div>
+      )}
+
+      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, maxHeight:"58vh", overflowY:"auto", paddingRight:2 }}>
+        {rows?.map(row => {
+          const rt  = REPORT_TYPES.find(r => r.id === row.report_type);
+          const pal = PAL[rt?.palette] || PAL.upload;
+          const names = Array.isArray(row.names) ? row.names.slice(0, 3).join(", ") + (row.names.length > 3 ? ` +${row.names.length - 3}` : "") : "—";
+          const date  = new Date(row.created_at).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+          const stat  = headline(row);
+          return (
+            <button key={row.id} onClick={() => onRestoreResult(row)} className="wc-btn"
+              style={{ background:pal.bg, border:"1px solid rgba(255,255,255,0.14)", borderRadius:20, padding:"14px 18px", textAlign:"left", color:"#fff", cursor:"pointer", width:"100%", transition:"all 0.15s" }}
+            >
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.45)", marginBottom:4 }}>{rt?.label || row.report_type} · {date}</div>
+              <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3, marginBottom:3 }}>{names}</div>
+              {stat !== "—" && <div style={{ fontSize:12, fontWeight:600, color:pal.accent }}>{stat}</div>}
+            </button>
+          );
+        })}
+      </div>
+
+      <Btn onClick={onBack}>← Back</Btn>
+    </Shell>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 // APP
 // ─────────────────────────────────────────────────────────────────
 export default function App() {
@@ -2768,6 +2838,7 @@ export default function App() {
       else if (type === "accounta") result = await aiAccountaAnalysis(messages, math, relType);
       else if (type === "energy")   result = await aiEnergyAnalysis(messages, math, relType);
       setAi(result || {});
+      if (result) saveResult(type, result, math);
     } catch { setAi({}); }
     setAiLoading(false);
     setPhase("results");
@@ -2794,8 +2865,20 @@ export default function App() {
 
   const wrap = child => <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}><Slide dir={dir} id={sid}>{child}</Slide></div>;
 
-  if (phase === "auth")   return <Slide dir="fwd" id={sid}><Auth /></Slide>;
-  if (phase === "upload") return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} /></Slide>;
+  const onRestoreResult = (row) => {
+    setMath(row.math_data);
+    setAi(row.result_data);
+    setReportType(row.report_type);
+    setAiLoading(false);
+    setStep(0);
+    setDir("fwd");
+    setPhase("results");
+    setSid(s => s + 1);
+  };
+
+  if (phase === "auth")    return <Slide dir="fwd" id={sid}><Auth /></Slide>;
+  if (phase === "history") return <Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>;
+  if (phase === "upload")  return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} /></Slide>;
   if (phase === "select") return (
     <Slide dir="fwd" id={sid}>
       <ReportSelect math={math} onSelect={onSelectReport} onBack={() => { setPhase("upload"); setSid(s => s+1); }} />
