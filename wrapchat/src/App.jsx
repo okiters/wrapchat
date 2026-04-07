@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "./supabase";
 
 // ─────────────────────────────────────────────────────────────────
 // PARSER
@@ -2471,7 +2472,99 @@ function RelationshipSelect({ onSelect, onBack }) {
 // ─────────────────────────────────────────────────────────────────
 // UPLOAD
 // ─────────────────────────────────────────────────────────────────
-function Upload({ onParsed }) {
+// ─────────────────────────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────────────────────────
+function Auth() {
+  const [tab,      setTab]      = useState("login");
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [err,      setErr]      = useState("");
+  const [info,     setInfo]     = useState("");
+  const [busy,     setBusy]     = useState(false);
+
+  const switchTab = (t) => { setTab(t); setErr(""); setInfo(""); };
+
+  const submit = async () => {
+    if (!email || !password) { setErr("Please fill in both fields."); return; }
+    setBusy(true); setErr(""); setInfo("");
+    try {
+      if (tab === "login") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) setErr(error.message);
+      } else {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) setErr(error.message);
+        else setInfo("Check your email to confirm your account, then log in.");
+      }
+    } catch { setErr("Something went wrong. Please try again."); }
+    setBusy(false);
+  };
+
+  const inputStyle = {
+    width: "100%",
+    background: "rgba(0,0,0,0.25)",
+    border: "1.5px solid rgba(255,255,255,0.12)",
+    borderRadius: 14,
+    padding: "13px 16px",
+    fontSize: 15,
+    color: "#fff",
+    outline: "none",
+    fontFamily: "inherit",
+  };
+
+  return (
+    <Shell sec="upload" prog={0} total={0}>
+      <div style={{ fontSize:44, fontWeight:800, color:"#fff", letterSpacing:-3, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
+      <div style={{ fontSize:15, color:"rgba(255,255,255,0.5)", marginBottom:4, textAlign:"center", fontWeight:500 }}>Your chats, unwrapped.</div>
+
+      {/* Tab toggle */}
+      <div style={{ display:"flex", background:"rgba(0,0,0,0.25)", borderRadius:50, padding:4, width:"100%", gap:4 }}>
+        {[["login","Log in"],["signup","Sign up"]].map(([t,label]) => (
+          <button key={t} onClick={() => switchTab(t)}
+            style={{
+              flex:1, border:"none", borderRadius:46, padding:"10px 0",
+              fontSize:14, fontWeight:700, cursor:"pointer", transition:"all 0.2s",
+              background: tab === t ? "rgba(255,255,255,0.18)" : "transparent",
+              color: tab === t ? "#fff" : "rgba(255,255,255,0.38)",
+              letterSpacing: 0.2,
+            }}
+          >{label}</button>
+        ))}
+      </div>
+
+      {/* Inputs */}
+      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10 }}>
+        <input
+          type="email" placeholder="Email" value={email}
+          onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && submit()}
+          style={inputStyle}
+        />
+        <input
+          type="password" placeholder="Password" value={password}
+          onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && submit()}
+          style={inputStyle}
+        />
+      </div>
+
+      {err  && <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center", lineHeight:1.5 }}>{err}</div>}
+      {info && <div style={{ fontSize:13, color:"#B0F4C8", background:"rgba(20,160,80,0.15)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center", lineHeight:1.5 }}>{info}</div>}
+
+      <button
+        onClick={submit} disabled={busy} className="wc-btn"
+        style={{ width:"100%", padding:"14px 0", borderRadius:50, border:"none", background: PAL.upload.inner, color:"#fff", fontSize:16, cursor: busy ? "default" : "pointer", fontWeight:700, transition:"all 0.15s", letterSpacing:0.2, opacity: busy ? 0.65 : 1 }}
+      >
+        {busy ? "…" : tab === "login" ? "Log in" : "Create account"}
+      </button>
+
+      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", textAlign:"center" }}>Nothing leaves your device.</div>
+    </Shell>
+  );
+}
+
+function Upload({ onParsed, onLogout }) {
   const fileRef = useRef();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2508,6 +2601,11 @@ function Upload({ onParsed }) {
       {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
       {!hasKey && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, background:"rgba(200,60,20,0.2)", padding:"12px 16px", borderRadius:16, width:"100%", lineHeight:1.6, textAlign:"center" }}>No API key found. Add <strong style={{ color:"#fff" }}>VITE_ANTHROPIC_API_KEY</strong> to your .env file.</div>}
       <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>Group or duo detected automatically. Nothing leaves your device.</div>
+      {onLogout && (
+        <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
+          Log out
+        </button>
+      )}
     </Shell>
   );
 }
@@ -2599,7 +2697,7 @@ function Slide({ children, dir, id }) {
 // APP
 // ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [phase,            setPhase]            = useState("upload");
+  const [phase,            setPhase]            = useState("auth");
   const [messages,         setMessages]         = useState(null);
   const [math,             setMath]             = useState(null);
   const [ai,               setAi]               = useState(null);
@@ -2609,6 +2707,30 @@ export default function App() {
   const [step,             setStep]             = useState(0);
   const [dir,              setDir]              = useState("fwd");
   const [sid,              setSid]              = useState(0);
+
+  // Check for an existing session on mount and listen for auth changes
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setPhase("upload");
+        setSid(s => s + 1);
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setPhase("upload");
+        setSid(s => s + 1);
+      } else {
+        setPhase("auth");
+        setSid(s => s + 1);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const go      = d => { setDir(d); setSid(s => s+1); setStep(s => d==="fwd" ? s+1 : s-1); };
   const back    = () => go("bk");
@@ -2672,7 +2794,8 @@ export default function App() {
 
   const wrap = child => <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}><Slide dir={dir} id={sid}>{child}</Slide></div>;
 
-  if (phase === "upload") return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} /></Slide>;
+  if (phase === "auth")   return <Slide dir="fwd" id={sid}><Auth /></Slide>;
+  if (phase === "upload") return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} /></Slide>;
   if (phase === "select") return (
     <Slide dir="fwd" id={sid}>
       <ReportSelect math={math} onSelect={onSelectReport} onBack={() => { setPhase("upload"); setSid(s => s+1); }} />
