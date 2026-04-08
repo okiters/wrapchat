@@ -112,6 +112,83 @@ function parseWhatsApp(text) {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// LANGUAGE DETECTION  — heuristic only, no external dependency.
+// Call detectLanguage(messages) → { code, label, confidence }.
+// Upgrade this block freely without touching any other section.
+// ─────────────────────────────────────────────────────────────────
+
+// Human-readable labels for every supported language code.
+const LANG_META = {
+  en: "English",
+  tr: "Turkish",
+  es: "Spanish",
+  pt: "Portuguese",
+  ar: "Arabic",
+  fr: "French",
+  de: "German",
+  it: "Italian",
+};
+
+// High-frequency stopwords that are strongly characteristic of each language.
+// Overlap with other languages is intentional — scoring across all languages
+// simultaneously lets the distribution decide rather than strict rules.
+const LANG_WORDS = {
+  en: new Set(["the","and","you","that","this","with","have","from","they","just","okay","yeah","dont","cant","what","your","for","but","not","its","was","are","like","know","sure","well","going","hey","haha","will","when","yes","really","need","want","come","time","good","got","been","about","get"]),
+  tr: new Set(["bir","bu","ne","ben","sen","var","yok","ama","çok","nasıl","tamam","şimdi","evet","hayır","iyi","güzel","dedi","geldi","gidiyor","bilmiyorum","oldu","olur","neden","abi","canım","tabi","hani","yani","artık","bak","dur","gel","git","şey","bence","aslında","belki","seni","beni","çünkü"]),
+  es: new Set(["que","los","las","con","una","del","para","por","pero","este","esto","están","tengo","gracias","hola","estoy","bien","también","cuando","porque","después","ahora","todo","muy","más","hay","así","hacer","voy","estar","quiero","puedo","sabe","siempre","nada","algo","claro","bueno","pues"]),
+  pt: new Set(["que","com","uma","para","isso","você","está","tudo","então","também","quando","porque","minha","nossa","agora","aqui","depois","quero","posso","acho","fazer","vou","hoje","gente","cara","obrigado","obrigada","beleza","saudade","não","sim","né","bom","tá","oi","boa","legal","kkkk"]),
+  fr: new Set(["les","des","une","est","pas","plus","avec","pour","dans","mais","bien","merci","voilà","aussi","quoi","moi","toi","mon","ton","son","sur","oui","non","très","tout","même","comme","quand","parce","alors","après","encore","rien","ça","je","tu","bonsoir","bonjour","salut","super"]),
+  de: new Set(["und","die","der","das","ich","nicht","ist","mit","für","eine","bitte","danke","schon","auch","habe","nein","ja","gut","sehr","wenn","aber","noch","nur","mal","wie","was","wir","du","es","so","dann","doch","jetzt","muss","kann","hier","also","okay","klar","alles","hallo"]),
+  it: new Set(["che","non","con","una","per","del","sono","hai","grazie","ciao","cosa","bene","anche","però","tutto","adesso","quando","perché","molto","come","così","dopo","poi","ancora","più","mio","tuo","suo","dove","vuoi","fare","questo","bella","bello","dai","sì","no","vero","comunque"]),
+};
+
+// Arabic block — unambiguous; ı/ğ/ş/İ are Turkish-only among supported languages
+const ARABIC_RE        = /[\u0600-\u06FF]/;
+const TURKISH_CHAR_RE  = /[ğışİ]/;
+
+const LANG_DETECT_SAMPLE  = 250;  // max messages to inspect
+const LANG_CONFIDENCE_MIN = 0.30; // fallback to English below this share
+
+// Returns { code: string, label: string, confidence: number (0–1) }
+function detectLanguage(messages) {
+  // Evenly-spaced sample to cover the whole chat timeline
+  const n      = messages.length;
+  const step   = n > LANG_DETECT_SAMPLE ? Math.floor(n / LANG_DETECT_SAMPLE) : 1;
+  const sample = [];
+  for (let i = 0; i < n && sample.length < LANG_DETECT_SAMPLE; i += step) sample.push(messages[i]);
+
+  const scores = { en: 0, tr: 0, es: 0, pt: 0, ar: 0, fr: 0, de: 0, it: 0 };
+
+  for (const { body } of sample) {
+    if (!body || /^<(Voice|Media) omitted>$/i.test(body) || body.startsWith("http")) continue;
+
+    // Arabic block: strong signal — skip further scoring for this message
+    if (ARABIC_RE.test(body)) { scores.ar += 6; continue; }
+
+    // Turkish-specific characters not found in other listed languages
+    if (TURKISH_CHAR_RE.test(body)) scores.tr += 3;
+
+    const words = body.toLowerCase().replace(/[^\p{L}\s]/gu, "").split(/\s+/);
+    for (const w of words) {
+      if (w.length < 2) continue;
+      for (const [code, wordSet] of Object.entries(LANG_WORDS)) {
+        if (wordSet.has(w)) scores[code] += 1;
+      }
+    }
+  }
+
+  const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const [topCode, topScore] = entries[0];
+  const total = Object.values(scores).reduce((s, v) => s + v, 0);
+
+  if (total === 0 || topScore === 0) return { code: "en", label: "English", confidence: 0 };
+
+  const confidence = topScore / total;
+  if (confidence < LANG_CONFIDENCE_MIN) return { code: "en", label: "English", confidence };
+  return { code: topCode, label: LANG_META[topCode] ?? "English", confidence };
+}
+
+// ─────────────────────────────────────────────────────────────────
 // LARGE-GROUP CAP
 // ─────────────────────────────────────────────────────────────────
 const GROUP_PARTICIPANT_THRESHOLD = 20; // above this, cap is applied
@@ -1076,8 +1153,15 @@ function buildRelationshipContextBlock(relType) {
     : "";
 }
 
-function buildAnalystSystemPrompt(role, relationshipType, extraRules = "") {
-  return `You are WrapChat, ${role}. Be specific, grounded, and evidence-led. Reference real patterns, real phrases, and real moments from the chat instead of generic observations. Be conservative before singling out one person: if the evidence is mixed, close, or mostly based on tone, prefer balanced labels like "Tie", "Shared", "Balanced", or "None clearly identified" instead of over-assigning blame. Do not pile onto the loudest or most active person unless multiple distinct examples support it. Keep the tone honest but not cruel, mocking, or absolute. Avoid repetitive wording across fields: if two answers overlap, make them distinct in angle and concrete detail rather than repeating the same judgment. When negative and positive evidence coexist, acknowledge both. Return ONLY valid JSON with no markdown fences or explanation outside the JSON.${buildRelationshipContextBlock(relationshipType)}${extraRules ? ` ${extraRules}` : ""}`;
+function buildLangInstruction(chatLang) {
+  if (!chatLang || chatLang === "en") return "";
+  const label = LANG_META[chatLang];
+  if (!label) return "";
+  return ` LANGUAGE INSTRUCTION: This chat is primarily in ${label}. Write ALL descriptive fields — observations, summaries, verdicts, labels, and any paraphrased or quoted text you compose — in ${label}. JSON keys must stay in English. Names must appear exactly as they do in the chat.`;
+}
+
+function buildAnalystSystemPrompt(role, relationshipType, extraRules = "", chatLang = "en") {
+  return `You are WrapChat, ${role}. Be specific, grounded, and evidence-led. Reference real patterns, real phrases, and real moments from the chat instead of generic observations. Be conservative before singling out one person: if the evidence is mixed, close, or mostly based on tone, prefer balanced labels like "Tie", "Shared", "Balanced", or "None clearly identified" instead of over-assigning blame. Do not pile onto the loudest or most active person unless multiple distinct examples support it. Keep the tone honest but not cruel, mocking, or absolute. Avoid repetitive wording across fields: if two answers overlap, make them distinct in angle and concrete detail rather than repeating the same judgment. When negative and positive evidence coexist, acknowledge both. Return ONLY valid JSON with no markdown fences or explanation outside the JSON.${buildRelationshipContextBlock(relationshipType)}${extraRules ? ` ${extraRules}` : ""}${buildLangInstruction(chatLang)}`;
 }
 
 function clampScore(value, fallback = 5) {
@@ -1485,7 +1569,7 @@ function deriveAccountaReportFromCore(core, math, relationshipType) {
   }, relationshipType, core);
 }
 
-async function generateCoreAnalysisA(messages, math, relationshipType) {
+async function generateCoreAnalysisA(messages, math, relationshipType, chatLang = "en") {
   const chatText = buildSampleText(messages);
   const names = math.names || [];
   const isGroup = math.isGroup;
@@ -1577,7 +1661,8 @@ async function generateCoreAnalysisA(messages, math, relationshipType) {
   const system = buildAnalystSystemPrompt(
     "a sharp, observant chat analyst building a canonical core-analysis object that later reports will reuse",
     relationshipType,
-    `CORE-A SCOPE: relationship dynamic, communication patterns, funny moments, kindness moments, energy, love language, and growth trajectory. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. You will also receive EARLY and RECENT contiguous snapshots; use those specifically for growth/change fields, and use the event windows for specific moments and recurring patterns. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: In windows labelled "funny moment", the sequence is [trigger line] → [laugh reaction from a different person]. The funny person is the sender of the trigger line — the one whose message caused the other person to laugh. Do not attribute the humour to the person who laughed. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and energy/love-language reads, the actor is the sender of that exact line. For all "name" fields return ONLY the person's first name, with no explanation. Each timestamp already includes the day of week — read it directly and never calculate it yourself. Only report findings you can directly cite from the chat — if evidence is weak, use "None clearly identified". When quoting messages in any language, quote them as-is — do not translate them. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`
+    `CORE-A SCOPE: relationship dynamic, communication patterns, funny moments, kindness moments, energy, love language, and growth trajectory. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. You will also receive EARLY and RECENT contiguous snapshots; use those specifically for growth/change fields, and use the event windows for specific moments and recurring patterns. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: In windows labelled "funny moment", the sequence is [trigger line] → [laugh reaction from a different person]. The funny person is the sender of the trigger line — the one whose message caused the other person to laugh. Do not attribute the humour to the person who laughed. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and energy/love-language reads, the actor is the sender of that exact line. For all "name" fields return ONLY the person's first name, with no explanation. Each timestamp already includes the day of week — read it directly and never calculate it yourself. Only report findings you can directly cite from the chat — if evidence is weak, use "None clearly identified". When quoting messages in any language, quote them as-is — do not translate them. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`,
+    chatLang
   );
 
   const userContent = `Here is a ${isGroup ? "group" : "two-person"} WhatsApp chat between ${names.slice(0, 6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages. The content below is divided into ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N · date · type ━━━. Windows are non-contiguous excerpts; do not infer connections between separate windows. Every line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that specific line.
@@ -1599,7 +1684,7 @@ ${fields}`;
   return normalizeCoreAnalysisA(raw, math, relationshipType);
 }
 
-async function generateCoreAnalysisB(messages, math, relationshipType) {
+async function generateCoreAnalysisB(messages, math, relationshipType, chatLang = "en") {
   const chatText = buildSampleText(messages);
   const names = math.names || [];
   const personCount = Math.min(names.length || 0, 2);
@@ -1667,7 +1752,8 @@ async function generateCoreAnalysisB(messages, math, relationshipType) {
   const system = buildAnalystSystemPrompt(
     "a careful risk, conflict, and accountability analyst building the canonical core-b object",
     relationshipType,
-    `CORE-B SCOPE: toxicity, health scores, apology patterns, conflict patterns, power balance, red flag moments, and accountability. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — never connect separate windows unless the messages explicitly link them. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — all behaviour belongs only to the sender on that exact line. Be conservative: one or two examples do not prove a stable pattern. If the balance is mixed, prefer "Balanced", "Tie", or "None clearly identified" over forcing one villain. For accountability: a promise is BROKEN only if there is clear evidence it was never fulfilled or the person explicitly backed out. A promise fulfilled late is still KEPT. Do not count vague ideas like "we should hang out sometime" as promises. Never combine two separate events into one story. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`
+    `CORE-B SCOPE: toxicity, health scores, apology patterns, conflict patterns, power balance, red flag moments, and accountability. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — never connect separate windows unless the messages explicitly link them. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — all behaviour belongs only to the sender on that exact line. Be conservative: one or two examples do not prove a stable pattern. If the balance is mixed, prefer "Balanced", "Tie", or "None clearly identified" over forcing one villain. For accountability: a promise is BROKEN only if there is clear evidence it was never fulfilled or the person explicitly backed out. A promise fulfilled late is still KEPT. Do not count vague ideas like "we should hang out sometime" as promises. Never combine two separate events into one story. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`,
+    chatLang
   );
 
   const userContent = `Here is a WhatsApp chat between ${names.slice(0, 6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history. Do not connect events across windows unless the messages explicitly link them. Every line shows the speaker: [timestamp] SpeakerName: body.
@@ -1741,10 +1827,11 @@ async function aiEnergyAnalysis(messages, math, relationshipType, coreAnalysis =
   }
 }
 
-function getCoreAnalysisCacheKey(math, relationshipType) {
+function getCoreAnalysisCacheKey(math, relationshipType, chatLang = "en") {
   return [
     math?.isGroup ? "group" : "duo",
     relationshipType || "none",
+    chatLang || "en",
     math?.totalMessages || 0,
     ...(math?.names || []),
   ].join("::");
@@ -3845,7 +3932,23 @@ function Loading({ math, reportType }) {
 // ─────────────────────────────────────────────────────────────────
 // REPORT SELECT
 // ─────────────────────────────────────────────────────────────────
-function ReportSelect({ math, onSelect, onBack }) {
+const LANG_OPTIONS = [
+  { code: "en", label: "English"    },
+  { code: "tr", label: "Turkish"    },
+  { code: "es", label: "Spanish"    },
+  { code: "pt", label: "Portuguese" },
+  { code: "ar", label: "Arabic"     },
+  { code: "fr", label: "French"     },
+  { code: "de", label: "German"     },
+  { code: "it", label: "Italian"    },
+];
+
+function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangChange }) {
+  const [langOpen, setLangOpen] = useState(false);
+
+  const isOverridden = detectedLang && chatLang !== detectedLang.code;
+  const currentLabel = LANG_OPTIONS.find(l => l.code === chatLang)?.label ?? "English";
+
   return (
     <Shell sec="upload" prog={0} total={1}>
       <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>Choose your report</div>
@@ -3882,6 +3985,64 @@ function ReportSelect({ math, onSelect, onBack }) {
           );
         })}
       </div>
+
+      {/* ── Language selector ── */}
+      <div style={{ width:"100%", marginTop:4 }}>
+        <button
+          type="button"
+          onClick={() => setLangOpen(v => !v)}
+          className="wc-btn"
+          style={{
+            width:"100%", background:"rgba(255,255,255,0.06)",
+            border:"1px solid rgba(255,255,255,0.10)", borderRadius:14,
+            padding:"10px 16px", color:"#fff", cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            transition:"all 0.15s",
+          }}
+        >
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)", fontWeight:600 }}>Report language</span>
+            <span style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{currentLabel}</span>
+            {!isOverridden && detectedLang && (
+              <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>auto</span>
+            )}
+            {isOverridden && (
+              <span style={{ fontSize:10, color:PAL.upload.accent, fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>changed</span>
+            )}
+          </div>
+          <span style={{ fontSize:11, color:"rgba(255,255,255,0.35)", transform: langOpen ? "rotate(180deg)" : "none", transition:"transform 0.2s" }}>▾</span>
+        </button>
+
+        {langOpen && (
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:8, padding:"4px 0" }}>
+            {LANG_OPTIONS.map(opt => {
+              const active = chatLang === opt.code;
+              return (
+                <button
+                  key={opt.code}
+                  type="button"
+                  onClick={() => { onLangChange(opt.code); setLangOpen(false); }}
+                  className="wc-btn"
+                  style={{
+                    border: `1px solid ${active ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.12)"}`,
+                    borderRadius: 50,
+                    padding: "7px 14px",
+                    fontSize: 13,
+                    fontWeight: active ? 800 : 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    background: active ? PAL.upload.inner : "rgba(255,255,255,0.07)",
+                    color: "#fff",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <Btn onClick={onBack}>← Upload different file</Btn>
     </Shell>
   );
@@ -4014,6 +4175,8 @@ export default function App() {
   const [aiLoading,        setAiLoading]        = useState(false);
   const [reportType,       setReportType]       = useState(null);
   const [relationshipType, setRelationshipType] = useState(null);
+  const [chatLang,         setChatLang]         = useState("en");  // detected or user-selected
+  const [detectedLang,     setDetectedLang]     = useState(null);  // { code, label, confidence }
   const [step,             setStep]             = useState(0);
   const [dir,              setDir]              = useState("fwd");
   const [sid,              setSid]              = useState(0);
@@ -4124,10 +4287,11 @@ export default function App() {
     setCoreAnalysisA(null); setCoreAnalysisAKey("");
     setCoreAnalysisB(null); setCoreAnalysisBKey("");
     setAiLoading(false); setReportType(null); setRelationshipType(null);
+    setChatLang("en"); setDetectedLang(null);
     setStep(0); setDir("fwd"); setSid(s => s+1);
   };
 
-  // Step 1: file parsed → check thresholds, cap large groups, compute local stats
+  // Step 1: file parsed → check thresholds, cap large groups, compute local stats, detect language
   const onParsed = ({ messages: msgs, tooShort }) => {
     if (tooShort) {
       setPhase("tooshort");
@@ -4140,6 +4304,9 @@ export default function App() {
       m.cappedGroup = cappedGroup;
       m.originalParticipantCount = originalParticipantCount;
     }
+    const detected = detectLanguage(cappedMsgs);
+    setDetectedLang(detected);
+    setChatLang(detected.code);
     setSeed((m?.totalMessages||1) * 31 + (m?.names?.[0]?.charCodeAt(0)||7) * 17);
     resetPicks();
     setMessages(cappedMsgs);
@@ -4166,15 +4333,15 @@ export default function App() {
       let result;
 
       if (pipeline?.strategy === "core") {
-        const cacheKey = getCoreAnalysisCacheKey(math, relType);
+        const cacheKey = getCoreAnalysisCacheKey(math, relType, chatLang);
         const useCoreA = pipeline.cache === "a";
         let core = useCoreA
           ? (coreAnalysisAKey === cacheKey ? coreAnalysisA : null)
           : (coreAnalysisBKey === cacheKey ? coreAnalysisB : null);
         if (!core) {
           core = useCoreA
-            ? await generateCoreAnalysisA(messages, math, relType)
-            : await generateCoreAnalysisB(messages, math, relType);
+            ? await generateCoreAnalysisA(messages, math, relType, chatLang)
+            : await generateCoreAnalysisB(messages, math, relType, chatLang);
           if (useCoreA) {
             setCoreAnalysisA(core);
             setCoreAnalysisAKey(cacheKey);
@@ -4264,7 +4431,14 @@ export default function App() {
   if (phase === "tooshort") return <Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>;
   if (phase === "select") return (
     <Slide dir="fwd" id={sid}>
-      <ReportSelect math={math} onSelect={onSelectReport} onBack={() => { setPhase("upload"); setSid(s => s+1); }} />
+      <ReportSelect
+        math={math}
+        onSelect={onSelectReport}
+        onBack={() => { setPhase("upload"); setSid(s => s+1); }}
+        chatLang={chatLang}
+        detectedLang={detectedLang}
+        onLangChange={code => { setChatLang(code); setCoreAnalysisA(null); setCoreAnalysisAKey(""); setCoreAnalysisB(null); setCoreAnalysisBKey(""); }}
+      />
     </Slide>
   );
   if (phase === "relationship") return (
