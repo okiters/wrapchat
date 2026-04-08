@@ -1,5 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, createContext, useContext } from "react";
 import { supabase } from "./supabase";
+
+// Provided by App during the results phase; Shell reads it to show the close button.
+// null means "no close button" (upload, auth, loading, etc.)
+const CloseResultsContext = createContext(null);
 
 // ─────────────────────────────────────────────────────────────────
 // PARSER
@@ -1338,6 +1342,7 @@ const REPORT_TYPES = [
 
 function Shell({ sec, prog, total, children }) {
   const p = PAL[sec] || PAL.upload;
+  const onClose = useContext(CloseResultsContext);
   return (
     <>
       <style>{`
@@ -1367,6 +1372,34 @@ function Shell({ sec, prog, total, children }) {
         <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(255,255,255,0.12)" }}>
           <div style={{ height:"100%", background:"rgba(255,255,255,0.75)", borderRadius:"0 2px 2px 0", width:`${total>0?Math.round((prog/total)*100):0}%`, transition:"width 0.4s" }} />
         </div>
+        {/* Close button — only rendered when a close handler is provided via context */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="wc-btn"
+            aria-label="Close results"
+            style={{
+              position: "absolute",
+              top: 14,
+              right: 14,
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              border: "none",
+              background: "rgba(255,255,255,0.12)",
+              color: "rgba(255,255,255,0.45)",
+              fontSize: 15,
+              lineHeight: 1,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 10,
+              padding: 0,
+              transition: "all 0.15s",
+            }}
+          >✕</button>
+        )}
         {/* Centered pill label */}
         {PILL_LABEL[sec] && (
           <div style={{ paddingTop:18, display:"flex", justifyContent:"center" }}>
@@ -2949,14 +2982,66 @@ function ReportSelect({ math, onSelect, onBack }) {
 // SLIDE
 // ─────────────────────────────────────────────────────────────────
 function Slide({ children, dir, id }) {
+  // Keep a snapshot of the outgoing card so we can animate it out
+  // simultaneously with the incoming card sliding in.
+  const prevChildrenRef = useRef(null);
+  const prevIdRef       = useRef(id);
+  const [exiting, setExiting] = useState(null); // { children, dir }
+
+  useLayoutEffect(() => {
+    if (id !== prevIdRef.current) {
+      // Capture outgoing content before it disappears
+      setExiting({ children: prevChildrenRef.current, dir });
+      prevIdRef.current = id;
+      // Remove the exiting ghost after the transition finishes
+      const t = setTimeout(() => setExiting(null), 420);
+      return () => clearTimeout(t);
+    }
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Always keep a ref to the current children so the next transition can grab them
+  prevChildrenRef.current = children;
+
+  // Forward: enter from right (+100%), exit to left (-100%)
+  // Back:    enter from left  (-100%), exit to right (+100%)
+  const enterFrom = dir === "fwd" ? "100%"  : "-100%";
+  const exitTo    = dir === "fwd" ? "-100%" : "100%";
+
+  const transition = "transform 0.42s cubic-bezier(.25,0,.1,1)";
+
   return (
     <div style={{ position: "relative", width: "min(420px, 100vw)", overflow: "hidden" }}>
-      <div key={id} style={{ animation: `${dir === "fwd" ? "enterUp" : "enterDown"} 0.42s cubic-bezier(.2,0,.1,1)` }}>
+      {/* Outgoing card — slides out */}
+      {exiting && (
+        <div style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0,
+          transform: `translateX(${exitTo})`,
+          transition,
+          willChange: "transform",
+          pointerEvents: "none",
+        }}>
+          {exiting.children}
+        </div>
+      )}
+      {/* Incoming card — slides in */}
+      <div style={{
+        transform: exiting ? "translateX(0)" : "translateX(0)",
+        // On first mount there's no exiting card; skip the enter animation entirely.
+        // When there IS an exiting card the browser starts the element at enterFrom
+        // then transitions to 0. We achieve this with a one-frame delay via a
+        // CSS animation so the starting position is painted before the transition kicks in.
+        animation: exiting ? `wcSlideIn 0.42s cubic-bezier(.25,0,.1,1) both` : "none",
+        ["--wc-enter-from"]: enterFrom,
+        willChange: "transform",
+      }}>
         {children}
       </div>
       <style>{`
-        @keyframes enterUp { from{transform:translateY(12%);opacity:0} to{transform:translateY(0);opacity:1} }
-        @keyframes enterDown { from{transform:translateY(-12%);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes wcSlideIn {
+          from { transform: translateX(var(--wc-enter-from)); }
+          to   { transform: translateX(0); }
+        }
       `}</style>
     </div>
   );
@@ -3072,6 +3157,51 @@ export default function App() {
   const [step,             setStep]             = useState(0);
   const [dir,              setDir]              = useState("fwd");
   const [sid,              setSid]              = useState(0);
+  const [resultsOrigin,    setResultsOrigin]    = useState("upload"); // "upload" | "history"
+
+  // Keep a ref so the visibilitychange handler always sees the current phase
+  // without being re-registered on every render.
+  const phaseRef = useRef(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  // When the tab becomes visible again while stuck on the loading screen,
+  // check if a result was already saved (e.g. the fetch completed in the
+  // background) and restore it without asking the user to re-upload.
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState !== "visible") return;
+      if (phaseRef.current !== "loading") return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from("results")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("created_at", tenMinutesAgo)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!data) return;
+
+      setAi(data.result_data || {});
+      setMath(data.math_data || null);
+      setReportType(data.report_type || null);
+      setRelationshipType(data.result_data?.relationshipType ?? null);
+      setAiLoading(false);
+      setStep(0);
+      setDir("fwd");
+      setResultsOrigin("upload");
+      setPhase("results");
+      setSid(s => s + 1);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []); // registered once — reads phase via phaseRef
 
   // Check for an existing session on mount and listen for auth changes
   useEffect(() => {
@@ -3146,6 +3276,7 @@ export default function App() {
       if (result) saveResult(type, result, math);
     } catch { setAi({}); }
     setAiLoading(false);
+    setResultsOrigin("upload");
     setPhase("results");
     setStep(0);
     setSid(s => s+1);
@@ -3168,7 +3299,20 @@ export default function App() {
     runAnalysis(reportType, relType);
   };
 
-  const wrap = child => <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}><Slide dir={dir} id={sid}>{child}</Slide></div>;
+  const closeResults = () => {
+    const dest = resultsOrigin === "history" ? "history" : "upload";
+    setPhase(dest);
+    setSid(s => s + 1);
+  };
+  const wrap = child => (
+    <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}>
+      <Slide dir={dir} id={sid}>
+        <CloseResultsContext.Provider value={closeResults}>
+          {child}
+        </CloseResultsContext.Provider>
+      </Slide>
+    </div>
+  );
 
   const onRestoreResult = (row) => {
     setMath(row.math_data);
@@ -3177,6 +3321,7 @@ export default function App() {
     setAiLoading(false);
     setStep(0);
     setDir("fwd");
+    setResultsOrigin("history");
     setPhase("results");
     setSid(s => s + 1);
   };
