@@ -1048,89 +1048,7 @@ function buildSampleText(messages) {
   return formatChunksForAI(messages, buildChunks(messages));
 }
 
-async function aiAnalysis(messages, math, relationshipType) {
-  const chatText = buildSampleText(messages);
-  const names    = math.names;
-  const isGroup  = math.isGroup;
-  const relCtx   = relContextStr(relationshipType);
-  const relCtxBlock = relCtx ? `\n\nRELATIONSHIP CONTEXT: ${relCtx} Frame all analysis, tone, and language accordingly. Do not label a partner relationship as "friendship" or "chosen family". Do not label a family dynamic as "romantic". The vibe summary and relationship read must reflect the actual relationship type.` : "";
-
-  const duoFields = `{
-  "funniestPerson": "ONLY the first name of the funniest person, nothing else",
-  "funniestReason": "Give one specific example — describe an actual joke, line or moment from the chat that caused the other person to laugh. Do not reference the laugh itself, reference what caused it. Under 15 words, complete this naturally: 'drops lines like...'",
-  "ghostContext": "1 sentence — explain the ghost pattern with real context, not just 'they take long to reply'",
-  "biggestTopic": "1 sentence — the main recurring thing they talk about (be very specific, e.g. 'Planning trips they never take' not 'travel')",
-  "dramaStarter": "ONLY a first name — who starts the most tension. Name only.",
-  "dramaContext": "1 sentence — how they do it, with specific examples from the chat",
-  "signaturePhrase": ["a real phrase or expression ${names[0]} uses constantly", "a real phrase or expression ${names[1]||names[0]} uses constantly"],
-  "relationshipStatus": "very short label — guess the relationship status from the chat only (examples: 'Probably dating', 'Situationship territory', 'Close friends')",
-  "relationshipStatusWhy": "1 sentence — explain why that status fits, using objective evidence from the chat's tone and habits",
-  "statusEvidence": "1 short line with a concrete dated example if possible, like 'Mar 3, 2026 • "miss you, baby"'",
-  "toxicPerson": "ONLY a first name, or 'Tie' if it is genuinely even",
-  "toxicReason": "1 sentence — explain factually what behaviour makes them look more toxic",
-  "evidenceTimeline": [
-    { "date": "exact or approximate date from the chat", "title": "short factual headline", "detail": "1 short factual detail, ideally with a quote or clear paraphrase" },
-    { "date": "exact or approximate date from the chat", "title": "short factual headline", "detail": "1 short factual detail, ideally with a quote or clear paraphrase" },
-    { "date": "exact or approximate date from the chat", "title": "short factual headline", "detail": "1 short factual detail, ideally with a quote or clear paraphrase" }
-  ],
-  "redFlags": [
-    { "title": "2-4 word factual pattern label", "detail": "1 sentence — explain this pattern objectively with specific chat evidence", "evidence": "dated example or short quote" },
-    { "title": "2-4 word factual pattern label", "detail": "1 sentence — explain this pattern objectively with specific chat evidence", "evidence": "dated example or short quote" },
-    { "title": "2-4 word factual pattern label", "detail": "1 sentence — explain this pattern objectively with specific chat evidence", "evidence": "dated example or short quote" }
-  ],
-  "toxicityReport": "2 sentences — an objective toxicity summary that focuses on observable patterns, not insults",
-  "relationshipSummary": "2 sentences — honest, slightly sassy read of the real dynamic. What's actually going on between these two?",
-  "tensionMoment": "1 sentence — the most awkward or tense moment in the chat",
-  "kindestPerson": "ONLY a first name — the most caring and warm person. Name only.",
-  "sweetMoment": "1 sentence — describe a specific, concrete sweet moment with actual detail (e.g. 'When Ozge stayed up until 2am talking Hubby through his flight anxiety on March 3rd' not 'They were very supportive of each other'). Name names, reference what was actually said or done.",
-  "vibeOneLiner": "one punchy sentence that perfectly captures this chat's energy"
-}`;
-
-  const groupFields = `{
-  "funniestPerson": "ONLY the first name of the funniest person, nothing else",
-  "funniestReason": "Give one specific example — describe an actual joke, line or moment from the chat that caused the other person to laugh. Do not reference the laugh itself, reference what caused it. Under 15 words, complete this naturally: 'drops lines like...'",
-  "ghostContext": "1 sentence — explain why the ghost is so quiet, with real context from the chat (do they only show up for certain topics? disappear for days? only lurk?)",
-  "biggestTopic": "1 sentence — the main thing this group talks about (be specific, not generic)",
-  "dramaStarter": "ONLY a first name — who causes the most chaos. Name only.",
-  "dramaContext": "1 sentence — how and why they start drama",
-  "toxicPerson": "ONLY a first name, or 'Tie' if the chaos is genuinely shared",
-  "toxicReason": "1 sentence — what behaviour makes them look the most toxic, stated factually",
-  "evidenceTimeline": [
-    { "date": "exact or approximate date from the chat", "title": "short factual headline", "detail": "1 short factual detail, ideally with a quote or clear paraphrase" },
-    { "date": "exact or approximate date from the chat", "title": "short factual headline", "detail": "1 short factual detail, ideally with a quote or clear paraphrase" },
-    { "date": "exact or approximate date from the chat", "title": "short factual headline", "detail": "1 short factual detail, ideally with a quote or clear paraphrase" }
-  ],
-  "redFlags": [
-    { "title": "2-4 word factual pattern label", "detail": "1 sentence — explain this group pattern objectively with specific chat evidence", "evidence": "dated example or short quote" },
-    { "title": "2-4 word factual pattern label", "detail": "1 sentence — explain this group pattern objectively with specific chat evidence", "evidence": "dated example or short quote" },
-    { "title": "2-4 word factual pattern label", "detail": "1 sentence — explain this group pattern objectively with specific chat evidence", "evidence": "dated example or short quote" }
-  ],
-  "toxicityReport": "2 sentences — an objective toxicity summary that focuses on observable patterns, not insults",
-  "groupDynamic": "2 sentences — honest read of the group's energy and relationships. Be specific.",
-  "mostMissed": "ONLY a first name — who the group misses most when quiet. Name only.",
-  "insideJoke": "1 sentence — a recurring joke, meme or reference that keeps coming up",
-  "tensionMoment": "1 sentence — the most tense moment in the group history",
-  "kindestPerson": "ONLY a first name — the most caring and warm person. Name only.",
-  "sweetMoment": "1 sentence — describe a specific, concrete sweet group moment with real detail (name who was involved, what was said or done). Not generic — reference something that actually happened in the chat.",
-  "hypePersonReason": "1 sentence — why this specific person is the group's hype, with a real example from the chat (e.g. what they say, how they respond, what they bring)",
-  "vibeOneLiner": "one punchy sentence capturing this group's energy"
-}`;
-
-  try {
-    return await callClaude(
-      `You are WrapChat — a sharp, observant chat analyst who reads WhatsApp conversations and gives specific, grounded analysis. Be specific — reference real patterns, real phrases, and real moments from the chat. Avoid generic observations. For red-flag style fields such as relationshipStatusWhy, statusEvidence, evidenceTimeline, redFlags, toxicReason, and toxicityReport, be objective and evidence-led: mention concrete behaviour, quotes, and dates when available, and do not use mocking or insulting language. Return ONLY valid JSON with no markdown fences and no explanation outside the JSON. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: In windows labelled "funny moment", the sequence is [trigger line] → [laugh reaction from a different person]. The funny person is the sender of the trigger line — the one whose message caused the other person to laugh. Do not attribute the humour to the person who laughed. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and any act of support — the actor is the person whose name appears on the message line where that act occurs. If a message says "I stayed up all night helping you" the actor is the sender of that line. IMPORTANT: For funniestPerson, look at who CAUSES laugh reactions from the other person — whoever causes these reactions most is the funniest. For all "name" fields return ONLY the person's first name, no explanation. CRITICAL: Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — use this directly, never calculate the day yourself. Only report findings you can directly cite from the chat — if evidence is weak or absent for a field, write "None clearly identified" rather than guessing. When quoting messages in any language, quote them as-is — do not translate or add translations in parentheses. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite.${relCtxBlock}`,
-      `Here is a ${isGroup?"group":"two-person"} WhatsApp chat between ${names.slice(0,6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages. The content below is divided into ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N · date · type ━━━. Windows are non-contiguous excerpts; do not infer connections between separate windows. Every line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that specific line.\n\nIMPORTANT CONTEXT: ${isGroup ? `The least active member (the ghost) is ${math.ghost}. The conversation starter is ${math.convStarter}.` : `By reply time, ${math.ghostName} is slower to respond. The conversation starter is ${math.convStarter}. Local analysis found that ${math.funniestPerson} caused the most laugh reactions from the other person (${math.laughCausedBy?.[math.funniestPerson]||0} times) — confirm or correct this based on the chat.`}\n\n${chatText}\n\nAnalyse this deeply and return exactly this JSON structure:\n${isGroup?groupFields:duoFields}\n\nBe specific, funny, and reference real things from the chat.`
-    );
-  } catch(e) {
-    console.error("AI failed:", e);
-    return {};
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-// AI HELPERS FOR PREMIUM REPORTS
-// ─────────────────────────────────────────────────────────────────
-async function callClaude(systemPrompt, userContent) {
+async function callClaude(systemPrompt, userContent, maxTokens = 1500) {
   const { data: { session } } = await supabase.auth.getSession();
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-chat`,
@@ -1140,170 +1058,706 @@ async function callClaude(systemPrompt, userContent) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${session?.access_token}`,
       },
-      body: JSON.stringify({ system: systemPrompt, userContent }),
+      body: JSON.stringify({ system: systemPrompt, userContent, max_tokens: maxTokens }),
     }
   );
   if (!res.ok) throw new Error(`Edge function error ${res.status}`);
   return res.json();
 }
 
-async function aiToxicityAnalysis(messages, math, relationshipType) {
-  const chatText = buildSampleText(messages);
-  const names = math.names;
-  const relCtx = relContextStr(relationshipType);
-  const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert relationship and communication analyst. Analyse the provided WhatsApp chat for toxicity, power dynamics, and conflict patterns. Be specific, evidence-led, and objective — reference real moments and quotes from the chat. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only include findings you can directly cite from the chat. If evidence is weak or absent for a field, write "None clearly identified" rather than guessing. (3) Be conservative — one or two examples of a behaviour do not constitute a pattern. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences or explanation outside the JSON. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — never connect or combine events from different windows. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — assign all quotes and behaviours only to the name on that exact line. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite.${relCtxBlock}`;
-  const fields = `{
-  "chatHealthScore": [integer 1-10, overall health of this chat],
-  "healthScores": [
-    { "name": "first person first name", "score": [1-10], "detail": "1 sentence — specific behaviours driving their score" },
-    { "name": "second person first name", "score": [1-10], "detail": "1 sentence — specific behaviours driving their score" }
-  ],
-  "apologiesLeader": { "name": "who apologises MORE — first name only", "count": [estimated count in sample], "context": "1 sentence — when and why they apologise, any pattern observed" },
-  "apologiesOther":  { "name": "who apologises LESS — first name only", "count": [estimated count], "context": "1 sentence — context and pattern" },
-  "redFlagMoments": [
-    { "date": "approximate date from chat", "person": "first name", "description": "what happened specifically", "quote": "short real quote from that moment" },
-    { "date": "approximate date from chat", "person": "first name", "description": "what happened specifically", "quote": "short real quote from that moment" },
-    { "date": "approximate date from chat", "person": "first name", "description": "what happened specifically", "quote": "short real quote from that moment" }
-  ],
-  "conflictPattern": "2 sentences — how arguments typically start, escalate, and resolve (or don't)",
-  "powerBalance": "2 sentences — who holds more power in this dynamic and how it shows up in the chat",
-  "powerHolder": "first name of person with more power, or 'Balanced'",
-  "verdict": "1 punchy sentence verdict on the overall health of this chat"
-}`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N ━━━. Do not connect events across windows. Every line shows the speaker: [timestamp] SpeakerName: body.\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
-  return callClaude(system, userContent);
+const CORE_ANALYSIS_VERSION = 2;
+const CORE_A_MAX_TOKENS = 2200;
+const CORE_B_MAX_TOKENS = 2200;
+
+function buildRelationshipContextBlock(relType) {
+  const relCtx = relContextStr(relType);
+  return relCtx
+    ? ` RELATIONSHIP CONTEXT: ${relCtx}. Frame all analysis, tone, and language accordingly. Do not label a partner dynamic as friendship or chosen family. Do not label a family dynamic as romantic.`
+    : "";
 }
 
-async function aiLoveLangAnalysis(messages, math, relationshipType) {
-  const chatText = buildSampleText(messages);
-  const names = math.names;
-  const relCtx = relContextStr(relationshipType);
-  const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert in relationship dynamics and love languages. Analyse how each person in this chat expresses affection or care — this could be romantic, a friendship, or family. Map their behaviour to the 5 love languages: Words of Affirmation, Acts of Service, Receiving Gifts, Quality Time, Physical Touch. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only assign a love language if you can cite at least 2-3 real examples from the chat. If evidence is thin, pick the closest match and note it is inferred. (3) For the mismatch field — if they actually speak the same language, say so honestly rather than inventing a gap. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. WINDOW FORMAT: The chat arrives as isolated windows separated by ━━━ headers — never connect events across windows. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — the actor in any act of care or affection is the sender of that line, never the recipient. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite.${relCtxBlock}`;
-  const fields = `{
-  "personA": {
-    "name": "${names[0]}",
-    "language": "one of: Words of Affirmation / Acts of Service / Receiving Gifts / Quality Time / Physical Touch",
-    "languageEmoji": "1 emoji that represents this love language",
-    "examples": "2-3 specific examples of how ${names[0]} expresses this in the chat — cite real messages or patterns",
-    "score": [1-10, how strongly this is expressed]
-  },
-  "personB": {
-    "name": "${names[1] || names[0]}",
-    "language": "one of: Words of Affirmation / Acts of Service / Receiving Gifts / Quality Time / Physical Touch",
-    "languageEmoji": "1 emoji that represents this love language",
-    "examples": "2-3 specific examples of how ${names[1] || names[0]} expresses this — cite real messages or patterns",
-    "score": [1-10, how strongly this is expressed]
-  },
-  "mismatch": "2 sentences — do they speak the same language? If not, what does the gap look like in practice with specific examples?",
-  "mostLovingMoment": "1 sentence — the most genuinely loving or warm moment in the chat, with specific detail (name who, what was said/done)",
-  "compatibilityScore": [1-10],
-  "compatibilityRead": "1 sentence — love language compatibility summary"
-}`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N ━━━. Do not connect events across windows. Every line shows the speaker: [timestamp] SpeakerName: body — the actor in any act of care is always the sender of that line.\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
-  return callClaude(system, userContent);
+function buildAnalystSystemPrompt(role, relationshipType, extraRules = "") {
+  return `You are WrapChat, ${role}. Be specific, grounded, and evidence-led. Reference real patterns, real phrases, and real moments from the chat instead of generic observations. Be conservative before singling out one person: if the evidence is mixed, close, or mostly based on tone, prefer balanced labels like "Tie", "Shared", "Balanced", or "None clearly identified" instead of over-assigning blame. Do not pile onto the loudest or most active person unless multiple distinct examples support it. Keep the tone honest but not cruel, mocking, or absolute. Avoid repetitive wording across fields: if two answers overlap, make them distinct in angle and concrete detail rather than repeating the same judgment. When negative and positive evidence coexist, acknowledge both. Return ONLY valid JSON with no markdown fences or explanation outside the JSON.${buildRelationshipContextBlock(relationshipType)}${extraRules ? ` ${extraRules}` : ""}`;
 }
 
-async function aiGrowthAnalysis(messages, math, relationshipType) {
-  // Early/late slices are contiguous by design — kept as flat format so Claude
-  // reads them as real conversation flow, not isolated excerpts
-  const names = math.names;
-  const earlyMsgs = messages.slice(0, Math.min(200, Math.floor(messages.length * 0.25)));
-  const lateMsgs  = messages.slice(Math.max(0, messages.length - Math.min(200, Math.floor(messages.length * 0.25))));
+function clampScore(value, fallback = 5) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.max(1, Math.min(10, Math.round(num)));
+}
+
+function strOr(value, fallback = "") {
+  return typeof value === "string" ? value.trim() : fallback;
+}
+
+function cleanStringArray(items, limit = 10) {
+  if (!Array.isArray(items)) return [];
+  return items.map(item => String(item || "").trim()).filter(Boolean).slice(0, limit);
+}
+
+function normalizeNamedScoreRows(items, limit = 10) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item, i) => {
+    if (!item || typeof item !== "object") return null;
+    return {
+      name: strOr(item.name, `Person ${i + 1}`),
+      score: clampScore(item.score, 5),
+      detail: strOr(item.detail),
+    };
+  }).filter(Boolean).slice(0, limit);
+}
+
+function normalizeApologySummary(item) {
+  const safe = item && typeof item === "object" ? item : {};
+  return {
+    name: strOr(safe.name, "None clearly identified"),
+    count: Math.max(0, Math.round(Number(safe.count) || 0)),
+    context: strOr(safe.context),
+  };
+}
+
+function normalizeMomentRows(items, limit = 10) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item, i) => {
+    if (!item || typeof item !== "object") return null;
+    return {
+      date: strOr(item.date, `Moment ${i + 1}`),
+      person: strOr(item.person),
+      description: strOr(item.description || item.title),
+      quote: strOr(item.quote || item.detail),
+    };
+  }).filter(Boolean).slice(0, limit);
+}
+
+function normalizePromiseMoment(item) {
+  const safe = item && typeof item === "object" ? item : {};
+  return {
+    person: strOr(safe.person, "None clearly identified"),
+    promise: strOr(safe.promise),
+    date: strOr(safe.date),
+    outcome: strOr(safe.outcome),
+  };
+}
+
+function normalizeCorePersonA(person, fallbackName = "") {
+  const safe = person && typeof person === "object" ? person : {};
+  const care = safe.careStyle && typeof safe.careStyle === "object" ? safe.careStyle : {};
+  const energy = safe.energy && typeof safe.energy === "object" ? safe.energy : {};
+  return {
+    name: strOr(safe.name, fallbackName || "Unknown"),
+    summaryRole: strOr(safe.summaryRole),
+    careStyle: {
+      language: strOr(care.language, "Mixed"),
+      languageEmoji: strOr(care.languageEmoji, "💝"),
+      examples: strOr(care.examples),
+      score: clampScore(care.score, 5),
+    },
+    energy: {
+      netScore: clampScore(energy.netScore, 5),
+      type: strOr(energy.type, "mixed"),
+      goodNews: strOr(energy.goodNews),
+      venting: strOr(energy.venting, "minimal venting"),
+      hypeQuote: strOr(energy.hypeQuote),
+    },
+  };
+}
+
+function normalizeCorePersonB(person, fallbackName = "") {
+  const safe = person && typeof person === "object" ? person : {};
+  const health = safe.health && typeof safe.health === "object" ? safe.health : {};
+  const accountability = safe.accountability && typeof safe.accountability === "object" ? safe.accountability : {};
+  return {
+    name: strOr(safe.name, fallbackName || "Unknown"),
+    health: {
+      score: clampScore(health.score, 5),
+      detail: strOr(health.detail),
+      apologyCount: Math.max(0, Math.round(Number(health.apologyCount) || 0)),
+      apologyContext: strOr(health.apologyContext),
+    },
+    accountability: {
+      total: Math.max(0, Math.round(Number(accountability.total) || 0)),
+      kept: Math.max(0, Math.round(Number(accountability.kept) || 0)),
+      broken: Math.max(0, Math.round(Number(accountability.broken) || 0)),
+      score: clampScore(accountability.score, 5),
+      detail: strOr(accountability.detail),
+    },
+  };
+}
+
+function normalizeCoreAnalysisA(raw, math, relationshipType) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const meta = source.meta && typeof source.meta === "object" ? source.meta : {};
+  const shared = source.shared && typeof source.shared === "object" ? source.shared : {};
+  const growth = shared.growth && typeof shared.growth === "object" ? shared.growth : {};
+  const inputPeople = Array.isArray(source.people) ? source.people : [];
+  const expectedPeople = Math.max(
+    inputPeople.length,
+    Math.min(math?.names?.length || 0, math?.isGroup ? Math.min(math?.names?.length || 0, 6) : 2)
+  );
+
+  const people = Array.from({ length: expectedPeople }, (_, i) =>
+    normalizeCorePersonA(inputPeople[i], math?.names?.[i] || `Person ${i + 1}`)
+  );
+
+  return {
+    schemaVersion: CORE_ANALYSIS_VERSION,
+    part: "a",
+    relationshipType: relationshipType ?? null,
+    meta: {
+      confidenceNote: strOr(meta.confidenceNote),
+      dominantTone: strOr(meta.dominantTone),
+    },
+    people,
+    shared: {
+      vibeOneLiner: strOr(shared.vibeOneLiner),
+      biggestTopic: strOr(shared.biggestTopic),
+      ghostContext: strOr(shared.ghostContext),
+      funniestPerson: strOr(shared.funniestPerson),
+      funniestReason: strOr(shared.funniestReason),
+      dramaStarter: strOr(shared.dramaStarter),
+      dramaContext: strOr(shared.dramaContext),
+      signaturePhrases: cleanStringArray(shared.signaturePhrases, 2),
+      relationshipStatus: strOr(shared.relationshipStatus),
+      relationshipStatusWhy: strOr(shared.relationshipStatusWhy),
+      statusEvidence: strOr(shared.statusEvidence),
+      toxicPerson: strOr(shared.toxicPerson),
+      toxicReason: strOr(shared.toxicReason),
+      toxicityReport: strOr(shared.toxicityReport),
+      redFlags: normalizeRedFlags(shared.redFlags),
+      evidenceTimeline: normalizeTimeline(shared.evidenceTimeline),
+      relationshipSummary: strOr(shared.relationshipSummary),
+      groupDynamic: strOr(shared.groupDynamic),
+      tensionMoment: strOr(shared.tensionMoment),
+      kindestPerson: strOr(shared.kindestPerson),
+      sweetMoment: strOr(shared.sweetMoment),
+      mostMissed: strOr(shared.mostMissed),
+      insideJoke: strOr(shared.insideJoke),
+      hypePersonReason: strOr(shared.hypePersonReason),
+      loveLanguageMismatch: strOr(shared.loveLanguageMismatch),
+      mostLovingMoment: strOr(shared.mostLovingMoment),
+      compatibilityScore: clampScore(shared.compatibilityScore, 5),
+      compatibilityRead: strOr(shared.compatibilityRead),
+      mostEnergising: strOr(shared.mostEnergising),
+      mostDraining: strOr(shared.mostDraining),
+      energyCompatibility: strOr(shared.energyCompatibility),
+      growth: {
+        thenDepth: strOr(growth.thenDepth),
+        nowDepth: strOr(growth.nowDepth),
+        depthChange: strOr(growth.depthChange),
+        whoChangedMore: strOr(growth.whoChangedMore),
+        whoChangedHow: strOr(growth.whoChangedHow),
+        topicsAppeared: strOr(growth.topicsAppeared),
+        topicsDisappeared: strOr(growth.topicsDisappeared),
+        trajectory: strOr(growth.trajectory),
+        trajectoryDetail: strOr(growth.trajectoryDetail),
+        arcSummary: strOr(growth.arcSummary),
+      },
+    },
+  };
+}
+
+function normalizeCoreAnalysisB(raw, math, relationshipType) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const meta = source.meta && typeof source.meta === "object" ? source.meta : {};
+  const shared = source.shared && typeof source.shared === "object" ? source.shared : {};
+  const toxicity = shared.toxicity && typeof shared.toxicity === "object" ? shared.toxicity : {};
+  const accountability = shared.accountability && typeof shared.accountability === "object" ? shared.accountability : {};
+  const inputPeople = Array.isArray(source.people) ? source.people : [];
+  const expectedPeople = Math.max(
+    inputPeople.length,
+    Math.min(math?.names?.length || 0, 2)
+  );
+
+  const people = Array.from({ length: expectedPeople }, (_, i) =>
+    normalizeCorePersonB(inputPeople[i], math?.names?.[i] || `Person ${i + 1}`)
+  );
+
+  return {
+    schemaVersion: CORE_ANALYSIS_VERSION,
+    part: "b",
+    relationshipType: relationshipType ?? null,
+    meta: {
+      confidenceNote: strOr(meta.confidenceNote),
+      dominantTone: strOr(meta.dominantTone),
+    },
+    people,
+    shared: {
+      toxicity: {
+        chatHealthScore: clampScore(toxicity.chatHealthScore, 5),
+        healthScores: normalizeNamedScoreRows(toxicity.healthScores),
+        apologiesLeader: normalizeApologySummary(toxicity.apologiesLeader),
+        apologiesOther: normalizeApologySummary(toxicity.apologiesOther),
+        redFlagMoments: normalizeMomentRows(toxicity.redFlagMoments, 5),
+        conflictPattern: strOr(toxicity.conflictPattern),
+        powerBalance: strOr(toxicity.powerBalance),
+        powerHolder: strOr(toxicity.powerHolder, "Balanced"),
+        verdict: strOr(toxicity.verdict),
+      },
+      accountability: {
+        notableBroken: normalizePromiseMoment(accountability.notableBroken),
+        notableKept: normalizePromiseMoment(accountability.notableKept),
+        overallVerdict: strOr(accountability.overallVerdict),
+      },
+    },
+  };
+}
+
+function attachReportMeta(report, relationshipType, coreAnalysis = null) {
+  return {
+    ...(report && typeof report === "object" ? report : {}),
+    relationshipType: relationshipType ?? null,
+    ...(coreAnalysis ? { coreAnalysis } : {}),
+  };
+}
+
+function pickCorePairA(core, math) {
+  const fallbackA = math?.names?.[0] || "Person A";
+  const fallbackB = math?.names?.[1] || fallbackA || "Person B";
+  const personA = normalizeCorePersonA(core?.people?.[0], fallbackA);
+  const personB = normalizeCorePersonA(core?.people?.[1] || core?.people?.[0], fallbackB);
+  return [personA, personB];
+}
+
+function pickCorePairB(core, math) {
+  const fallbackA = math?.names?.[0] || "Person A";
+  const fallbackB = math?.names?.[1] || fallbackA || "Person B";
+  const personA = normalizeCorePersonB(core?.people?.[0], fallbackA);
+  const personB = normalizeCorePersonB(core?.people?.[1] || core?.people?.[0], fallbackB);
+  return [personA, personB];
+}
+
+function deriveGeneralReportFromCore(core, math, relationshipType) {
+  const shared = core?.shared || {};
+  return attachReportMeta({
+    funniestPerson: shared.funniestPerson || math?.funniestPerson || "",
+    funniestReason: shared.funniestReason,
+    ghostContext: shared.ghostContext,
+    biggestTopic: shared.biggestTopic,
+    dramaStarter: shared.dramaStarter,
+    dramaContext: shared.dramaContext,
+    signaturePhrase: shared.signaturePhrases?.length ? shared.signaturePhrases : undefined,
+    relationshipStatus: shared.relationshipStatus,
+    relationshipStatusWhy: shared.relationshipStatusWhy,
+    statusEvidence: shared.statusEvidence,
+    toxicPerson: shared.toxicPerson,
+    toxicReason: shared.toxicReason,
+    evidenceTimeline: shared.evidenceTimeline,
+    redFlags: shared.redFlags,
+    toxicityReport: shared.toxicityReport,
+    relationshipSummary: shared.relationshipSummary,
+    tensionMoment: shared.tensionMoment,
+    kindestPerson: shared.kindestPerson,
+    sweetMoment: shared.sweetMoment,
+    vibeOneLiner: shared.vibeOneLiner,
+    groupDynamic: shared.groupDynamic,
+    mostMissed: shared.mostMissed,
+    insideJoke: shared.insideJoke,
+    hypePersonReason: shared.hypePersonReason,
+  }, relationshipType, core);
+}
+
+function deriveEnergyReportFromCore(core, math, relationshipType) {
+  const [personA, personB] = pickCorePairA(core, math);
+  const shared = core?.shared || {};
+  return attachReportMeta({
+    personA: {
+      name: personA.name,
+      netScore: personA.energy.netScore,
+      type: personA.energy.type,
+      goodNews: personA.energy.goodNews,
+      venting: personA.energy.venting,
+      hypeQuote: personA.energy.hypeQuote,
+    },
+    personB: {
+      name: personB.name,
+      netScore: personB.energy.netScore,
+      type: personB.energy.type,
+      goodNews: personB.energy.goodNews,
+      venting: personB.energy.venting,
+      hypeQuote: personB.energy.hypeQuote,
+    },
+    mostEnergising: shared.mostEnergising,
+    mostDraining: shared.mostDraining,
+    compatibility: shared.energyCompatibility,
+  }, relationshipType, core);
+}
+
+function deriveToxicityReportFromCore(core, math, relationshipType) {
+  const [personA, personB] = pickCorePairB(core, math);
+  const shared = core?.shared || {};
+  const toxicity = shared.toxicity || {};
+  const healthScores = toxicity.healthScores?.length
+    ? toxicity.healthScores
+    : [personA, personB].map(person => ({
+        name: person.name,
+        score: person.health.score,
+        detail: person.health.detail,
+      }));
+
+  const apologyLeader = toxicity.apologiesLeader?.name && toxicity.apologiesLeader.name !== "None clearly identified"
+    ? toxicity.apologiesLeader
+    : (personA.health.apologyCount >= personB.health.apologyCount
+        ? { name: personA.name, count: personA.health.apologyCount, context: personA.health.apologyContext }
+        : { name: personB.name, count: personB.health.apologyCount, context: personB.health.apologyContext });
+  const apologyOther = toxicity.apologiesOther?.name && toxicity.apologiesOther.name !== "None clearly identified"
+    ? toxicity.apologiesOther
+    : (apologyLeader.name === personA.name
+        ? { name: personB.name, count: personB.health.apologyCount, context: personB.health.apologyContext }
+        : { name: personA.name, count: personA.health.apologyCount, context: personA.health.apologyContext });
+
+  return attachReportMeta({
+    chatHealthScore: toxicity.chatHealthScore,
+    healthScores,
+    apologiesLeader: apologyLeader,
+    apologiesOther: apologyOther,
+    redFlagMoments: toxicity.redFlagMoments,
+    conflictPattern: toxicity.conflictPattern,
+    powerBalance: toxicity.powerBalance,
+    powerHolder: toxicity.powerHolder,
+    verdict: toxicity.verdict,
+  }, relationshipType, core);
+}
+
+function deriveLoveLangReportFromCore(core, math, relationshipType) {
+  const [personA, personB] = pickCorePairA(core, math);
+  const shared = core?.shared || {};
+  return attachReportMeta({
+    personA: {
+      name: personA.name,
+      language: personA.careStyle.language,
+      languageEmoji: personA.careStyle.languageEmoji,
+      examples: personA.careStyle.examples,
+      score: personA.careStyle.score,
+    },
+    personB: {
+      name: personB.name,
+      language: personB.careStyle.language,
+      languageEmoji: personB.careStyle.languageEmoji,
+      examples: personB.careStyle.examples,
+      score: personB.careStyle.score,
+    },
+    mismatch: shared.loveLanguageMismatch,
+    mostLovingMoment: shared.mostLovingMoment,
+    compatibilityScore: shared.compatibilityScore,
+    compatibilityRead: shared.compatibilityRead,
+  }, relationshipType, core);
+}
+
+function deriveGrowthReportFromCore(core, math, relationshipType) {
+  const growth = core?.shared?.growth || {};
+  return attachReportMeta({
+    thenDepth: growth.thenDepth,
+    nowDepth: growth.nowDepth,
+    depthChange: growth.depthChange,
+    whoChangedMore: growth.whoChangedMore,
+    whoChangedHow: growth.whoChangedHow,
+    topicsAppeared: growth.topicsAppeared,
+    topicsDisappeared: growth.topicsDisappeared,
+    trajectory: growth.trajectory,
+    trajectoryDetail: growth.trajectoryDetail,
+    arcSummary: growth.arcSummary,
+  }, relationshipType, core);
+}
+
+function deriveAccountaReportFromCore(core, math, relationshipType) {
+  const [personA, personB] = pickCorePairB(core, math);
+  const accountability = core?.shared?.accountability || {};
+  return attachReportMeta({
+    personA: {
+      name: personA.name,
+      total: personA.accountability.total,
+      kept: personA.accountability.kept,
+      broken: personA.accountability.broken,
+      score: personA.accountability.score,
+      detail: personA.accountability.detail,
+    },
+    personB: {
+      name: personB.name,
+      total: personB.accountability.total,
+      kept: personB.accountability.kept,
+      broken: personB.accountability.broken,
+      score: personB.accountability.score,
+      detail: personB.accountability.detail,
+    },
+    notableBroken: accountability.notableBroken,
+    notableKept: accountability.notableKept,
+    overallVerdict: accountability.overallVerdict,
+  }, relationshipType, core);
+}
+
+async function generateCoreAnalysisA(messages, math, relationshipType) {
+  const chatText = buildSampleText(messages);
+  const names = math.names || [];
+  const isGroup = math.isGroup;
+  const personCount = Math.min(names.length || 0, isGroup ? Math.min(names.length || 0, 6) : 2);
+  const earlyMsgs = messages.slice(0, Math.min(120, Math.max(40, Math.floor(messages.length * 0.18))));
+  const lateMsgs  = messages.slice(Math.max(0, messages.length - Math.min(120, Math.max(40, Math.floor(messages.length * 0.18)))));
   const earlyText = formatForAI(earlyMsgs);
   const lateText  = formatForAI(lateMsgs);
-  const chatText  = buildSampleText(messages);
-  const relCtx = relContextStr(relationshipType);
-  const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert relationship analyst specialising in how relationships evolve over time. Compare the early messages to the recent messages to detect growth, drift, or change. Be specific — mention actual topics, tone shifts, and patterns you observe. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only describe changes you can actually see in the two sets of messages. Do not invent growth or drift — if the tone is similar, say "about the same" honestly. (3) For topicsAppeared and topicsDisappeared — only list topics with clear evidence in both periods, not single mentions. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that exact line. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite.${relCtxBlock}`;
   const fields = `{
-  "thenDepth": "2 sentences describing the conversation style and topics in the EARLY messages",
-  "nowDepth": "2 sentences describing the conversation style and topics in the RECENT messages",
-  "depthChange": "deeper / shallower / about the same",
-  "whoChangedMore": "first name of who changed more over the period, or 'Both equally'",
-  "whoChangedHow": "1 sentence — specifically how they changed, with evidence from the chat",
-  "topicsAppeared": "topics or themes that appear in recent messages but weren't present early on",
-  "topicsDisappeared": "topics or themes from the early chat that seem to have faded away",
-  "trajectory": "closer / drifting / stable",
-  "trajectoryDetail": "1 sentence — the overall arc based on chat evidence",
-  "arcSummary": "1 punchy sentence capturing the full growth arc of this relationship"
+  "schemaVersion": ${CORE_ANALYSIS_VERSION},
+  "meta": {
+    "confidenceNote": "1 sentence — how confident the read is, noting if evidence is mixed or limited",
+    "dominantTone": "short phrase naming the dominant overall tone"
+  },
+  "people": [
+    {
+      "name": "first person's first name",
+      "summaryRole": "1 short phrase describing their role in the dynamic",
+      "careStyle": {
+        "language": "one of: Words of Affirmation / Acts of Service / Receiving Gifts / Quality Time / Physical Touch / Mixed",
+        "languageEmoji": "1 emoji representing that care style",
+        "examples": "1-2 sentences with concrete examples of how they show care or affection",
+        "score": [1-10]
+      },
+      "energy": {
+        "netScore": [1-10],
+        "type": "net positive / mixed / net draining",
+        "goodNews": "1 sentence — how they bring positive energy, with a real example",
+        "venting": "1 sentence — how or how much they vent/drain, or 'minimal venting' if low",
+        "hypeQuote": "a short real quote or near-verbatim example of them bringing energy"
+      }
+    }
+  ],
+  "shared": {
+    "vibeOneLiner": "one punchy sentence capturing the whole chat's energy",
+    "biggestTopic": "1 sentence — the biggest recurring topic, very specific not generic",
+    "ghostContext": "1 sentence — explain the ghost pattern with real context",
+    "funniestPerson": "ONLY the first name of the funniest person, or 'None clearly identified'",
+    "funniestReason": "1 short concrete example of the kind of line or moment they drop",
+    "dramaStarter": "ONLY a first name, 'Shared', or 'None clearly identified'",
+    "dramaContext": "1 sentence — how tension usually gets started, with real evidence",
+    "signaturePhrases": ["real phrase or expression person 1 uses a lot", "real phrase or expression person 2 uses a lot"],
+    "relationshipStatus": "duo only: short relationship-status label, or 'None clearly identified'",
+    "relationshipStatusWhy": "1 sentence — why that status fits, using objective evidence",
+    "statusEvidence": "1 short line with a concrete dated example if possible",
+    "toxicPerson": "ONLY a first name, 'Tie', or 'None clearly identified'",
+    "toxicReason": "1 sentence — factual and conservative explanation of that read",
+    "toxicityReport": "2 sentences — balanced, observable summary of tension or health",
+    "redFlags": [
+      { "title": "2-4 word factual pattern label", "detail": "1 sentence with objective evidence", "evidence": "dated example or short quote" },
+      { "title": "2-4 word factual pattern label", "detail": "1 sentence with objective evidence", "evidence": "dated example or short quote" },
+      { "title": "2-4 word factual pattern label", "detail": "1 sentence with objective evidence", "evidence": "dated example or short quote" }
+    ],
+    "evidenceTimeline": [
+      { "date": "exact or approximate date", "title": "short factual headline", "detail": "1 short factual detail with quote or clear paraphrase" },
+      { "date": "exact or approximate date", "title": "short factual headline", "detail": "1 short factual detail with quote or clear paraphrase" },
+      { "date": "exact or approximate date", "title": "short factual headline", "detail": "1 short factual detail with quote or clear paraphrase" }
+    ],
+    "relationshipSummary": "2 sentences — honest read of the duo dynamic",
+    "groupDynamic": "2 sentences — honest read of the group dynamic",
+    "tensionMoment": "1 sentence — the most tense moment or recurring tension pattern",
+    "kindestPerson": "ONLY a first name — the warmest/caring person, or 'None clearly identified'",
+    "sweetMoment": "1 sentence — a specific, concrete sweet moment",
+    "mostMissed": "group only: ONLY a first name, or 'None clearly identified'",
+    "insideJoke": "group only: 1 sentence — recurring joke, meme or reference",
+    "hypePersonReason": "group only: 1 sentence — why this person is the group's hype",
+    "loveLanguageMismatch": "2 sentences — how their care styles align or mismatch in practice",
+    "mostLovingMoment": "1 sentence — the most genuinely warm/loving moment with specific detail",
+    "compatibilityScore": [1-10],
+    "compatibilityRead": "1 sentence — love-language compatibility summary",
+    "mostEnergising": "1 sentence — the most energising moment in the chat",
+    "mostDraining": "1 sentence — the most draining moment or pattern, with specific detail",
+    "energyCompatibility": "1 sentence — how their energy styles work together (or don't)",
+    "growth": {
+      "thenDepth": "2 sentences describing the conversation style and topics in the EARLY snapshot",
+      "nowDepth": "2 sentences describing the conversation style and topics in the RECENT snapshot",
+      "depthChange": "deeper / shallower / about the same",
+      "whoChangedMore": "first name of who changed more, or 'Both equally'",
+      "whoChangedHow": "1 sentence — specifically how they changed, with evidence",
+      "topicsAppeared": "topics or themes that appear in recent messages but were not present early on",
+      "topicsDisappeared": "topics or themes from the early messages that seem to have faded away",
+      "trajectory": "closer / drifting / stable",
+      "trajectoryDetail": "1 sentence — the overall arc based on evidence",
+      "arcSummary": "1 punchy sentence capturing the full growth arc"
+    }
+  }
 }`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). Every message line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that line.\n\nEARLY MESSAGES (first ~3 months — contiguous):\n${earlyText}\n\nRECENT MESSAGES (last ~3 months — contiguous):\n${lateText}\n\nEVENT WINDOWS across full history (isolated excerpts — do not connect across ━━━ separators):\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
-  return callClaude(system, userContent);
+
+  const system = buildAnalystSystemPrompt(
+    "a sharp, observant chat analyst building a canonical core-analysis object that later reports will reuse",
+    relationshipType,
+    `CORE-A SCOPE: relationship dynamic, communication patterns, funny moments, kindness moments, energy, love language, and growth trajectory. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. You will also receive EARLY and RECENT contiguous snapshots; use those specifically for growth/change fields, and use the event windows for specific moments and recurring patterns. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: In windows labelled "funny moment", the sequence is [trigger line] → [laugh reaction from a different person]. The funny person is the sender of the trigger line — the one whose message caused the other person to laugh. Do not attribute the humour to the person who laughed. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and energy/love-language reads, the actor is the sender of that exact line. For all "name" fields return ONLY the person's first name, with no explanation. Each timestamp already includes the day of week — read it directly and never calculate it yourself. Only report findings you can directly cite from the chat — if evidence is weak, use "None clearly identified". When quoting messages in any language, quote them as-is — do not translate them. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`
+  );
+
+  const userContent = `Here is a ${isGroup ? "group" : "two-person"} WhatsApp chat between ${names.slice(0, 6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages. The content below is divided into ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N · date · type ━━━. Windows are non-contiguous excerpts; do not infer connections between separate windows. Every line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that specific line.
+
+IMPORTANT CONTEXT: ${isGroup ? `The least active member (the ghost) is ${math.ghost}. The conversation starter is ${math.convStarter}.` : `By reply time, ${math.ghostName} is slower to respond. The conversation starter is ${math.convStarter}. Local analysis found that ${math.funniestPerson} caused the most laugh reactions from the other person (${math.laughCausedBy?.[math.funniestPerson] || 0} times) — confirm or correct this based on the chat.`}
+
+EARLY SNAPSHOT (contiguous excerpt from the start of the chat):
+${earlyText}
+
+RECENT SNAPSHOT (contiguous excerpt from the end of the chat):
+${lateText}
+
+${chatText}
+
+Return exactly this JSON structure:
+${fields}`;
+
+  const raw = await callClaude(system, userContent, CORE_A_MAX_TOKENS);
+  return normalizeCoreAnalysisA(raw, math, relationshipType);
 }
 
-async function aiAccountaAnalysis(messages, math, relationshipType) {
+async function generateCoreAnalysisB(messages, math, relationshipType) {
   const chatText = buildSampleText(messages);
-  const names = math.names;
-  const relCtx = relContextStr(relationshipType);
-  const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an analyst who tracks promises, commitments, and follow-throughs in conversations. Find all instances of someone saying they'll do something ("I'll call you", "let's meet", "I'll send that", "I promise", "I'll be there", etc.) and determine whether they followed through based on later messages. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) DEFINITION — a promise is BROKEN only if there is clear evidence it was never fulfilled, or the person explicitly backed out. A promise fulfilled late (even a few days) is still KEPT — do not mark it as broken. When unsure, mark it as kept. (3) Do not count casual expressions like "we should hang out sometime" as promises — only count specific, time-bound or action-bound commitments. (4) If you cannot find clear evidence of a broken or kept promise, write "None clearly identified" for that field. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. WINDOW FORMAT: The chat arrives as isolated windows separated by ━━━ headers — a promise and its follow-through may appear in different windows; only mark it as kept/broken if the evidence is explicit. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — the person making or breaking a promise is always the sender on that line. CRITICAL: Never combine two separate events into one story.${relCtxBlock}`;
+  const names = math.names || [];
+  const personCount = Math.min(names.length || 0, 2);
   const fields = `{
-  "personA": {
-    "name": "${names[0]}",
-    "total": [estimated number of promises/commitments made],
-    "kept": [estimated number kept],
-    "broken": [estimated number broken or dropped],
-    "score": [accountability score 1-10],
-    "detail": "1 sentence — pattern of how they handle commitments"
+  "schemaVersion": ${CORE_ANALYSIS_VERSION},
+  "meta": {
+    "confidenceNote": "1 sentence — how confident the risk/accountability read is",
+    "dominantTone": "short phrase naming the overall tension level"
   },
-  "personB": {
-    "name": "${names[1] || names[0]}",
-    "total": [estimated number of promises/commitments made],
-    "kept": [estimated number kept],
-    "broken": [estimated number broken or dropped],
-    "score": [accountability score 1-10],
-    "detail": "1 sentence — pattern of how they handle commitments"
-  },
-  "notableBroken": {
-    "person": "first name",
-    "promise": "what they said they'd do — quote or close paraphrase",
-    "date": "approximate date",
-    "outcome": "what actually happened (or didn't)"
-  },
-  "notableKept": {
-    "person": "first name",
-    "promise": "what they committed to — quote or close paraphrase",
-    "date": "approximate date",
-    "outcome": "how they followed through"
-  },
-  "overallVerdict": "1 sentence verdict on accountability in this chat overall"
+  "people": [
+    {
+      "name": "first person's first name",
+      "health": {
+        "score": [1-10, this person's contribution to chat health],
+        "detail": "1 sentence — specific behaviours driving their health score",
+        "apologyCount": [estimated apology count in the sample],
+        "apologyContext": "1 sentence — how and when they tend to apologise"
+      },
+      "accountability": {
+        "total": [estimated number of real commitments/promises made],
+        "kept": [estimated number kept],
+        "broken": [estimated number broken or dropped],
+        "score": [1-10],
+        "detail": "1 sentence — pattern of how they handle commitments"
+      }
+    }
+  ],
+  "shared": {
+    "toxicity": {
+      "chatHealthScore": [1-10, overall chat health],
+      "healthScores": [
+        { "name": "first name", "score": [1-10], "detail": "1 sentence — behaviours driving their score" },
+        { "name": "first name", "score": [1-10], "detail": "1 sentence — behaviours driving their score" }
+      ],
+      "apologiesLeader": { "name": "first name or None clearly identified", "count": [estimated count], "context": "1 sentence — context and pattern" },
+      "apologiesOther": { "name": "first name or None clearly identified", "count": [estimated count], "context": "1 sentence — context and pattern" },
+      "redFlagMoments": [
+        { "date": "approximate date", "person": "first name", "description": "what happened specifically", "quote": "short real quote from that moment" },
+        { "date": "approximate date", "person": "first name", "description": "what happened specifically", "quote": "short real quote from that moment" },
+        { "date": "approximate date", "person": "first name", "description": "what happened specifically", "quote": "short real quote from that moment" }
+      ],
+      "conflictPattern": "2 sentences — how arguments usually start, escalate, and resolve or fail to resolve",
+      "powerBalance": "2 sentences — who holds more power in this dynamic and how it shows up",
+      "powerHolder": "first name of who holds more power, or 'Balanced'",
+      "verdict": "1 punchy sentence verdict on the overall health of this chat"
+    },
+    "accountability": {
+      "notableBroken": {
+        "person": "first name or None clearly identified",
+        "promise": "what they said they'd do — quote or close paraphrase",
+        "date": "approximate date",
+        "outcome": "what actually happened, or didn't"
+      },
+      "notableKept": {
+        "person": "first name or None clearly identified",
+        "promise": "what they committed to — quote or close paraphrase",
+        "date": "approximate date",
+        "outcome": "how they followed through"
+      },
+      "overallVerdict": "1 sentence verdict on accountability in this chat overall"
+    }
+  }
 }`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N ━━━. Do not connect events across windows. Every line shows the speaker: [timestamp] SpeakerName: body — the person making or breaking a promise is always the sender on that line.\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
-  return callClaude(system, userContent);
+
+  const system = buildAnalystSystemPrompt(
+    "a careful risk, conflict, and accountability analyst building the canonical core-b object",
+    relationshipType,
+    `CORE-B SCOPE: toxicity, health scores, apology patterns, conflict patterns, power balance, red flag moments, and accountability. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — never connect separate windows unless the messages explicitly link them. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — all behaviour belongs only to the sender on that exact line. Be conservative: one or two examples do not prove a stable pattern. If the balance is mixed, prefer "Balanced", "Tie", or "None clearly identified" over forcing one villain. For accountability: a promise is BROKEN only if there is clear evidence it was never fulfilled or the person explicitly backed out. A promise fulfilled late is still KEPT. Do not count vague ideas like "we should hang out sometime" as promises. Never combine two separate events into one story. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`
+  );
+
+  const userContent = `Here is a WhatsApp chat between ${names.slice(0, 6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history. Do not connect events across windows unless the messages explicitly link them. Every line shows the speaker: [timestamp] SpeakerName: body.
+
+${chatText}
+
+Return exactly this JSON structure:
+${fields}`;
+
+  const raw = await callClaude(system, userContent, CORE_B_MAX_TOKENS);
+  return normalizeCoreAnalysisB(raw, math, relationshipType);
 }
 
-async function aiEnergyAnalysis(messages, math, relationshipType) {
-  const chatText = buildSampleText(messages);
-  const names = math.names;
-  const relCtx = relContextStr(relationshipType);
-  const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an analyst of conversational energy — who brings positivity, enthusiasm, and good vibes vs who vents, complains, or drains the conversation. Look at who shares good news, who hypes the other person up, who tends to vent or be negative, and the overall energy balance. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only report what you can directly cite from the chat — if someone rarely vents, say so honestly rather than inventing draining patterns. (3) A single vent session does not make someone "net draining" — look at the overall pattern across the full sample. (4) For hypeQuote — use a real verbatim or near-verbatim quote from the chat, not a paraphrase. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. WINDOW FORMAT: The chat arrives as isolated windows separated by ━━━ headers — never connect events across windows. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — the person bringing or draining energy is always the sender on that line. CRITICAL: Never combine two separate events into one story.${relCtxBlock}`;
-  const fields = `{
-  "personA": {
-    "name": "${names[0]}",
-    "netScore": [energy score 1-10, where 10 = most energising],
-    "type": "net positive / mixed / net draining",
-    "goodNews": "1 sentence — how they bring positive energy or good news, with a real example from the chat",
-    "venting": "1 sentence — how or how much they vent/drain energy, or 'minimal venting' if low",
-    "hypeQuote": "a real short quote or example of them being positive or hyping the other person"
-  },
-  "personB": {
-    "name": "${names[1] || names[0]}",
-    "netScore": [energy score 1-10],
-    "type": "net positive / mixed / net draining",
-    "goodNews": "1 sentence — how they bring positive energy, with a real example",
-    "venting": "1 sentence — how or how much they vent/drain",
-    "hypeQuote": "a real short quote or example of them being positive or energising"
-  },
-  "mostEnergising": "1 sentence — the single most energising moment in the chat, with specific detail (who, what was said)",
-  "mostDraining": "1 sentence — the single most draining moment or pattern, with specific detail",
-  "compatibility": "1 sentence — how their energy styles work together (or don't)"
-}`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N ━━━. Do not connect events across windows. Every line shows the speaker: [timestamp] SpeakerName: body — the person bringing or draining energy is always the sender on that line.\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
-  return callClaude(system, userContent);
+async function aiAnalysis(messages, math, relationshipType, coreAnalysis = null) {
+  try {
+    const core = coreAnalysis || await generateCoreAnalysisA(messages, math, relationshipType);
+    return deriveGeneralReportFromCore(core, math, relationshipType);
+  } catch (e) {
+    console.error("AI failed:", e);
+    return attachReportMeta({}, relationshipType);
+  }
 }
+
+async function aiToxicityAnalysis(messages, math, relationshipType, coreAnalysis = null) {
+  try {
+    const core = coreAnalysis || await generateCoreAnalysisB(messages, math, relationshipType);
+    return deriveToxicityReportFromCore(core, math, relationshipType);
+  } catch (e) {
+    console.error("AI toxicity failed:", e);
+    return attachReportMeta({}, relationshipType);
+  }
+}
+
+async function aiLoveLangAnalysis(messages, math, relationshipType, coreAnalysis = null) {
+  try {
+    const core = coreAnalysis || await generateCoreAnalysisA(messages, math, relationshipType);
+    return deriveLoveLangReportFromCore(core, math, relationshipType);
+  } catch (e) {
+    console.error("AI love language failed:", e);
+    return attachReportMeta({}, relationshipType);
+  }
+}
+
+async function aiGrowthAnalysis(messages, math, relationshipType, coreAnalysis = null) {
+  try {
+    const core = coreAnalysis || await generateCoreAnalysisA(messages, math, relationshipType);
+    return deriveGrowthReportFromCore(core, math, relationshipType);
+  } catch (e) {
+    console.error("AI growth failed:", e);
+    return attachReportMeta({}, relationshipType);
+  }
+}
+
+async function aiAccountaAnalysis(messages, math, relationshipType, coreAnalysis = null) {
+  try {
+    const core = coreAnalysis || await generateCoreAnalysisB(messages, math, relationshipType);
+    return deriveAccountaReportFromCore(core, math, relationshipType);
+  } catch (e) {
+    console.error("AI accountability failed:", e);
+    return attachReportMeta({}, relationshipType);
+  }
+}
+
+async function aiEnergyAnalysis(messages, math, relationshipType, coreAnalysis = null) {
+  try {
+    const core = coreAnalysis || await generateCoreAnalysisA(messages, math, relationshipType);
+    return deriveEnergyReportFromCore(core, math, relationshipType);
+  } catch (e) {
+    console.error("AI energy failed:", e);
+    return attachReportMeta({}, relationshipType);
+  }
+}
+
+function getCoreAnalysisCacheKey(math, relationshipType) {
+  return [
+    math?.isGroup ? "group" : "duo",
+    relationshipType || "none",
+    math?.totalMessages || 0,
+    ...(math?.names || []),
+  ].join("::");
+}
+
+const REPORT_PIPELINES = {
+  general:  { strategy: "core", cache: "a", derive: deriveGeneralReportFromCore },
+  toxicity: { strategy: "core", cache: "b", derive: deriveToxicityReportFromCore },
+  lovelang: { strategy: "core", cache: "a", derive: deriveLoveLangReportFromCore },
+  growth:   { strategy: "core", cache: "a", derive: deriveGrowthReportFromCore },
+  accounta: { strategy: "core", cache: "b", derive: deriveAccountaReportFromCore },
+  energy:   { strategy: "core", cache: "a", derive: deriveEnergyReportFromCore },
+};
 
 // ─────────────────────────────────────────────────────────────────
 // UI PRIMITIVES  — bold rounded-card aesthetic
@@ -1340,6 +1794,45 @@ const REPORT_TYPES = [
   { id:"growth",   label:"Growth Report",          desc:"First 3 months vs last 3 months — are you growing together or drifting apart?",             palette:"growth"   },
   { id:"accounta", label:"Accountability Report",  desc:"Promises made in the chat and whether they were followed through. Receipts for both.",       palette:"accounta" },
   { id:"energy",   label:"Energy Report",          desc:"Who brings good energy vs drains it — net energy score per person.",                         palette:"energy"   },
+];
+
+const LEGAL_VERSION = "1.0";
+const TERMS_OF_SERVICE_URL = "#";
+const PRIVACY_POLICY_URL = "#";
+const ONBOARDING_SCREENS = [
+  {
+    id: "intro",
+    eyebrow: "Welcome",
+    title: "What WrapChat is",
+    body: "WrapChat turns your exported WhatsApp chats into a playful, structured read of the patterns, moods, and dynamics inside them.",
+    bullets: [
+      "A wrapped-style summary built from your messages",
+      "Different report types for vibe, growth, energy, and more",
+      "Designed for mobile-first, quick-to-scan results",
+    ],
+  },
+  {
+    id: "how",
+    eyebrow: "How it works",
+    title: "How WrapChat works",
+    body: "You upload a WhatsApp text export, WrapChat analyses the chat structure and selected excerpts, then builds your report screens from that analysis.",
+    bullets: [
+      "Upload a WhatsApp chat export as a .txt file",
+      "WrapChat detects duo vs group chats automatically",
+      "AI reads selected parts of the conversation to generate the report",
+    ],
+  },
+  {
+    id: "consent",
+    eyebrow: "Privacy & Terms",
+    title: "Privacy + consent",
+    body: "Before continuing, review the current Terms of Service and Privacy Policy, then explicitly confirm you accept them.",
+    bullets: [
+      "Required before you can upload a chat",
+      "Stored as a versioned acceptance on your account",
+      "Future policy version changes can require re-acceptance",
+    ],
+  },
 ];
 
 const SLIDE_MS   = 480;
@@ -2730,7 +3223,9 @@ function Finale({ s, ai, aiLoading, restart, back, prog, total, mode }) {
 // ─────────────────────────────────────────────────────────────────
 function relContextStr(relType) {
   const map = {
-    partner:   "This is a chat between the user and their romantic partner.",
+    partner:   "committed romantic partner or spouse",
+    dating:    "early stage or casual romantic relationship",
+    ex:        "former romantic partner — the relationship has ended",
     family:    "This is a chat between the user and a family member (parent, sibling, or relative).",
     friend:    "This is a chat between the user and a close friend.",
     colleague: "This is a chat between the user and a work colleague.",
@@ -2748,29 +3243,66 @@ function relReadLabel(relType) {
   }[relType] || "Relationship read";
 }
 
+function hasAcceptedCurrentTerms(user) {
+  const meta = user?.user_metadata || {};
+  return meta.terms_accepted === true && meta.terms_version === LEGAL_VERSION;
+}
+
+function postAuthPhaseForUser(user) {
+  return hasAcceptedCurrentTerms(user) ? "upload" : "onboarding";
+}
+
 // ─────────────────────────────────────────────────────────────────
 // RELATIONSHIP SELECT SCREEN
 // ─────────────────────────────────────────────────────────────────
 function RelationshipSelect({ onSelect, onBack }) {
+  const romanticOptions = [
+    { id:"partner", label:"Partner", emoji:"💍", desc:"Committed" },
+    { id:"dating",  label:"Dating",  emoji:"💕", desc:"Early stages" },
+    { id:"ex",      label:"Ex",      emoji:"💔", desc:"Former" },
+  ];
   const options = [
-    { id:"partner",   label:"Partner",   emoji:"💑",  desc:"Romantic partner or spouse" },
     { id:"family",    label:"Family",    emoji:"👨‍👩‍👧", desc:"Parent, sibling or relative" },
     { id:"friend",    label:"Friend",    emoji:"👯",  desc:"Close friend or bestie" },
     { id:"colleague", label:"Colleague", emoji:"💼",  desc:"Coworker or professional contact" },
     { id:"other",     label:"Other",     emoji:"👤",  desc:"Someone you know" },
   ];
+  const optionButtonStyle = {
+    background:"rgba(255,255,255,0.08)",
+    border:"1px solid rgba(255,255,255,0.14)",
+    borderRadius:20,
+    color:"#fff",
+    cursor:"pointer",
+    transition:"all 0.15s",
+    width:"100%",
+    minHeight:80,
+  };
   return (
     <Shell sec="upload" prog={0} total={1}>
       <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.15, textAlign:"center", width:"100%" }}>Who is this chat with?</div>
-      <Sub mt={4}>This helps the AI frame the analysis correctly.</Sub>
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, marginTop:6 }}>
+        <div style={{ display:"flex", gap:10, width:"100%" }}>
+          {romanticOptions.map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onSelect(opt.id)}
+              className="wc-btn"
+              style={{ ...optionButtonStyle, flex:1, padding:"12px 10px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center" }}
+            >
+              <div style={{ fontSize:28, lineHeight:1, marginBottom:8 }}>{opt.emoji}</div>
+              <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>{opt.label}</div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:4 }}>{opt.desc}</div>
+            </button>
+          ))}
+        </div>
         {options.map(opt => (
           <button
             key={opt.id}
             type="button"
             onClick={() => onSelect(opt.id)}
             className="wc-btn"
-            style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:20, padding:"16px 18px", display:"flex", alignItems:"center", gap:14, color:"#fff", cursor:"pointer", width:"100%", transition:"all 0.15s", textAlign:"left" }}
+            style={{ ...optionButtonStyle, padding:"16px 18px", display:"flex", alignItems:"center", gap:14, textAlign:"left" }}
           >
             <div style={{ fontSize:28, flexShrink:0 }}>{opt.emoji}</div>
             <div>
@@ -2880,6 +3412,185 @@ function Auth() {
   );
 }
 
+function OnboardingFlow({ step, next, back, onAccepted, onLogout }) {
+  const [checked, setChecked] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const screen = ONBOARDING_SCREENS[step] || ONBOARDING_SCREENS[0];
+  const isConsent = screen.id === "consent";
+
+  const acceptTerms = async () => {
+    if (!checked || busy) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          terms_accepted: true,
+          terms_version: LEGAL_VERSION,
+          terms_accepted_at: new Date().toISOString(),
+        },
+      });
+      if (error) {
+        setErr(error.message || "Could not save your acceptance. Please try again.");
+        setBusy(false);
+        return;
+      }
+      onAccepted?.();
+    } catch {
+      setErr("Could not save your acceptance. Please try again.");
+      setBusy(false);
+    }
+  };
+
+  const linkStyle = {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    textDecoration: "none",
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    borderRadius: 20,
+    padding: "16px 18px",
+    color: "#fff",
+    transition: "all 0.15s",
+  };
+
+  return (
+    <Shell sec="upload" prog={0} total={1}>
+      <div style={{ fontSize:40, fontWeight:800, color:"#fff", letterSpacing:-2.5, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
+      <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(255,255,255,0.4)", textAlign:"center", width:"100%" }}>
+        {screen.eyebrow}
+      </div>
+      <div style={{ fontSize:24, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.15, textAlign:"center", width:"100%" }}>
+        {screen.title}
+      </div>
+      <div style={{ fontSize:13, color:"rgba(255,255,255,0.55)", textAlign:"center", lineHeight:1.7, width:"100%" }}>
+        {screen.body}
+      </div>
+
+      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10 }}>
+        {screen.bullets.map((item, i) => (
+          <div key={i} style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:20, padding:"15px 18px", color:"#fff", lineHeight:1.6 }}>
+            <div style={{ fontSize:14, fontWeight:700 }}>{item}</div>
+          </div>
+        ))}
+      </div>
+
+      {isConsent && (
+        <>
+          <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10 }}>
+            <a href={TERMS_OF_SERVICE_URL} target="_blank" rel="noreferrer" className="wc-btn" style={linkStyle}>
+              <div>
+                <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>Terms of Service</div>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:2 }}>Version {LEGAL_VERSION}</div>
+              </div>
+              <div style={{ fontSize:18, color:"rgba(255,255,255,0.55)" }}>↗</div>
+            </a>
+
+            <a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer" className="wc-btn" style={linkStyle}>
+              <div>
+                <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>Privacy Policy</div>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:2 }}>Version {LEGAL_VERSION}</div>
+              </div>
+              <div style={{ fontSize:18, color:"rgba(255,255,255,0.55)" }}>↗</div>
+            </a>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setChecked(v => !v)}
+            className="wc-btn"
+            style={{
+              width: "100%",
+              background: checked ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.22)",
+              border: `1px solid ${checked ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"}`,
+              borderRadius: 20,
+              padding: "16px 18px",
+              color: "#fff",
+              textAlign: "left",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12,
+              transition: "all 0.15s",
+              cursor: "pointer",
+            }}
+          >
+            <div style={{
+              width: 22,
+              height: 22,
+              borderRadius: 7,
+              border: "1.5px solid rgba(255,255,255,0.3)",
+              background: checked ? "rgba(255,255,255,0.16)" : "transparent",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              marginTop: 1,
+              fontSize: 13,
+              fontWeight: 800,
+            }}>
+              {checked ? "✓" : ""}
+            </div>
+            <div style={{ lineHeight: 1.6 }}>
+              <div style={{ fontSize:14, fontWeight:700 }}>I have read and accept the Terms of Service and Privacy Policy.</div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", marginTop:2 }}>
+                Required before you can continue to chat upload.
+              </div>
+            </div>
+          </button>
+
+          {err && (
+            <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center", lineHeight:1.5 }}>
+              {err}
+            </div>
+          )}
+        </>
+      )}
+
+      <div style={{ display:"flex", gap:10, marginTop:4, justifyContent:"center", width:"100%" }}>
+        {step > 0 && <Btn onClick={back}>← Back</Btn>}
+        {!isConsent && <Btn onClick={next}>Next</Btn>}
+      </div>
+
+      {isConsent && (
+        <button
+          type="button"
+          onClick={acceptTerms}
+          disabled={!checked || busy}
+          className="wc-btn"
+          style={{
+            width: "100%",
+            padding: "14px 0",
+            borderRadius: 50,
+            border: "none",
+            background: PAL.upload.inner,
+            color: "#fff",
+            fontSize: 16,
+            cursor: !checked || busy ? "default" : "pointer",
+            fontWeight: 700,
+            transition: "all 0.15s",
+            letterSpacing: 0.2,
+            opacity: !checked || busy ? 0.55 : 1,
+          }}
+        >
+          {busy ? "Saving…" : "Continue"}
+        </button>
+      )}
+
+      <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
+        {onLogout && (
+          <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
+            Log out
+          </button>
+        )}
+      </div>
+    </Shell>
+  );
+}
+
 function TooShort({ onBack }) {
   return (
     <Shell sec="upload" prog={0} total={1}>
@@ -2936,10 +3647,7 @@ function Upload({ onParsed, onLogout, onHistory }) {
         onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.35)"}
         onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0.25)"}
       >
-        <div style={{ fontSize:17, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>{busy ? "Reading your chat…" : "Upload WhatsApp export"}</div>
-        <div style={{ fontSize:13, color:"rgba(255,255,255,0.4)", marginTop:10, lineHeight:1.9 }}>
-          WhatsApp → open a chat → menu → More<br/>→ Export Chat → Without Media<br/>Drop or tap to upload the .txt file
-        </div>
+        <div style={{ fontSize:17, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>{busy ? "Reading your chat…" : "Upload your chat"}</div>
         <input ref={fileRef} type="file" accept=".txt" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
       </div>
       {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
@@ -3151,6 +3859,10 @@ export default function App() {
   const [messages,         setMessages]         = useState(null);
   const [math,             setMath]             = useState(null);
   const [ai,               setAi]               = useState(null);
+  const [coreAnalysisA,    setCoreAnalysisA]    = useState(null);
+  const [coreAnalysisAKey, setCoreAnalysisAKey] = useState("");
+  const [coreAnalysisB,    setCoreAnalysisB]    = useState(null);
+  const [coreAnalysisBKey, setCoreAnalysisBKey] = useState("");
   const [aiLoading,        setAiLoading]        = useState(false);
   const [reportType,       setReportType]       = useState(null);
   const [relationshipType, setRelationshipType] = useState(null);
@@ -3188,6 +3900,13 @@ export default function App() {
       if (!data) return;
 
       setAi(data.result_data || {});
+      if (data.result_data?.coreAnalysis?.part === "a") {
+        setCoreAnalysisA(data.result_data.coreAnalysis);
+        setCoreAnalysisAKey(getCoreAnalysisCacheKey(data.math_data || null, data.result_data?.relationshipType ?? null));
+      } else if (data.result_data?.coreAnalysis?.part === "b") {
+        setCoreAnalysisB(data.result_data.coreAnalysis);
+        setCoreAnalysisBKey(getCoreAnalysisCacheKey(data.math_data || null, data.result_data?.relationshipType ?? null));
+      }
       setMath(data.math_data || null);
       setReportType(data.report_type || null);
       setRelationshipType(data.result_data?.relationshipType ?? null);
@@ -3207,15 +3926,21 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setPhase("upload");
+        setStep(0);
+        setDir("fwd");
+        setPhase(postAuthPhaseForUser(session.user));
         setSid(s => s + 1);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setPhase("upload");
+        setStep(0);
+        setDir("fwd");
+        setPhase(postAuthPhaseForUser(session.user));
         setSid(s => s + 1);
       } else {
+        setStep(0);
+        setDir("fwd");
         setPhase("auth");
         setSid(s => s + 1);
       }
@@ -3227,11 +3952,20 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
+  const onAcceptedLegal = () => {
+    setStep(0);
+    setDir("fwd");
+    setPhase("upload");
+    setSid(s => s + 1);
+  };
+
   const go      = d => { setDir(d); setSid(s => s+1); setStep(s => d==="fwd" ? s+1 : s-1); };
   const back    = () => go("bk");
   const next    = () => go("fwd");
   const restart = () => {
     setPhase("upload"); setMessages(null); setMath(null); setAi(null);
+    setCoreAnalysisA(null); setCoreAnalysisAKey("");
+    setCoreAnalysisB(null); setCoreAnalysisBKey("");
     setAiLoading(false); setReportType(null); setRelationshipType(null);
     setStep(0); setDir("fwd"); setSid(s => s+1);
   };
@@ -3253,6 +3987,12 @@ export default function App() {
     resetPicks();
     setMessages(cappedMsgs);
     setMath(m);
+    setAi(null);
+    setCoreAnalysisA(null);
+    setCoreAnalysisAKey("");
+    setCoreAnalysisB(null);
+    setCoreAnalysisBKey("");
+    setRelationshipType(null);
     setPhase("select");
     setSid(s => s+1);
   };
@@ -3265,13 +4005,30 @@ export default function App() {
     setAiLoading(true);
     setAi(null);
     try {
+      const pipeline = REPORT_PIPELINES[type];
       let result;
-      if      (type === "general")  result = await aiAnalysis(messages, math, relType);
-      else if (type === "toxicity") result = await aiToxicityAnalysis(messages, math, relType);
-      else if (type === "lovelang") result = await aiLoveLangAnalysis(messages, math, relType);
-      else if (type === "growth")   result = await aiGrowthAnalysis(messages, math, relType);
-      else if (type === "accounta") result = await aiAccountaAnalysis(messages, math, relType);
-      else if (type === "energy")   result = await aiEnergyAnalysis(messages, math, relType);
+
+      if (pipeline?.strategy === "core") {
+        const cacheKey = getCoreAnalysisCacheKey(math, relType);
+        const useCoreA = pipeline.cache === "a";
+        let core = useCoreA
+          ? (coreAnalysisAKey === cacheKey ? coreAnalysisA : null)
+          : (coreAnalysisBKey === cacheKey ? coreAnalysisB : null);
+        if (!core) {
+          core = useCoreA
+            ? await generateCoreAnalysisA(messages, math, relType)
+            : await generateCoreAnalysisB(messages, math, relType);
+          if (useCoreA) {
+            setCoreAnalysisA(core);
+            setCoreAnalysisAKey(cacheKey);
+          } else {
+            setCoreAnalysisB(core);
+            setCoreAnalysisBKey(cacheKey);
+          }
+        }
+        result = pipeline.derive(core, math, relType);
+      }
+
       setAi(result || {});
       if (result) saveResult(type, result, math);
     } catch { setAi({}); }
@@ -3317,7 +4074,15 @@ export default function App() {
   const onRestoreResult = (row) => {
     setMath(row.math_data);
     setAi(row.result_data);
+    if (row.result_data?.coreAnalysis?.part === "a") {
+      setCoreAnalysisA(row.result_data.coreAnalysis);
+      setCoreAnalysisAKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null));
+    } else if (row.result_data?.coreAnalysis?.part === "b") {
+      setCoreAnalysisB(row.result_data.coreAnalysis);
+      setCoreAnalysisBKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null));
+    }
     setReportType(row.report_type);
+    setRelationshipType(row.result_data?.relationshipType ?? null);
     setAiLoading(false);
     setStep(0);
     setDir("fwd");
@@ -3327,6 +4092,11 @@ export default function App() {
   };
 
   if (phase === "auth")     return <Slide dir="fwd" id={sid}><Auth /></Slide>;
+  if (phase === "onboarding") return (
+    <Slide dir={dir} id={sid}>
+      <OnboardingFlow step={step} next={next} back={back} onAccepted={onAcceptedLegal} onLogout={logout} />
+    </Slide>
+  );
   if (phase === "history")  return <Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>;
   if (phase === "upload")   return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} /></Slide>;
   if (phase === "tooshort") return <Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>;
