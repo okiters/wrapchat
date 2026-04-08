@@ -2981,43 +2981,57 @@ function ReportSelect({ math, onSelect, onBack }) {
 // ─────────────────────────────────────────────────────────────────
 // SLIDE
 // ─────────────────────────────────────────────────────────────────
+const SLIDE_MS = 480;
+const SLIDE_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
+
 function Slide({ children, dir, id }) {
-  // Keep a snapshot of the outgoing card so we can animate it out
-  // simultaneously with the incoming card sliding in.
+  const containerRef    = useRef(null);
   const prevChildrenRef = useRef(null);
   const prevIdRef       = useRef(id);
-  const [exiting, setExiting] = useState(null); // { children, dir }
+  const prevBgRef       = useRef("#2C1268"); // sensible default; overwritten before first transition
+  const [exiting, setExiting] = useState(null); // { children } | null
 
   useLayoutEffect(() => {
     if (id !== prevIdRef.current) {
-      // Capture outgoing content before it disappears
-      setExiting({ children: prevChildrenRef.current, dir });
+      // Snapshot the outgoing card's background from the live DOM before React
+      // replaces it, so the wrapper never shows a raw page background during the slide.
+      const root = containerRef.current?.querySelector(".wc-root");
+      if (root) prevBgRef.current = root.style.background || prevBgRef.current;
+
+      setExiting({ children: prevChildrenRef.current });
       prevIdRef.current = id;
-      // Remove the exiting ghost after the transition finishes
-      const t = setTimeout(() => setExiting(null), 420);
+
+      const t = setTimeout(() => setExiting(null), SLIDE_MS);
       return () => clearTimeout(t);
     }
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Always keep a ref to the current children so the next transition can grab them
   prevChildrenRef.current = children;
 
-  // Forward: enter from right (+100%), exit to left (-100%)
-  // Back:    enter from left  (-100%), exit to right (+100%)
+  // Forward: new card enters from right, old card exits to left.
+  // Back:    new card enters from left,  old card exits to right.
   const enterFrom = dir === "fwd" ? "100%"  : "-100%";
   const exitTo    = dir === "fwd" ? "-100%" : "100%";
 
-  const transition = "transform 0.42s cubic-bezier(.25,0,.1,1)";
-
   return (
-    <div style={{ position: "relative", width: "min(420px, 100vw)", overflow: "hidden" }}>
-      {/* Outgoing card — slides out */}
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "min(420px, 100vw)",
+        overflow: "hidden",
+        // Fill the wrapper with the outgoing card's colour during the transition
+        // so the raw page background never bleeds through the gap between cards.
+        background: exiting ? prevBgRef.current : "transparent",
+      }}
+    >
+      {/* Outgoing card — slides out simultaneously */}
       {exiting && (
         <div style={{
           position: "absolute",
           top: 0, left: 0, right: 0,
           transform: `translateX(${exitTo})`,
-          transition,
+          transition: `transform ${SLIDE_MS}ms ${SLIDE_EASE}`,
           willChange: "transform",
           pointerEvents: "none",
         }}>
@@ -3026,12 +3040,9 @@ function Slide({ children, dir, id }) {
       )}
       {/* Incoming card — slides in */}
       <div style={{
-        transform: exiting ? "translateX(0)" : "translateX(0)",
-        // On first mount there's no exiting card; skip the enter animation entirely.
-        // When there IS an exiting card the browser starts the element at enterFrom
-        // then transitions to 0. We achieve this with a one-frame delay via a
-        // CSS animation so the starting position is painted before the transition kicks in.
-        animation: exiting ? `wcSlideIn 0.42s cubic-bezier(.25,0,.1,1) both` : "none",
+        animation: exiting
+          ? `wcSlideIn ${SLIDE_MS}ms ${SLIDE_EASE} both`
+          : "none",
         ["--wc-enter-from"]: enterFrom,
         willChange: "transform",
       }}>
