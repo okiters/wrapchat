@@ -1436,7 +1436,7 @@ function Shell({ sec, prog, total, children }) {
         )}
 
         {/* ── SLIDING CONTENT AREA ── */}
-        <div style={{ flex:1, position:"relative", overflow:"hidden" }}>
+        <div style={{ flex:1, position:"relative", overflow:"hidden", display:"flex", flexDirection:"column" }}>
           {/* Outgoing content */}
           {exitContent && (
             <div style={{
@@ -1455,6 +1455,7 @@ function Shell({ sec, prog, total, children }) {
           <div style={{
             position: exitContent ? "absolute" : "relative",
             inset: exitContent ? 0 : "auto",
+            flex: exitContent ? "none" : 1,
             display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
             padding:"16px 20px 24px", gap:10,
             animation: exitContent ? `wcContentIn ${SLIDE_MS}ms ${SLIDE_EASE} both` : "none",
