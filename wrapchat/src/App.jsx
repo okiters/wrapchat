@@ -869,11 +869,15 @@ async function aiAnalysis(messages, math, relationshipType) {
 // AI HELPERS FOR PREMIUM REPORTS
 // ─────────────────────────────────────────────────────────────────
 async function callClaude(systemPrompt, userContent) {
+  const { data: { session } } = await supabase.auth.getSession();
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-chat`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session?.access_token}`,
+      },
       body: JSON.stringify({ system: systemPrompt, userContent }),
     }
   );
@@ -2533,7 +2537,7 @@ function Auth() {
         {busy ? "…" : tab === "login" ? "Log in" : "Create account"}
       </button>
 
-      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", textAlign:"center" }}>Nothing leaves your device.</div>
+      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", textAlign:"center" }}>Your chat is analysed by AI and never stored. Only results are saved.</div>
     </Shell>
   );
 }
@@ -2679,13 +2683,18 @@ async function saveResult(type, result, mathData) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const safeMathData = {
+      ...mathData,
+      evidenceTimeline: mathData.evidenceTimeline?.map(({ date, title }) => ({ date, title })) ?? [],
+      redFlags: mathData.redFlags?.map(({ title }) => ({ title })) ?? [],
+    };
     await supabase.from("results").insert({
       user_id:     user.id,
       report_type: type,
       chat_type:   mathData.isGroup ? "group" : "duo",
       names:       mathData.names,
       result_data: result,
-      math_data:   mathData,
+      math_data:   safeMathData,
     });
   } catch { /* silent — never interrupt the user flow */ }
 }
