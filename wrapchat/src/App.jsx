@@ -4,25 +4,73 @@ import { supabase } from "./supabase";
 // ─────────────────────────────────────────────────────────────────
 // PARSER
 // ─────────────────────────────────────────────────────────────────
+
+// System messages to always skip (applied to both body and sender name)
+const SYSTEM_RE = /end-to-end encrypted|end-to-end şifreli|is a contact|bir kişidir|added|removed|left|created group|changed the|security code|<attached:|Messages and calls|Mesajlar ve aramalar/i;
+
+// iOS bracket format:     [DD.MM.YY, HH:MM:SS] Name: body
+// Android no-bracket fmt: DD/MM/YYYY, HH:MM - Name: body
+// Both formats support optional AM/PM for 12-hour locales
+const HEADER_IOS     = /^\[(\d{1,2}[./]\d{1,2}[./]\d{2,4}),\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][Mm])?)\]\s(.+?):\s/;
+const HEADER_ANDROID = /^(\d{1,2}[./]\d{1,2}[./]\d{2,4}),\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][Mm])?)\s-\s(.+?):\s/;
+
+// Minimum real messages required to produce a meaningful wrap
+const MIN_MESSAGES = 50;
+
+function detectFormat(lines) {
+  for (const line of lines) {
+    if (HEADER_IOS.test(line))     return "ios";
+    if (HEADER_ANDROID.test(line)) return "android";
+  }
+  return null;
+}
+
+function parseTimestamp(dateStr, timeStr) {
+  // Date — always day-first (DD.MM.YY / DD/MM/YYYY) matching WhatsApp's global default
+  const parts = dateStr.split(/[./]/).map(Number);
+  const day   = parts[0];
+  const month = parts[1];
+  const year  = parts[2] < 100 ? 2000 + parts[2] : parts[2];
+  const date  = new Date(year, month - 1, day);
+
+  // Time — supports HH:MM, HH:MM:SS, and 12-hour AM/PM variants
+  const tp = timeStr.match(/(\d+):(\d+)(?::(\d+))?\s*([APap][Mm])?/);
+  if (tp) {
+    let h      = parseInt(tp[1]);
+    const min  = parseInt(tp[2]);
+    const sec  = parseInt(tp[3] || 0);
+    const ampm = tp[4]?.toLowerCase();
+    if (ampm === "pm" && h < 12) h += 12;
+    if (ampm === "am" && h === 12) h = 0;
+    date.setHours(h, min, sec);
+  }
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeBody(body) {
+  if (/audio omitted|voice omitted|\.(opus|aac|m4a)/i.test(body)) return "<Voice omitted>";
+  if (/^<attached:.*>$/.test(body) || /\.(jpg|jpeg|png|mp4|pdf|webp)/i.test(body)) return "<Media omitted>";
+  return body;
+}
+
+// Returns { messages, formatDetected, tooShort }
 function parseWhatsApp(text) {
   // Strip invisible Unicode chars WhatsApp injects (LRM, ZWNBSP, directional marks etc.)
-  const clean = text.replace(/[\u200e\u200f\u202a-\u202e\ufeff\u2066-\u2069]/g, "");
-
-  // A message header looks like: [DD.MM.YY, HH:MM:SS] or [DD/MM/YYYY, HH:MM:SS]
-  const HEADER = /^\[(\d{1,2}[./]\d{1,2}[./]\d{2,4}),\s(\d{1,2}:\d{2}(?::\d{2})?)\]\s(.+?):\s/;
-
-  // System message patterns to skip
-  const SYSTEM = /end-to-end encrypted|end-to-end şifreli|is a contact|bir kişidir|added|removed|left|created group|changed the|security code|<attached:|Messages and calls|Mesajlar ve aramalar/i;
-
-  // ── Step 1: join multiline messages ──
-  // Lines that don't start with a [ timestamp belong to the previous message
+  const clean    = text.replace(/[\u200e\u200f\u202a-\u202e\ufeff\u2066-\u2069]/g, "");
   const rawLines = clean.split("\n");
+
+  const format = detectFormat(rawLines);
+  if (!format) return { messages: [], formatDetected: false, tooShort: false };
+
+  const HEADER = format === "ios" ? HEADER_IOS : HEADER_ANDROID;
+
+  // ── Step 1: join continuation lines ──
+  // A line that does not start with a timestamp header is a continuation of the previous message
   const joined = [];
   for (const line of rawLines) {
     if (HEADER.test(line)) {
       joined.push(line);
     } else if (joined.length > 0 && line.trim().length > 0) {
-      // Append continuation line to previous message
       joined[joined.length - 1] += " " + line.trim();
     }
   }
@@ -33,36 +81,53 @@ function parseWhatsApp(text) {
     const m = line.match(HEADER);
     if (!m) continue;
 
-    const dateStr   = m[1];
-    const timeStr   = m[2];
-    const name      = m[3].trim();
-    // Body is everything after the header match
-    const body      = line.slice(m[0].length).trim();
+    const dateStr = m[1];
+    const timeStr = m[2];
+    const name    = m[3].trim();
+    const body    = line.slice(m[0].length).trim();
 
-    if (!body || SYSTEM.test(body) || SYSTEM.test(name)) continue;
+    if (!body || SYSTEM_RE.test(body) || SYSTEM_RE.test(name)) continue;
 
-    // Parse date — DD.MM.YY or DD.MM.YYYY, always day first in WhatsApp
-    const parts = dateStr.split(/[./]/).map(Number);
-    const day   = parts[0];
-    const month = parts[1];
-    const year  = parts[2] < 100 ? 2000 + parts[2] : parts[2];
-    const date  = new Date(year, month - 1, day);
+    const date = parseTimestamp(dateStr, timeStr);
+    if (!date) continue;
 
-    const tp = timeStr.match(/(\d+):(\d+)(?::(\d+))?/);
-    if (tp) date.setHours(parseInt(tp[1]), parseInt(tp[2]), parseInt(tp[3]||0));
-    if (isNaN(date.getTime())) continue;
-
-    // Normalise media — voice memos tagged separately so they can be counted
-    const isVoice = /audio omitted|voice omitted|\.(opus|aac|m4a)/i.test(body);
-    const bodyClean = isVoice
-      ? "<Voice omitted>"
-      : /^<attached:.*>$/.test(body) || /\.(jpg|jpeg|png|mp4|pdf|webp)/i.test(body)
-        ? "<Media omitted>"
-        : body;
-
-    messages.push({ name, body: bodyClean, date, hour: date.getHours(), month: date.getMonth(), year: date.getFullYear() });
+    messages.push({
+      name,
+      body:  normalizeBody(body),
+      date,
+      hour:  date.getHours(),
+      month: date.getMonth(),
+      year:  date.getFullYear(),
+    });
   }
-  return messages;
+
+  return { messages, formatDetected: true, tooShort: messages.length < MIN_MESSAGES };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LARGE-GROUP CAP
+// ─────────────────────────────────────────────────────────────────
+const GROUP_PARTICIPANT_THRESHOLD = 20; // above this, cap is applied
+const GROUP_PARTICIPANT_CAP       = 10; // keep this many top senders
+
+function capLargeGroup(messages) {
+  const countByName = {};
+  messages.forEach(m => { countByName[m.name] = (countByName[m.name] || 0) + 1; });
+  const allNames = Object.keys(countByName);
+  if (allNames.length <= GROUP_PARTICIPANT_THRESHOLD) {
+    return { messages, cappedGroup: false, originalParticipantCount: allNames.length };
+  }
+  const topNames = new Set(
+    Object.entries(countByName)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, GROUP_PARTICIPANT_CAP)
+      .map(([n]) => n)
+  );
+  return {
+    messages: messages.filter(m => topNames.has(m.name)),
+    cappedGroup: true,
+    originalParticipantCount: allNames.length,
+  };
 }
 // ─────────────────────────────────────────────────────────────────
 // LOCAL MATH
@@ -2542,18 +2607,47 @@ function Auth() {
   );
 }
 
+function TooShort({ onBack }) {
+  return (
+    <Shell sec="upload" prog={0} total={1}>
+      <div style={{ fontSize:44, fontWeight:800, color:"#fff", letterSpacing:-3, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
+      <div style={{ background:"rgba(0,0,0,0.25)", borderRadius:24, padding:"32px 24px", textAlign:"center", width:"100%" }}>
+        <div style={{ fontSize:40, lineHeight:1 }}>🤐</div>
+        <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:-0.5, marginTop:14, lineHeight:1.2 }}>
+          Not enough messages to wrap
+        </div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", marginTop:10, lineHeight:1.75 }}>
+          This chat has fewer than {MIN_MESSAGES} messages after filtering system messages. WrapChat needs more to work with.
+        </div>
+      </div>
+      <div style={{ fontSize:12, color:"rgba(255,255,255,0.35)", textAlign:"center", lineHeight:1.8 }}>
+        Try exporting a longer chat history.
+      </div>
+      <Btn onClick={onBack}>← Upload a different file</Btn>
+    </Shell>
+  );
+}
+
 function Upload({ onParsed, onLogout, onHistory }) {
   const fileRef = useRef();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const handle = file => {
     if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      setErr("This file is too large (max 50 MB). Try exporting a shorter date range.");
+      return;
+    }
     setBusy(true); setErr("");
     const r = new FileReader();
     r.onload = e => {
-      const msgs = parseWhatsApp(e.target.result);
-      if (msgs.length < 5) { setErr("Couldn't read this file. Make sure it's a WhatsApp .txt export."); setBusy(false); return; }
-      onParsed(msgs);
+      const result = parseWhatsApp(e.target.result);
+      if (!result.formatDetected) {
+        setErr("Couldn't read this file. Make sure it's a WhatsApp .txt export.");
+        setBusy(false);
+        return;
+      }
+      onParsed(result);
     };
     r.readAsText(file);
   };
@@ -2576,7 +2670,7 @@ function Upload({ onParsed, onLogout, onHistory }) {
         <input ref={fileRef} type="file" accept=".txt" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
       </div>
       {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
-      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>Group or duo detected automatically. Nothing leaves your device.</div>
+      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.</div>
       <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
         {onHistory && (
           <button onClick={onHistory} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
@@ -2613,7 +2707,7 @@ function Loading({ math, reportType }) {
         </div>
       </div>
       <div style={{ fontSize:12, color:"rgba(255,255,255,0.25)", textAlign:"center", lineHeight:1.8 }}>
-        Nothing leaves your device.
+        Your chat is analysed by AI and never stored. Only results are saved.
       </div>
     </Shell>
   );
@@ -2627,6 +2721,11 @@ function ReportSelect({ math, onSelect, onBack }) {
     <Shell sec="upload" prog={0} total={1}>
       <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>Choose your report</div>
       <Sub mt={4}>{math?.totalMessages?.toLocaleString()} messages · {math?.names?.slice(0,3).join(", ") || ""}{(math?.names?.length||0)>3?` +${math.names.length-3}`:""}</Sub>
+      {math?.cappedGroup && (
+        <div style={{ fontSize:12, color:"rgba(255,255,255,0.55)", background:"rgba(255,255,255,0.08)", borderRadius:14, padding:"8px 14px", width:"100%", textAlign:"center", lineHeight:1.6 }}>
+          Large group detected — analysing the top {GROUP_PARTICIPANT_CAP} members out of {math.originalParticipantCount}.
+        </div>
+      )}
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, marginTop:6 }}>
         {REPORT_TYPES.map((r) => {
           const pal = PAL[r.palette] || PAL.upload;
@@ -2820,12 +2919,22 @@ export default function App() {
     setStep(0); setDir("fwd"); setSid(s => s+1);
   };
 
-  // Step 1: file parsed → compute local stats, go to report selection
-  const onParsed = (msgs) => {
-    const m = localStats(msgs);
+  // Step 1: file parsed → check thresholds, cap large groups, compute local stats
+  const onParsed = ({ messages: msgs, tooShort }) => {
+    if (tooShort) {
+      setPhase("tooshort");
+      setSid(s => s + 1);
+      return;
+    }
+    const { messages: cappedMsgs, cappedGroup, originalParticipantCount } = capLargeGroup(msgs);
+    const m = localStats(cappedMsgs);
+    if (m) {
+      m.cappedGroup = cappedGroup;
+      m.originalParticipantCount = originalParticipantCount;
+    }
     setSeed((m?.totalMessages||1) * 31 + (m?.names?.[0]?.charCodeAt(0)||7) * 17);
     resetPicks();
-    setMessages(msgs);
+    setMessages(cappedMsgs);
     setMath(m);
     setPhase("select");
     setSid(s => s+1);
@@ -2885,9 +2994,10 @@ export default function App() {
     setSid(s => s + 1);
   };
 
-  if (phase === "auth")    return <Slide dir="fwd" id={sid}><Auth /></Slide>;
-  if (phase === "history") return <Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>;
-  if (phase === "upload")  return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} /></Slide>;
+  if (phase === "auth")     return <Slide dir="fwd" id={sid}><Auth /></Slide>;
+  if (phase === "history")  return <Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>;
+  if (phase === "upload")   return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} /></Slide>;
+  if (phase === "tooshort") return <Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>;
   if (phase === "select") return (
     <Slide dir="fwd" id={sid}>
       <ReportSelect math={math} onSelect={onSelectReport} onBack={() => { setPhase("upload"); setSid(s => s+1); }} />
