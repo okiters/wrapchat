@@ -152,6 +152,7 @@ const CONTROL_RE = /\b(where are you|who are you with|why are you online|why wer
 const AGGRO_RE = /\b(stupid|idiot|shut up|hate you|leave me alone|you're crazy|you are crazy|disgusting|pathetic|annoying|i'm sick of this|i am sick of this|salak|gerizekal[ıi]|aptal|mal|siktir|siktir git|defol|yeter|bıktım|biktim|nefret ediyorum|manyak|saçma|sacma)\b/i;
 const BREAKUP_RE = /\b(it'?s over|we'?re done|i'?m done|im done|done with you|break up|breakup|goodbye forever|don't text me|dont text me|blocked you|bitti|bitsin|ayrıl|ayrilelim|ayrılalım|beni arama|yazma bana|engelledim|sildim seni)\b/i;
 const APOLOGY_RE = /\b(sorry|i'm sorry|i am sorry|my fault|forgive me|özür dilerim|ozur dilerim|affet|hata bendeydi|haklısın|haklisin)\b/i;
+const LAUGH_RE   = /\b(ha(ha)+|lol+|lmao+|lmfao+|hehe+|im dead|i'm dead|dying|dead)\b|😂|💀|🤣/i;
 
 const DUO_CONTENT_SCREENS = 20;
 const GROUP_CONTENT_SCREENS = 19;
@@ -743,7 +744,7 @@ function localStats(messages) {
   });
 
   // ── Funniest person — who CAUSED laugh reactions ──
-  const LAUGH_RE = /\b(ha(ha)+|lol+|lmao+|lmfao+|hehe+|im dead|i'm dead|dying|dead)\b|😂|💀|🤣/i;
+  // LAUGH_RE is defined at module scope
   const isLaughReaction = body => {
     const b = body.trim().toLowerCase();
     if (LAUGH_RE.test(b)) return true;
@@ -833,26 +834,215 @@ function localStats(messages) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// SMART SAMPLE + AI
+// EVENT-BASED SAMPLING PIPELINE
 // ─────────────────────────────────────────────────────────────────
-function smartSample(messages, target=1500) {
-  if (messages.length <= target) return messages;
-  const step = messages.length / target;
-  return Array.from({length:target}, (_,i) => messages[Math.floor(i*step)]);
-}
 
 const DAY_ABBR = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+// Format a single message line — timestamp always includes speaker name
+function formatMessageLine(m) {
+  const d  = m.date;
+  const ts = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${DAY_ABBR[d.getDay()]} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  return `[${ts}] ${m.name}: ${m.body}`;
+}
+
+// Flat formatter kept for growth analysis early/late contiguous slices
 function formatForAI(messages) {
-  return messages.map(m => {
-    const d = m.date;
-    const ts = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${DAY_ABBR[d.getDay()]} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-    return `[${ts}] ${m.name}: ${m.body}`;
-  }).join("\n");
+  return messages.map(formatMessageLine).join("\n");
+}
+
+// Assign an event score and tag set to every message position.
+// Higher score = more valuable to anchor a context window on.
+function scoreMessages(messages) {
+  return messages.map((msg, i) => {
+    let score = 0;
+    const tags = [];
+    // Skip pure media placeholders for signal detection
+    const body = /^<(Voice|Media) omitted>$/.test(msg.body) ? "" : msg.body;
+
+    // Reply-gap signal — long silences often bracket important exchanges
+    if (i > 0) {
+      const gapMin = (msg.date - messages[i - 1].date) / 60000;
+      if (gapMin > 240)     { score += 4; tags.push("long-gap"); }
+      else if (gapMin > 60) { score += 2; tags.push("gap"); }
+    }
+
+    // Conflict signals
+    if (body && (CONTROL_RE.test(body) || AGGRO_RE.test(body) || BREAKUP_RE.test(body))) {
+      score += 6; tags.push("conflict");
+    }
+
+    // Apology clusters
+    if (body && APOLOGY_RE.test(body)) {
+      score += 4; tags.push("apology");
+    }
+
+    // Romantic / affection spikes
+    if (body && (ROMANCE_RE.test(body) || DATE_RE.test(body) || FLIRTY_EMOJI_RE.test(body))) {
+      score += 4; tags.push("affection");
+    }
+
+    // Long message — likely something substantive
+    if (body.length > 200) { score += 2; tags.push("long-msg"); }
+
+    // Laugh-trigger: this message caused a laugh reaction from a DIFFERENT speaker
+    // in the next 1–3 messages. Preserving these windows (with their tail) lets
+    // Claude see exactly whose line made someone laugh — not just what sounds funny.
+    for (let j = i + 1; j <= Math.min(i + 3, messages.length - 1); j++) {
+      if (messages[j].name !== msg.name && LAUGH_RE.test(messages[j].body)) {
+        score += 5; tags.push("laugh-trigger");
+        break;
+      }
+    }
+
+    return { score, tags };
+  });
+}
+
+// Merge overlapping or adjacent [start, end, tags[]] intervals
+function mergeIntervals(intervals) {
+  if (!intervals.length) return [];
+  const sorted = [...intervals].sort((a, b) => a[0] - b[0]);
+  const out = [[...sorted[0]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = out[out.length - 1];
+    if (sorted[i][0] <= last[1] + 1) {
+      last[1] = Math.max(last[1], sorted[i][1]);
+      last[2] = [...new Set([...(last[2] || []), ...(sorted[i][2] || [])])];
+    } else {
+      out.push([...sorted[i]]);
+    }
+  }
+  return out;
+}
+
+// Human-readable label for a chunk header, derived from its tag set
+function chunkLabel(tags = []) {
+  if (tags.includes("conflict"))      return "conflict";
+  if (tags.includes("apology"))       return "apology";
+  if (tags.includes("laugh-trigger")) return "funny moment";
+  if (tags.includes("affection"))     return "affection";
+  if (tags.includes("long-gap"))      return "after silence";
+  if (tags.includes("long-msg"))      return "long message";
+  return "excerpt";
+}
+
+// Build the ordered list of [startIdx, endIdx, tags[]] windows to send to Claude.
+//
+// Two-pass strategy:
+//   1. Event windows  — anchor on high-scoring messages, include enough surrounding
+//      context that speaker direction and laugh reactions are unambiguous.
+//   2. Timeline fill  — add short baseline windows for time buckets not yet covered,
+//      so Claude always sees something from every major period of the chat.
+function buildChunks(messages) {
+  if (!messages.length) return [];
+
+  const CONTEXT_BEFORE      = 4;   // lines before each event center
+  const CONTEXT_AFTER       = 5;   // lines after event center (default)
+  const CONTEXT_AFTER_LAUGH = 8;   // extended tail for laugh-trigger windows
+                                   //   — captures the reaction(s) that follow the funny line
+  const EVENT_SCORE_MIN     = 4;   // minimum score to qualify as an event center
+  const MAX_EVENT_WINDOWS   = 55;  // hard cap on event-based windows
+  const TIMELINE_BUCKETS    = 28;  // time segments for baseline coverage
+  const LINES_PER_BUCKET    = 5;   // messages per uncovered timeline window
+  const MSG_LINE_LIMIT      = 1400; // hard cap on total message lines (headers not counted)
+
+  const n      = messages.length;
+  const scores = scoreMessages(messages);
+
+  // ── Pass 1: event windows ──
+  // Sort all candidates by descending score, then limit density so we never
+  // take more than one event center within any 8-message neighbourhood.
+  const candidates = scores
+    .map((s, i) => ({ i, score: s.score, tags: s.tags }))
+    .filter(x => x.score >= EVENT_SCORE_MIN)
+    .sort((a, b) => b.score - a.score);
+
+  const takenCenters  = new Set();
+  const eventWindows  = [];
+  for (const c of candidates) {
+    if (takenCenters.has(c.i)) continue;
+    for (let k = Math.max(0, c.i - 4); k <= Math.min(n - 1, c.i + 4); k++) takenCenters.add(k);
+    const after = c.tags.includes("laugh-trigger") ? CONTEXT_AFTER_LAUGH : CONTEXT_AFTER;
+    eventWindows.push([
+      Math.max(0, c.i - CONTEXT_BEFORE),
+      Math.min(n - 1, c.i + after),
+      c.tags,
+    ]);
+    if (eventWindows.length >= MAX_EVENT_WINDOWS) break;
+  }
+
+  // ── Pass 2: timeline fill ──
+  // Divide the chat's time span into equal buckets.  Any bucket with no event
+  // coverage gets a short window centred on its midpoint message.
+  const firstTs = messages[0].date.getTime();
+  const lastTs  = messages[n - 1].date.getTime();
+  const span    = Math.max(lastTs - firstTs, 1);
+
+  const mergedEvents = mergeIntervals(eventWindows);
+  const coveredSet   = new Set();
+  mergedEvents.forEach(([s, e]) => { for (let k = s; k <= e; k++) coveredSet.add(k); });
+
+  const timelineWindows = [];
+  for (let b = 0; b < TIMELINE_BUCKETS; b++) {
+    const lo = firstTs + (b / TIMELINE_BUCKETS) * span;
+    const hi = firstTs + ((b + 1) / TIMELINE_BUCKETS) * span;
+    const bucket = [];
+    for (let i = 0; i < n; i++) {
+      const ts = messages[i].date.getTime();
+      if (ts >= lo && ts < hi) bucket.push(i);
+    }
+    if (!bucket.length || bucket.some(i => coveredSet.has(i))) continue;
+    const center = bucket[Math.floor(bucket.length / 2)];
+    timelineWindows.push([
+      Math.max(0, center - 2),
+      Math.min(n - 1, center + LINES_PER_BUCKET - 1),
+      ["timeline"],
+    ]);
+  }
+
+  // ── Merge, sort, enforce line budget ──
+  const all = mergeIntervals([...eventWindows, ...timelineWindows])
+    .sort((a, b) => a[0] - b[0]);
+
+  let msgLines = 0;
+  const result = [];
+  for (const chunk of all) {
+    const sz = chunk[1] - chunk[0] + 1;
+    if (msgLines + sz > MSG_LINE_LIMIT) break;
+    result.push(chunk);
+    msgLines += sz;
+  }
+  return result;
+}
+
+// Render chunks as windowed text with ━━━ separators.
+// Each header tells Claude: isolated excerpt, date, type of signal.
+// Speaker name is always present on every message line — attribution is unambiguous.
+function formatChunksForAI(messages, chunks) {
+  const total = chunks.length;
+  const parts = [];
+  chunks.forEach(([start, end, tags], idx) => {
+    const d       = messages[start].date;
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${DAY_ABBR[d.getDay()]}`;
+    parts.push(`\n━━━ WINDOW ${idx + 1}/${total} · ${dateStr} · ${chunkLabel(tags)} ━━━`);
+    for (let i = start; i <= end; i++) parts.push(formatMessageLine(messages[i]));
+  });
+  return parts.join("\n");
+}
+
+// Main entry point — replaces the old smartSample(messages,N) + formatForAI(sample) pair.
+// Short chats (≤600 messages) are delivered in full as a single window.
+function buildSampleText(messages) {
+  if (!messages.length) return "";
+  if (messages.length <= 600) {
+    return formatChunksForAI(messages, [[0, messages.length - 1, ["full-history"]]]);
+  }
+  return formatChunksForAI(messages, buildChunks(messages));
 }
 
 async function aiAnalysis(messages, math, relationshipType) {
-  const sample   = smartSample(messages, 2000);
-  const chatText = formatForAI(sample);
+  const chatText = buildSampleText(messages);
   const names    = math.names;
   const isGroup  = math.isGroup;
   const relCtx   = relContextStr(relationshipType);
@@ -921,8 +1111,8 @@ async function aiAnalysis(messages, math, relationshipType) {
 
   try {
     return await callClaude(
-      `You are WrapChat — a sharp, observant chat analyst who reads WhatsApp conversations and gives specific, grounded analysis. Be specific — reference real patterns, real phrases, and real moments from the chat. Avoid generic observations. For red-flag style fields such as relationshipStatusWhy, statusEvidence, evidenceTimeline, redFlags, toxicReason, and toxicityReport, be objective and evidence-led: mention concrete behaviour, quotes, and dates when available, and do not use mocking or insulting language. Return ONLY valid JSON with no markdown fences and no explanation outside the JSON. IMPORTANT: For funniestPerson, look at who CAUSES laugh reactions from the other person — whose messages are followed by "haha", "lol", "lmaooo", keyboard smash laughs, 😂, 💀, 🤣, "IM DEAD", "dying" — whoever causes these reactions most is the funniest. For all "name" fields return ONLY the persons first name, no explanation. CRITICAL: Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — use this directly, never calculate the day yourself. Only report findings you can directly cite from the chat — if evidence is weak or absent for a field, write "None clearly identified" rather than guessing. When quoting messages in any language, quote them as-is — do not translate or add translations in parentheses. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`,
-      `Here is a ${isGroup?"group":"two-person"} WhatsApp chat between ${names.slice(0,6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages — this is a representative sample spread across the full history.\n\nIMPORTANT CONTEXT: ${isGroup ? `The least active member (the ghost) is ${math.ghost}. The conversation starter is ${math.convStarter}.` : `By reply time, ${math.ghostName} is slower to respond. The conversation starter is ${math.convStarter}. Local analysis found that ${math.funniestPerson} caused the most laugh reactions from the other person (${math.laughCausedBy?.[math.funniestPerson]||0} times) — confirm or correct this based on the chat.`}\n\n${chatText}\n\nAnalyse this deeply and return exactly this JSON structure:\n${isGroup?groupFields:duoFields}\n\nBe specific, funny, and reference real things from the chat.`
+      `You are WrapChat — a sharp, observant chat analyst who reads WhatsApp conversations and gives specific, grounded analysis. Be specific — reference real patterns, real phrases, and real moments from the chat. Avoid generic observations. For red-flag style fields such as relationshipStatusWhy, statusEvidence, evidenceTimeline, redFlags, toxicReason, and toxicityReport, be objective and evidence-led: mention concrete behaviour, quotes, and dates when available, and do not use mocking or insulting language. Return ONLY valid JSON with no markdown fences and no explanation outside the JSON. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: In windows labelled "funny moment", the sequence is [trigger line] → [laugh reaction from a different person]. The funny person is the sender of the trigger line — the one whose message caused the other person to laugh. Do not attribute the humour to the person who laughed. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and any act of support — the actor is the person whose name appears on the message line where that act occurs. If a message says "I stayed up all night helping you" the actor is the sender of that line. IMPORTANT: For funniestPerson, look at who CAUSES laugh reactions from the other person — whoever causes these reactions most is the funniest. For all "name" fields return ONLY the person's first name, no explanation. CRITICAL: Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — use this directly, never calculate the day yourself. Only report findings you can directly cite from the chat — if evidence is weak or absent for a field, write "None clearly identified" rather than guessing. When quoting messages in any language, quote them as-is — do not translate or add translations in parentheses. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite.${relCtxBlock}`,
+      `Here is a ${isGroup?"group":"two-person"} WhatsApp chat between ${names.slice(0,6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages. The content below is divided into ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N · date · type ━━━. Windows are non-contiguous excerpts; do not infer connections between separate windows. Every line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that specific line.\n\nIMPORTANT CONTEXT: ${isGroup ? `The least active member (the ghost) is ${math.ghost}. The conversation starter is ${math.convStarter}.` : `By reply time, ${math.ghostName} is slower to respond. The conversation starter is ${math.convStarter}. Local analysis found that ${math.funniestPerson} caused the most laugh reactions from the other person (${math.laughCausedBy?.[math.funniestPerson]||0} times) — confirm or correct this based on the chat.`}\n\n${chatText}\n\nAnalyse this deeply and return exactly this JSON structure:\n${isGroup?groupFields:duoFields}\n\nBe specific, funny, and reference real things from the chat.`
     );
   } catch(e) {
     console.error("AI failed:", e);
@@ -951,12 +1141,11 @@ async function callClaude(systemPrompt, userContent) {
 }
 
 async function aiToxicityAnalysis(messages, math, relationshipType) {
-  const sample = smartSample(messages, 2000);
-  const chatText = formatForAI(sample);
+  const chatText = buildSampleText(messages);
   const names = math.names;
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert relationship and communication analyst. Analyse the provided WhatsApp chat for toxicity, power dynamics, and conflict patterns. Be specific, evidence-led, and objective — reference real moments and quotes from the chat. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only include findings you can directly cite from the chat. If evidence is weak or absent for a field, write "None clearly identified" rather than guessing. (3) Be conservative — one or two examples of a behaviour do not constitute a pattern. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences or explanation outside the JSON. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
+  const system = `You are WrapChat, an expert relationship and communication analyst. Analyse the provided WhatsApp chat for toxicity, power dynamics, and conflict patterns. Be specific, evidence-led, and objective — reference real moments and quotes from the chat. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only include findings you can directly cite from the chat. If evidence is weak or absent for a field, write "None clearly identified" rather than guessing. (3) Be conservative — one or two examples of a behaviour do not constitute a pattern. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences or explanation outside the JSON. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — never connect or combine events from different windows. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — assign all quotes and behaviours only to the name on that exact line. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite.${relCtxBlock}`;
   const fields = `{
   "chatHealthScore": [integer 1-10, overall health of this chat],
   "healthScores": [
@@ -975,17 +1164,16 @@ async function aiToxicityAnalysis(messages, math, relationshipType) {
   "powerHolder": "first name of person with more power, or 'Balanced'",
   "verdict": "1 punchy sentence verdict on the overall health of this chat"
 }`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total, representative sample):\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
+  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N ━━━. Do not connect events across windows. Every line shows the speaker: [timestamp] SpeakerName: body.\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
   return callClaude(system, userContent);
 }
 
 async function aiLoveLangAnalysis(messages, math, relationshipType) {
-  const sample = smartSample(messages, 2000);
-  const chatText = formatForAI(sample);
+  const chatText = buildSampleText(messages);
   const names = math.names;
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert in relationship dynamics and love languages. Analyse how each person in this chat expresses affection or care — this could be romantic, a friendship, or family. Map their behaviour to the 5 love languages: Words of Affirmation, Acts of Service, Receiving Gifts, Quality Time, Physical Touch. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only assign a love language if you can cite at least 2-3 real examples from the chat. If evidence is thin, pick the closest match and note it is inferred. (3) For the mismatch field — if they actually speak the same language, say so honestly rather than inventing a gap. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
+  const system = `You are WrapChat, an expert in relationship dynamics and love languages. Analyse how each person in this chat expresses affection or care — this could be romantic, a friendship, or family. Map their behaviour to the 5 love languages: Words of Affirmation, Acts of Service, Receiving Gifts, Quality Time, Physical Touch. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only assign a love language if you can cite at least 2-3 real examples from the chat. If evidence is thin, pick the closest match and note it is inferred. (3) For the mismatch field — if they actually speak the same language, say so honestly rather than inventing a gap. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. WINDOW FORMAT: The chat arrives as isolated windows separated by ━━━ headers — never connect events across windows. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — the actor in any act of care or affection is the sender of that line, never the recipient. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite.${relCtxBlock}`;
   const fields = `{
   "personA": {
     "name": "${names[0]}",
@@ -1006,21 +1194,22 @@ async function aiLoveLangAnalysis(messages, math, relationshipType) {
   "compatibilityScore": [1-10],
   "compatibilityRead": "1 sentence — love language compatibility summary"
 }`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total, representative sample):\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
+  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N ━━━. Do not connect events across windows. Every line shows the speaker: [timestamp] SpeakerName: body — the actor in any act of care is always the sender of that line.\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
   return callClaude(system, userContent);
 }
 
 async function aiGrowthAnalysis(messages, math, relationshipType) {
-  const sample = smartSample(messages, 2000);
-  const chatText = formatForAI(sample);
+  // Early/late slices are contiguous by design — kept as flat format so Claude
+  // reads them as real conversation flow, not isolated excerpts
   const names = math.names;
   const earlyMsgs = messages.slice(0, Math.min(200, Math.floor(messages.length * 0.25)));
   const lateMsgs  = messages.slice(Math.max(0, messages.length - Math.min(200, Math.floor(messages.length * 0.25))));
   const earlyText = formatForAI(earlyMsgs);
   const lateText  = formatForAI(lateMsgs);
+  const chatText  = buildSampleText(messages);
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an expert relationship analyst specialising in how relationships evolve over time. Compare the early messages to the recent messages to detect growth, drift, or change. Be specific — mention actual topics, tone shifts, and patterns you observe. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only describe changes you can actually see in the two sets of messages. Do not invent growth or drift — if the tone is similar, say "about the same" honestly. (3) For topicsAppeared and topicsDisappeared — only list topics with clear evidence in both periods, not single mentions. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
+  const system = `You are WrapChat, an expert relationship analyst specialising in how relationships evolve over time. Compare the early messages to the recent messages to detect growth, drift, or change. Be specific — mention actual topics, tone shifts, and patterns you observe. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only describe changes you can actually see in the two sets of messages. Do not invent growth or drift — if the tone is similar, say "about the same" honestly. (3) For topicsAppeared and topicsDisappeared — only list topics with clear evidence in both periods, not single mentions. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that exact line. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite.${relCtxBlock}`;
   const fields = `{
   "thenDepth": "2 sentences describing the conversation style and topics in the EARLY messages",
   "nowDepth": "2 sentences describing the conversation style and topics in the RECENT messages",
@@ -1033,17 +1222,16 @@ async function aiGrowthAnalysis(messages, math, relationshipType) {
   "trajectoryDetail": "1 sentence — the overall arc based on chat evidence",
   "arcSummary": "1 punchy sentence capturing the full growth arc of this relationship"
 }`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total).\n\nEARLY MESSAGES (first ~3 months):\n${earlyText}\n\nRECENT MESSAGES (last ~3 months):\n${lateText}\n\nFULL SAMPLE:\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
+  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). Every message line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that line.\n\nEARLY MESSAGES (first ~3 months — contiguous):\n${earlyText}\n\nRECENT MESSAGES (last ~3 months — contiguous):\n${lateText}\n\nEVENT WINDOWS across full history (isolated excerpts — do not connect across ━━━ separators):\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
   return callClaude(system, userContent);
 }
 
 async function aiAccountaAnalysis(messages, math, relationshipType) {
-  const sample = smartSample(messages, 2000);
-  const chatText = formatForAI(sample);
+  const chatText = buildSampleText(messages);
   const names = math.names;
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an analyst who tracks promises, commitments, and follow-throughs in conversations. Find all instances of someone saying they'll do something ("I'll call you", "let's meet", "I'll send that", "I promise", "I'll be there", etc.) and determine whether they followed through based on later messages. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) DEFINITION — a promise is BROKEN only if there is clear evidence it was never fulfilled, or the person explicitly backed out. A promise fulfilled late (even a few days) is still KEPT — do not mark it as broken. When unsure, mark it as kept. (3) Do not count casual expressions like "we should hang out sometime" as promises — only count specific, time-bound or action-bound commitments. (4) If you cannot find clear evidence of a broken or kept promise, write "None clearly identified" for that field. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
+  const system = `You are WrapChat, an analyst who tracks promises, commitments, and follow-throughs in conversations. Find all instances of someone saying they'll do something ("I'll call you", "let's meet", "I'll send that", "I promise", "I'll be there", etc.) and determine whether they followed through based on later messages. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) DEFINITION — a promise is BROKEN only if there is clear evidence it was never fulfilled, or the person explicitly backed out. A promise fulfilled late (even a few days) is still KEPT — do not mark it as broken. When unsure, mark it as kept. (3) Do not count casual expressions like "we should hang out sometime" as promises — only count specific, time-bound or action-bound commitments. (4) If you cannot find clear evidence of a broken or kept promise, write "None clearly identified" for that field. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. WINDOW FORMAT: The chat arrives as isolated windows separated by ━━━ headers — a promise and its follow-through may appear in different windows; only mark it as kept/broken if the evidence is explicit. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — the person making or breaking a promise is always the sender on that line. CRITICAL: Never combine two separate events into one story.${relCtxBlock}`;
   const fields = `{
   "personA": {
     "name": "${names[0]}",
@@ -1075,17 +1263,16 @@ async function aiAccountaAnalysis(messages, math, relationshipType) {
   },
   "overallVerdict": "1 sentence verdict on accountability in this chat overall"
 }`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total, representative sample):\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
+  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N ━━━. Do not connect events across windows. Every line shows the speaker: [timestamp] SpeakerName: body — the person making or breaking a promise is always the sender on that line.\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
   return callClaude(system, userContent);
 }
 
 async function aiEnergyAnalysis(messages, math, relationshipType) {
-  const sample = smartSample(messages, 2000);
-  const chatText = formatForAI(sample);
+  const chatText = buildSampleText(messages);
   const names = math.names;
   const relCtx = relContextStr(relationshipType);
   const relCtxBlock = relCtx ? ` RELATIONSHIP CONTEXT: ${relCtx}` : "";
-  const system = `You are WrapChat, an analyst of conversational energy — who brings positivity, enthusiasm, and good vibes vs who vents, complains, or drains the conversation. Look at who shares good news, who hypes the other person up, who tends to vent or be negative, and the overall energy balance. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only report what you can directly cite from the chat — if someone rarely vents, say so honestly rather than inventing draining patterns. (3) A single vent session does not make someone "net draining" — look at the overall pattern across the full sample. (4) For hypeQuote — use a real verbatim or near-verbatim quote from the chat, not a paraphrase. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. CRITICAL: Never combine two separate events into one story. If you describe a moment, it must be a single event you can directly cite. Do not infer that two things that appear near each other in the chat are related unless the messages explicitly say so.${relCtxBlock}`;
+  const system = `You are WrapChat, an analyst of conversational energy — who brings positivity, enthusiasm, and good vibes vs who vents, complains, or drains the conversation. Look at who shares good news, who hypes the other person up, who tends to vent or be negative, and the overall energy balance. CRITICAL RULES: (1) Each message timestamp includes the day of week (e.g. [2024-11-10 Sun 14:32]) — read it directly, never calculate it yourself. (2) Only report what you can directly cite from the chat — if someone rarely vents, say so honestly rather than inventing draining patterns. (3) A single vent session does not make someone "net draining" — look at the overall pattern across the full sample. (4) For hypeQuote — use a real verbatim or near-verbatim quote from the chat, not a paraphrase. When quoting messages, quote them as-is in their original language — do not translate or add translations in parentheses. Return ONLY valid JSON with no markdown fences. WINDOW FORMAT: The chat arrives as isolated windows separated by ━━━ headers — never connect events across windows. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — the person bringing or draining energy is always the sender on that line. CRITICAL: Never combine two separate events into one story.${relCtxBlock}`;
   const fields = `{
   "personA": {
     "name": "${names[0]}",
@@ -1107,7 +1294,7 @@ async function aiEnergyAnalysis(messages, math, relationshipType) {
   "mostDraining": "1 sentence — the single most draining moment or pattern, with specific detail",
   "compatibility": "1 sentence — how their energy styles work together (or don't)"
 }`;
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total, representative sample):\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
+  const userContent = `Here is a WhatsApp chat between ${names.slice(0,6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N ━━━. Do not connect events across windows. Every line shows the speaker: [timestamp] SpeakerName: body — the person bringing or draining energy is always the sender on that line.\n\n${chatText}\n\nReturn exactly this JSON:\n${fields}`;
   return callClaude(system, userContent);
 }
 
