@@ -5,6 +5,9 @@ import { supabase } from "./supabase";
 // null means "no close button" (upload, auth, loading, etc.)
 const CloseResultsContext = createContext(null);
 
+// Provided by Slide; Shell reads it to animate only its content area.
+const SlideContext = createContext({ dir: "fwd", id: 0 });
+
 // ─────────────────────────────────────────────────────────────────
 // PARSER
 // ─────────────────────────────────────────────────────────────────
@@ -1339,10 +1342,33 @@ const REPORT_TYPES = [
   { id:"energy",   label:"Energy Report",          desc:"Who brings good energy vs drains it — net energy score per person.",                         palette:"energy"   },
 ];
 
+const SLIDE_MS   = 480;
+const SLIDE_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
 function Shell({ sec, prog, total, children }) {
   const p = PAL[sec] || PAL.upload;
   const onClose = useContext(CloseResultsContext);
+  const { dir, id } = useContext(SlideContext);
+
+  // Content-only slide animation — chrome (bg, bar, pill, X) stays perfectly still.
+  const prevContentRef = useRef(null);
+  const prevIdRef      = useRef(id);
+  const [exitContent, setExitContent] = useState(null);
+
+  useLayoutEffect(() => {
+    if (id !== prevIdRef.current) {
+      setExitContent({ node: prevContentRef.current, dir });
+      prevIdRef.current = id;
+      const t = setTimeout(() => setExitContent(null), SLIDE_MS);
+      return () => clearTimeout(t);
+    }
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  prevContentRef.current = children;
+
+  const enterFrom = dir === "fwd" ? "100%"  : "-100%";
+  const exitTo    = dir === "fwd" ? "-100%" : "100%";
+
   return (
     <>
       <style>{`
@@ -1354,12 +1380,17 @@ function Shell({ sec, prog, total, children }) {
         .wc-fadeup-3 { animation: fadeUp 0.4s 0.14s cubic-bezier(.2,0,.1,1) both; }
         .wc-btn:hover { opacity:0.82; transform:scale(0.98); }
         @media (max-width: 430px) { .wc-root { border-radius: 0 !important; } }
+        @keyframes wcContentIn {
+          from { transform: translateX(var(--wc-enter-from)); }
+          to   { transform: translateX(0); }
+        }
       `}</style>
       <div className="wc-root" style={{
         width: "min(420px, 100vw)",
         minHeight: "100svh",
         margin: "0 auto",
         background: p.bg,
+        transition: `background ${SLIDE_MS}ms ${SLIDE_EASE}`,
         borderRadius: 32,
         overflow: "hidden",
         position: "relative",
@@ -1368,11 +1399,12 @@ function Shell({ sec, prog, total, children }) {
         flexDirection: "column",
         fontFamily: "system-ui, sans-serif",
       }}>
+        {/* ── STATIC CHROME — never moves ── */}
         {/* Thin progress bar at very top */}
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(255,255,255,0.12)" }}>
+        <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(255,255,255,0.12)", zIndex:5 }}>
           <div style={{ height:"100%", background:"rgba(255,255,255,0.75)", borderRadius:"0 2px 2px 0", width:`${total>0?Math.round((prog/total)*100):0}%`, transition:"width 0.4s" }} />
         </div>
-        {/* Close button — only rendered when a close handler is provided via context */}
+        {/* Close button */}
         {onClose && (
           <button
             onClick={onClose}
@@ -1380,37 +1412,57 @@ function Shell({ sec, prog, total, children }) {
             aria-label="Close results"
             style={{
               position: "absolute",
-              top: 14,
-              right: 14,
-              width: 30,
-              height: 30,
+              top: 14, right: 14,
+              width: 30, height: 30,
               borderRadius: "50%",
               border: "none",
               background: "rgba(255,255,255,0.12)",
               color: "rgba(255,255,255,0.45)",
-              fontSize: 15,
-              lineHeight: 1,
+              fontSize: 15, lineHeight: 1,
               cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 10,
-              padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              zIndex: 10, padding: 0,
               transition: "all 0.15s",
             }}
           >✕</button>
         )}
-        {/* Centered pill label */}
+        {/* Pill label */}
         {PILL_LABEL[sec] && (
-          <div style={{ paddingTop:18, display:"flex", justifyContent:"center" }}>
+          <div style={{ paddingTop:18, display:"flex", justifyContent:"center", position:"relative", zIndex:4 }}>
             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", background:"rgba(255,255,255,0.12)", padding:"5px 14px", borderRadius:20 }}>
               {PILL_LABEL[sec]}
             </div>
           </div>
         )}
-        {/* Content area — centered */}
-        <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"16px 20px 24px", gap:10 }}>
-          {children}
+
+        {/* ── SLIDING CONTENT AREA ── */}
+        <div style={{ flex:1, position:"relative", overflow:"hidden" }}>
+          {/* Outgoing content */}
+          {exitContent && (
+            <div style={{
+              position:"absolute", inset:0,
+              display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+              padding:"16px 20px 24px", gap:10,
+              transform:`translateX(${exitTo})`,
+              transition:`transform ${SLIDE_MS}ms ${SLIDE_EASE}`,
+              willChange:"transform",
+              pointerEvents:"none",
+            }}>
+              {exitContent.node}
+            </div>
+          )}
+          {/* Incoming content */}
+          <div style={{
+            position: exitContent ? "absolute" : "relative",
+            inset: exitContent ? 0 : "auto",
+            display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+            padding:"16px 20px 24px", gap:10,
+            animation: exitContent ? `wcContentIn ${SLIDE_MS}ms ${SLIDE_EASE} both` : "none",
+            ["--wc-enter-from"]: enterFrom,
+            willChange: exitContent ? "transform" : "auto",
+          }}>
+            {children}
+          </div>
         </div>
       </div>
     </>
@@ -2981,80 +3033,16 @@ function ReportSelect({ math, onSelect, onBack }) {
 // ─────────────────────────────────────────────────────────────────
 // SLIDE
 // ─────────────────────────────────────────────────────────────────
-const SLIDE_MS = 480;
-const SLIDE_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
+// SLIDE_MS and SLIDE_EASE are defined above Shell, which consumes them.
 
+// Slide is now a thin context provider only.
+// Shell consumes SlideContext and animates its content area internally,
+// keeping the chrome (background, progress bar, pill, close button) perfectly still.
 function Slide({ children, dir, id }) {
-  const containerRef    = useRef(null);
-  const prevChildrenRef = useRef(null);
-  const prevIdRef       = useRef(id);
-  const prevBgRef       = useRef("#2C1268"); // sensible default; overwritten before first transition
-  const [exiting, setExiting] = useState(null); // { children } | null
-
-  useLayoutEffect(() => {
-    if (id !== prevIdRef.current) {
-      // Snapshot the outgoing card's background from the live DOM before React
-      // replaces it, so the wrapper never shows a raw page background during the slide.
-      const root = containerRef.current?.querySelector(".wc-root");
-      if (root) prevBgRef.current = root.style.background || prevBgRef.current;
-
-      setExiting({ children: prevChildrenRef.current });
-      prevIdRef.current = id;
-
-      const t = setTimeout(() => setExiting(null), SLIDE_MS);
-      return () => clearTimeout(t);
-    }
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  prevChildrenRef.current = children;
-
-  // Forward: new card enters from right, old card exits to left.
-  // Back:    new card enters from left,  old card exits to right.
-  const enterFrom = dir === "fwd" ? "100%"  : "-100%";
-  const exitTo    = dir === "fwd" ? "-100%" : "100%";
-
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "relative",
-        width: "min(420px, 100vw)",
-        overflow: "hidden",
-        // Fill the wrapper with the outgoing card's colour during the transition
-        // so the raw page background never bleeds through the gap between cards.
-        background: exiting ? prevBgRef.current : "transparent",
-      }}
-    >
-      {/* Outgoing card — slides out simultaneously */}
-      {exiting && (
-        <div style={{
-          position: "absolute",
-          top: 0, left: 0, right: 0,
-          transform: `translateX(${exitTo})`,
-          transition: `transform ${SLIDE_MS}ms ${SLIDE_EASE}`,
-          willChange: "transform",
-          pointerEvents: "none",
-        }}>
-          {exiting.children}
-        </div>
-      )}
-      {/* Incoming card — slides in */}
-      <div style={{
-        animation: exiting
-          ? `wcSlideIn ${SLIDE_MS}ms ${SLIDE_EASE} both`
-          : "none",
-        ["--wc-enter-from"]: enterFrom,
-        willChange: "transform",
-      }}>
-        {children}
-      </div>
-      <style>{`
-        @keyframes wcSlideIn {
-          from { transform: translateX(var(--wc-enter-from)); }
-          to   { transform: translateX(0); }
-        }
-      `}</style>
-    </div>
+    <SlideContext.Provider value={{ dir, id }}>
+      {children}
+    </SlideContext.Provider>
   );
 }
 
