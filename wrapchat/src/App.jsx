@@ -4091,8 +4091,11 @@ async function saveResult(type, result, mathData) {
 // MY RESULTS
 // ─────────────────────────────────────────────────────────────────
 function MyResults({ onBack, onRestoreResult }) {
-  const [rows, setRows] = useState(null);
-  const [err,  setErr]  = useState("");
+  const [rows,          setRows]          = useState(null);
+  const [err,           setErr]           = useState("");
+  const [editing,       setEditing]       = useState(false);
+  const [confirmId,     setConfirmId]     = useState(null); // row.id awaiting confirm
+  const [deletingId,    setDeletingId]    = useState(null); // row.id mid-delete
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -4106,6 +4109,24 @@ function MyResults({ onBack, onRestoreResult }) {
       else setRows(data || []);
     });
   }, []);
+
+  const exitEditing = () => { setEditing(false); setConfirmId(null); };
+
+  const handleDelete = async (id) => {
+    setDeletingId(id);
+    setConfirmId(null);
+    try {
+      const { error } = await supabase.from("results").delete().eq("id", id);
+      if (!error) {
+        setRows(prev => prev.filter(r => r.id !== id));
+      } else {
+        setErr("Couldn't delete. Try again.");
+      }
+    } catch {
+      setErr("Couldn't delete. Try again.");
+    }
+    setDeletingId(null);
+  };
 
   const headline = (row) => {
     const ai   = row.result_data || {};
@@ -4123,8 +4144,34 @@ function MyResults({ onBack, onRestoreResult }) {
 
   return (
     <Shell sec="upload" prog={0} total={0}>
-      <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1, textAlign:"center", width:"100%" }}>My Results</div>
-      <Sub mt={2}>Tap any result to view it again.</Sub>
+      {/* Header row — title + Edit/Done */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%" }}>
+        <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1 }}>My Results</div>
+        {rows?.length > 0 && (
+          <button
+            type="button"
+            onClick={() => editing ? exitEditing() : setEditing(true)}
+            className="wc-btn"
+            style={{
+              background: editing ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 50,
+              padding: "7px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#fff",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              letterSpacing: 0.1,
+            }}
+          >
+            {editing ? "Done" : "Edit"}
+          </button>
+        )}
+      </div>
+
+      {!editing && <Sub mt={2}>Tap any result to view it again.</Sub>}
+      {editing  && <Sub mt={2}>Tap the × to delete a result.</Sub>}
 
       {rows === null && !err && (
         <div style={{ width:"100%", display:"flex", justifyContent:"center", padding:"24px 0" }}><Dots /></div>
@@ -4138,24 +4185,101 @@ function MyResults({ onBack, onRestoreResult }) {
 
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, maxHeight:"58vh", overflowY:"auto", paddingRight:2 }}>
         {rows?.map(row => {
-          const rt  = REPORT_TYPES.find(r => r.id === row.report_type);
-          const pal = PAL[rt?.palette] || PAL.upload;
-          const names = Array.isArray(row.names) ? row.names.slice(0, 3).join(", ") + (row.names.length > 3 ? ` +${row.names.length - 3}` : "") : "—";
-          const date  = new Date(row.created_at).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
-          const stat  = headline(row);
-          return (
-            <button key={row.id} onClick={() => onRestoreResult(row)} className="wc-btn"
-              style={{ background:pal.bg, border:"1px solid rgba(255,255,255,0.14)", borderRadius:20, padding:"14px 18px", textAlign:"left", color:"#fff", cursor:"pointer", width:"100%", transition:"all 0.15s" }}
-            >
+          const rt      = REPORT_TYPES.find(r => r.id === row.report_type);
+          const pal     = PAL[rt?.palette] || PAL.upload;
+          const names   = Array.isArray(row.names) ? row.names.slice(0, 3).join(", ") + (row.names.length > 3 ? ` +${row.names.length - 3}` : "") : "—";
+          const date    = new Date(row.created_at).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+          const stat    = headline(row);
+          const isDeleting = deletingId === row.id;
+          const isConfirming = confirmId === row.id;
+
+          const cardContent = (
+            <>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.45)", marginBottom:4 }}>{rt?.label || row.report_type} · {date}</div>
               <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3, marginBottom:3 }}>{names}</div>
               {stat !== "—" && <div style={{ fontSize:12, fontWeight:600, color:pal.accent }}>{stat}</div>}
-            </button>
+            </>
+          );
+
+          if (!editing) {
+            return (
+              <button key={row.id} onClick={() => onRestoreResult(row)} className="wc-btn"
+                style={{ background:pal.bg, border:"1px solid rgba(255,255,255,0.14)", borderRadius:20, padding:"14px 18px", textAlign:"left", color:"#fff", cursor:"pointer", width:"100%", transition:"all 0.15s", position:"relative" }}
+              >
+                {cardContent}
+              </button>
+            );
+          }
+
+          // ── Edit mode card ──
+          return (
+            <div key={row.id}
+              style={{ background:pal.bg, border:`1px solid ${isConfirming ? "rgba(220,50,50,0.5)" : "rgba(255,255,255,0.14)"}`, borderRadius:20, padding:"14px 18px", color:"#fff", width:"100%", position:"relative", transition:"border-color 0.15s" }}
+            >
+              {/* Dimmed card body */}
+              <div style={{ opacity: isDeleting || isConfirming ? 0.35 : 0.65, pointerEvents:"none", transition:"opacity 0.15s" }}>
+                {cardContent}
+              </div>
+
+              {/* Delete button — top-right */}
+              {!isConfirming && !isDeleting && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmId(row.id)}
+                  className="wc-btn"
+                  style={{
+                    position:"absolute", top:10, right:10,
+                    width:28, height:28, borderRadius:"50%",
+                    background:"rgba(200,40,40,0.85)",
+                    border:"1.5px solid rgba(255,100,100,0.5)",
+                    color:"#fff", fontSize:14, fontWeight:800,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    cursor:"pointer", lineHeight:1, padding:0,
+                    transition:"all 0.15s",
+                  }}
+                  aria-label="Delete result"
+                >
+                  ×
+                </button>
+              )}
+
+              {/* Deleting spinner */}
+              {isDeleting && (
+                <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:20 }}>
+                  <Dots />
+                </div>
+              )}
+
+              {/* Inline confirmation */}
+              {isConfirming && !isDeleting && (
+                <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, borderRadius:20, padding:"12px 18px" }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#fff", textAlign:"center", lineHeight:1.4 }}>Delete this result?</div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(row.id)}
+                      className="wc-btn"
+                      style={{ background:"rgba(200,40,40,0.9)", border:"1px solid rgba(255,100,100,0.4)", borderRadius:50, padding:"7px 18px", fontSize:13, fontWeight:800, color:"#fff", cursor:"pointer", transition:"all 0.15s" }}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmId(null)}
+                      className="wc-btn"
+                      style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:50, padding:"7px 18px", fontSize:13, fontWeight:700, color:"#fff", cursor:"pointer", transition:"all 0.15s" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
 
-      <Btn onClick={onBack}>← Back</Btn>
+      <Btn onClick={() => { exitEditing(); onBack(); }}>← Back</Btn>
     </Shell>
   );
 }
