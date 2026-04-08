@@ -1796,44 +1796,121 @@ const REPORT_TYPES = [
   { id:"energy",   label:"Energy Report",          desc:"Who brings good energy vs drains it — net energy score per person.",                         palette:"energy"   },
 ];
 
-const LEGAL_VERSION = "1.0";
-const TERMS_OF_SERVICE_URL = "#";
-const PRIVACY_POLICY_URL = "#";
-const ONBOARDING_SCREENS = [
-  {
-    id: "intro",
-    eyebrow: "Welcome",
-    title: "What WrapChat is",
-    body: "WrapChat turns your exported WhatsApp chats into a playful, structured read of the patterns, moods, and dynamics inside them.",
-    bullets: [
-      "A wrapped-style summary built from your messages",
-      "Different report types for vibe, growth, energy, and more",
-      "Designed for mobile-first, quick-to-scan results",
-    ],
-  },
-  {
-    id: "how",
-    eyebrow: "How it works",
-    title: "How WrapChat works",
-    body: "You upload a WhatsApp text export, WrapChat analyses the chat structure and selected excerpts, then builds your report screens from that analysis.",
-    bullets: [
-      "Upload a WhatsApp chat export as a .txt file",
-      "WrapChat detects duo vs group chats automatically",
-      "AI reads selected parts of the conversation to generate the report",
-    ],
-  },
-  {
-    id: "consent",
-    eyebrow: "Privacy & Terms",
-    title: "Privacy + consent",
-    body: "Before continuing, review the current Terms of Service and Privacy Policy, then explicitly confirm you accept them.",
-    bullets: [
-      "Required before you can upload a chat",
-      "Stored as a versioned acceptance on your account",
-      "Future policy version changes can require re-acceptance",
-    ],
-  },
-];
+const LEGAL_VERSION = "1.1";
+
+// ─── Legal document text — rendered inline, no external links ───
+// Replace the placeholder strings below with the full text from your PDFs.
+const TERMS_OF_SERVICE_TEXT = `TERMS OF SERVICE
+Version 1.1 — Last updated 2025
+
+PLEASE READ THESE TERMS CAREFULLY BEFORE USING WRAPCHAT.
+
+1. ACCEPTANCE OF TERMS
+By accessing or using WrapChat ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service.
+
+2. DESCRIPTION OF SERVICE
+WrapChat is a chat analysis tool that processes WhatsApp chat exports you provide. The Service uses AI to generate reports about communication patterns, relationship dynamics, and related insights from the text you upload.
+
+3. ELIGIBILITY
+You must be at least 18 years old to use the Service. By using the Service, you represent that you are at least 18 years of age.
+
+4. YOUR CONTENT
+You retain ownership of any chat data you upload. By uploading a chat export, you grant WrapChat a limited licence to process that data for the sole purpose of generating your requested reports. Chat content is analysed in transit and is not stored on our servers beyond what is necessary to produce your results.
+
+5. CONSENT AND THIRD PARTIES
+You are responsible for ensuring you have the right to upload any conversation. You should only upload chats in which you are a participant. You must not upload chats belonging to other people without their knowledge and consent. WrapChat is not responsible for any claims arising from your use of third-party data.
+
+6. PROHIBITED USES
+You agree not to use the Service to:
+- Upload content belonging to others without consent
+- Circumvent security or access controls
+- Reverse-engineer, copy, or reproduce any part of the Service
+- Use the Service for any unlawful purpose
+- Attempt to gain unauthorised access to any system or network
+
+7. INTELLECTUAL PROPERTY
+All intellectual property rights in the Service, including but not limited to its software, design, and methodology, are owned by WrapChat. Nothing in these Terms grants you any rights in the Service other than the right to use it as expressly set out herein.
+
+8. DISCLAIMER OF WARRANTIES
+The Service is provided "as is" and "as available" without any warranties of any kind, express or implied. WrapChat does not warrant that the Service will be uninterrupted, error-free, or that any results generated will be accurate, complete, or reliable.
+
+9. LIMITATION OF LIABILITY
+To the maximum extent permitted by applicable law, WrapChat shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of the Service.
+
+10. CHANGES TO TERMS
+WrapChat reserves the right to modify these Terms at any time. Continued use of the Service after changes are posted constitutes your acceptance of the revised Terms. Material changes will require explicit re-acceptance.
+
+11. GOVERNING LAW
+These Terms shall be governed by and construed in accordance with applicable law. Any disputes shall be resolved through binding arbitration or in the courts of the applicable jurisdiction.
+
+12. CONTACT
+For questions about these Terms, contact us at support@wrapchat.app.
+
+By accepting these Terms, you confirm you have read and understood them in full.`;
+
+const PRIVACY_POLICY_TEXT = `PRIVACY POLICY
+Version 1.1 — Last updated 2025
+
+This Privacy Policy explains how WrapChat ("we", "us", "our") collects, uses, and protects your information when you use our Service.
+
+1. INFORMATION WE COLLECT
+
+Account Information
+When you create an account, we collect your email address and a hashed version of your password. We do not collect your real name unless you voluntarily provide it.
+
+Chat Data
+You upload WhatsApp chat exports to generate reports. These chat exports contain messages written by you and other participants. Chat content is transmitted securely and processed solely to generate your requested analysis. Chat text is not stored on our servers after processing is complete.
+
+Usage Data
+We may collect anonymised information about how you use the Service, including which report types you generate and general usage patterns. This data cannot be used to identify you and is used only to improve the Service.
+
+Results Data
+The reports generated from your analysis (not the underlying chat text) may be stored on your account so you can access them later. You can delete your saved results at any time.
+
+2. HOW WE USE YOUR INFORMATION
+
+We use your information to:
+- Provide and operate the Service
+- Generate the analysis reports you request
+- Maintain and improve the Service
+- Communicate with you about your account
+- Comply with legal obligations
+
+We do not sell, rent, or share your personal information with third parties for marketing purposes.
+
+3. AI PROCESSING
+Your chat content is processed by AI models to generate insights. Excerpts of your chat may be sent to a third-party AI provider (Anthropic) as part of this processing. Anthropic's use of this data is governed by their API usage policies and privacy practices. Chat content processed through the AI pipeline is not used to train AI models under our current agreements.
+
+4. DATA RETENTION
+Account data is retained while your account is active. Processed chat content is not retained after your report is generated. Saved report results are retained until you delete them or close your account.
+
+5. DATA SECURITY
+We implement industry-standard security measures to protect your data, including encryption in transit (TLS) and at rest. No method of transmission over the internet is 100% secure. We cannot guarantee absolute security but will notify you promptly in the event of a breach affecting your data.
+
+6. YOUR RIGHTS
+Depending on your location, you may have rights including:
+- Access to the personal data we hold about you
+- Correction of inaccurate data
+- Deletion of your account and associated data
+- Portability of your data in a machine-readable format
+- Withdrawal of consent at any time
+
+To exercise these rights, contact us at privacy@wrapchat.app.
+
+7. COOKIES AND TRACKING
+The Service uses essential cookies required for authentication and session management. We do not use tracking or advertising cookies.
+
+8. CHILDREN'S PRIVACY
+The Service is not directed to individuals under 18. We do not knowingly collect personal information from anyone under 18. If you believe we have inadvertently collected such information, contact us immediately.
+
+9. CHANGES TO THIS POLICY
+We may update this Privacy Policy periodically. We will notify you of material changes by requiring re-acceptance within the app. The version number and date at the top of this document will always reflect the most recent update.
+
+10. CONTACT
+For privacy-related questions or to exercise your rights:
+Email: privacy@wrapchat.app
+
+By accepting this Privacy Policy, you confirm you have read and understood it in full.`;
 
 const SLIDE_MS   = 480;
 const SLIDE_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
@@ -3249,7 +3326,10 @@ function hasAcceptedCurrentTerms(user) {
 }
 
 function postAuthPhaseForUser(user) {
-  return hasAcceptedCurrentTerms(user) ? "upload" : "onboarding";
+  const meta = user?.user_metadata || {};
+  if (hasAcceptedCurrentTerms(user)) return "upload";
+  if (meta.has_onboarded === true) return "terms";
+  return "onboarding";
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -3412,17 +3492,143 @@ function Auth() {
   );
 }
 
-function OnboardingFlow({ step, next, back, onAccepted, onLogout }) {
-  const [checked, setChecked] = useState(false);
+// ─────────────────────────────────────────────────────────────────
+// ONBOARDING (3 screens, first-login only)
+// ─────────────────────────────────────────────────────────────────
+const ONBOARD_PILLS = [
+  { label: "Toxicity",       palette: "toxicity" },
+  { label: "Love Languages", palette: "lovelang" },
+  { label: "Accountability", palette: "accounta" },
+  { label: "Energy",         palette: "energy"   },
+  { label: "Growth",         palette: "growth"   },
+  { label: "Chat Wrapped",   palette: "upload"   },
+];
+
+const EXPORT_STEPS = [
+  "Open WhatsApp",
+  "Tap the chat you want to analyse",
+  "Tap ··· menu → More → Export Chat",
+  "Choose Without Media",
+  "Save the .txt file to your device",
+];
+
+function OnboardingFlow({ step, next, onOnboarded, onLogout }) {
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const screen = ONBOARDING_SCREENS[step] || ONBOARDING_SCREENS[0];
-  const isConsent = screen.id === "consent";
+  const [err]           = useState("");
+
+  const markOnboarded = async (thenCb) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await supabase.auth.updateUser({ data: { has_onboarded: true } });
+    } catch { /* silent — non-critical */ }
+    thenCb?.();
+  };
+
+  const handleSkip    = () => markOnboarded(onOnboarded);
+  const handleLetsGo  = () => markOnboarded(onOnboarded);
+
+  const linkBtn = { background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 };
+
+  return (
+    <Shell sec="upload" prog={step + 1} total={3}>
+
+      {/* ── Screen 1: hook ── */}
+      {step === 0 && (<>
+        <div style={{ fontSize:34, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>
+          Your relationship, in data.
+        </div>
+        <div style={{ fontSize:14, color:"rgba(255,255,255,0.6)", textAlign:"center", lineHeight:1.75, width:"100%" }}>
+          Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.
+        </div>
+        <Btn onClick={next}>Next →</Btn>
+        <button onClick={handleSkip} style={linkBtn}>Skip</button>
+      </>)}
+
+      {/* ── Screen 2: export instructions ── */}
+      {step === 1 && (<>
+        <div style={{ fontSize:34, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>
+          Start with your chat.
+        </div>
+        <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:9 }}>
+          {EXPORT_STEPS.map((label, i) => (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:14, background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.10)", borderRadius:18, padding:"13px 16px" }}>
+              <div style={{ width:28, height:28, borderRadius:"50%", background:PAL.upload.inner, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:"#fff", flexShrink:0 }}>
+                {i + 1}
+              </div>
+              <div style={{ fontSize:14, fontWeight:600, color:"#fff", lineHeight:1.4 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+        <Btn onClick={next}>Next →</Btn>
+      </>)}
+
+      {/* ── Screen 3: launch ── */}
+      {step === 2 && (<>
+        <div style={{ fontSize:34, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>
+          Upload. Analyse. See it clearly.
+        </div>
+        <div style={{ fontSize:14, color:"rgba(255,255,255,0.6)", textAlign:"center", lineHeight:1.75, width:"100%" }}>
+          Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.
+        </div>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8, justifyContent:"center", width:"100%" }}>
+          {ONBOARD_PILLS.map(pill => {
+            const p = PAL[pill.palette] || PAL.upload;
+            return (
+              <div key={pill.label} style={{ background:p.inner, color:"#fff", borderRadius:50, padding:"7px 16px", fontSize:13, fontWeight:700, letterSpacing:0.1 }}>
+                {pill.label}
+              </div>
+            );
+          })}
+        </div>
+        {err && <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center" }}>{err}</div>}
+        <button
+          type="button"
+          onClick={handleLetsGo}
+          disabled={busy}
+          className="wc-btn"
+          style={{ width:"100%", padding:"14px 0", borderRadius:50, border:"none", background:PAL.upload.inner, color:"#fff", fontSize:16, cursor:busy?"default":"pointer", fontWeight:700, transition:"all 0.15s", letterSpacing:0.2, opacity:busy?0.65:1 }}
+        >
+          {busy ? "…" : "Let's go"}
+        </button>
+      </>)}
+
+      <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
+        {onLogout && <button onClick={onLogout} className="wc-btn" style={linkBtn}>Log out</button>}
+      </div>
+    </Shell>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TERMS & PRIVACY ACCEPTANCE (separate step, after onboarding)
+// ─────────────────────────────────────────────────────────────────
+function TermsFlow({ onAccepted, onLogout }) {
+  const [activeTab,    setActiveTab]    = useState("tos");
+  const [tosRead,      setTosRead]      = useState(false);
+  const [privacyRead,  setPrivacyRead]  = useState(false);
+  const [busy,         setBusy]         = useState(false);
+  const [err,          setErr]          = useState("");
+  const tosRef     = useRef(null);
+  const privacyRef = useRef(null);
+
+  const bothRead = tosRead && privacyRead;
+
+  const checkRead = (tab) => {
+    const el = tab === "tos" ? tosRef.current : privacyRef.current;
+    if (!el) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 28) {
+      if (tab === "tos")     setTosRead(true);
+      else                   setPrivacyRead(true);
+    }
+  };
+
+  // check on mount in case content is shorter than container
+  useEffect(() => { checkRead("tos"); checkRead("privacy"); }, []); // eslint-disable-line
 
   const acceptTerms = async () => {
-    if (!checked || busy) return;
-    setBusy(true);
-    setErr("");
+    if (!bothRead || busy) return;
+    setBusy(true); setErr("");
     try {
       const { error } = await supabase.auth.updateUser({
         data: {
@@ -3431,161 +3637,103 @@ function OnboardingFlow({ step, next, back, onAccepted, onLogout }) {
           terms_accepted_at: new Date().toISOString(),
         },
       });
-      if (error) {
-        setErr(error.message || "Could not save your acceptance. Please try again.");
-        setBusy(false);
-        return;
-      }
+      if (error) { setErr(error.message || "Could not save. Please try again."); setBusy(false); return; }
       onAccepted?.();
     } catch {
-      setErr("Could not save your acceptance. Please try again.");
+      setErr("Could not save. Please try again.");
       setBusy(false);
     }
   };
 
-  const linkStyle = {
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    textDecoration: "none",
-    background: "rgba(255,255,255,0.08)",
-    border: "1px solid rgba(255,255,255,0.14)",
-    borderRadius: 20,
-    padding: "16px 18px",
-    color: "#fff",
-    transition: "all 0.15s",
+  const tabBtn = (tab, isRead) => ({
+    flex:1, border:"none", borderRadius:46, padding:"10px 6px",
+    fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.2s",
+    background: activeTab === tab ? "rgba(255,255,255,0.18)" : "transparent",
+    color: activeTab === tab ? "#fff" : "rgba(255,255,255,0.38)",
+    letterSpacing:0.1,
+    display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+    opacity: isRead && activeTab !== tab ? 0.7 : 1,
+  });
+
+  const scrollBox = {
+    height:"40vh", overflowY:"auto",
+    background:"rgba(0,0,0,0.22)", borderRadius:20,
+    padding:"18px 20px", width:"100%",
+    fontSize:12.5, color:"rgba(255,255,255,0.62)", lineHeight:1.8,
+    fontFamily:"inherit", whiteSpace:"pre-wrap",
   };
+
+  const checkMark = (read) => read
+    ? <span style={{ color:PAL.growth.accent, fontWeight:800 }}>✓</span>
+    : null;
+
+  const linkBtn = { background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 };
 
   return (
     <Shell sec="upload" prog={0} total={1}>
-      <div style={{ fontSize:40, fontWeight:800, color:"#fff", letterSpacing:-2.5, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
-      <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(255,255,255,0.4)", textAlign:"center", width:"100%" }}>
-        {screen.eyebrow}
+      <div style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.15, textAlign:"center", width:"100%" }}>
+        One thing before you start.
       </div>
-      <div style={{ fontSize:24, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.15, textAlign:"center", width:"100%" }}>
-        {screen.title}
-      </div>
-      <div style={{ fontSize:13, color:"rgba(255,255,255,0.55)", textAlign:"center", lineHeight:1.7, width:"100%" }}>
-        {screen.body}
+      <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", textAlign:"center", lineHeight:1.6, width:"100%" }}>
+        Read both documents below before continuing.
       </div>
 
-      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10 }}>
-        {screen.bullets.map((item, i) => (
-          <div key={i} style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:20, padding:"15px 18px", color:"#fff", lineHeight:1.6 }}>
-            <div style={{ fontSize:14, fontWeight:700 }}>{item}</div>
-          </div>
-        ))}
-      </div>
-
-      {isConsent && (
-        <>
-          <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10 }}>
-            <a href={TERMS_OF_SERVICE_URL} target="_blank" rel="noreferrer" className="wc-btn" style={linkStyle}>
-              <div>
-                <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>Terms of Service</div>
-                <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:2 }}>Version {LEGAL_VERSION}</div>
-              </div>
-              <div style={{ fontSize:18, color:"rgba(255,255,255,0.55)" }}>↗</div>
-            </a>
-
-            <a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer" className="wc-btn" style={linkStyle}>
-              <div>
-                <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>Privacy Policy</div>
-                <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:2 }}>Version {LEGAL_VERSION}</div>
-              </div>
-              <div style={{ fontSize:18, color:"rgba(255,255,255,0.55)" }}>↗</div>
-            </a>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setChecked(v => !v)}
-            className="wc-btn"
-            style={{
-              width: "100%",
-              background: checked ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.22)",
-              border: `1px solid ${checked ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)"}`,
-              borderRadius: 20,
-              padding: "16px 18px",
-              color: "#fff",
-              textAlign: "left",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 12,
-              transition: "all 0.15s",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{
-              width: 22,
-              height: 22,
-              borderRadius: 7,
-              border: "1.5px solid rgba(255,255,255,0.3)",
-              background: checked ? "rgba(255,255,255,0.16)" : "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              marginTop: 1,
-              fontSize: 13,
-              fontWeight: 800,
-            }}>
-              {checked ? "✓" : ""}
-            </div>
-            <div style={{ lineHeight: 1.6 }}>
-              <div style={{ fontSize:14, fontWeight:700 }}>I have read and accept the Terms of Service and Privacy Policy.</div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", marginTop:2 }}>
-                Required before you can continue to chat upload.
-              </div>
-            </div>
-          </button>
-
-          {err && (
-            <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center", lineHeight:1.5 }}>
-              {err}
-            </div>
-          )}
-        </>
-      )}
-
-      <div style={{ display:"flex", gap:10, marginTop:4, justifyContent:"center", width:"100%" }}>
-        {step > 0 && <Btn onClick={back}>← Back</Btn>}
-        {!isConsent && <Btn onClick={next}>Next</Btn>}
-      </div>
-
-      {isConsent && (
-        <button
-          type="button"
-          onClick={acceptTerms}
-          disabled={!checked || busy}
-          className="wc-btn"
-          style={{
-            width: "100%",
-            padding: "14px 0",
-            borderRadius: 50,
-            border: "none",
-            background: PAL.upload.inner,
-            color: "#fff",
-            fontSize: 16,
-            cursor: !checked || busy ? "default" : "pointer",
-            fontWeight: 700,
-            transition: "all 0.15s",
-            letterSpacing: 0.2,
-            opacity: !checked || busy ? 0.55 : 1,
-          }}
-        >
-          {busy ? "Saving…" : "Continue"}
+      {/* Tab switcher */}
+      <div style={{ display:"flex", background:"rgba(0,0,0,0.25)", borderRadius:50, padding:4, width:"100%", gap:4 }}>
+        <button onClick={() => setActiveTab("tos")} style={tabBtn("tos", tosRead)}>
+          Terms of Service {checkMark(tosRead)}
         </button>
+        <button onClick={() => setActiveTab("privacy")} style={tabBtn("privacy", privacyRead)}>
+          Privacy Policy {checkMark(privacyRead)}
+        </button>
+      </div>
+
+      {/* Scrollable document bodies — both mounted so scroll position is preserved */}
+      <div
+        ref={tosRef}
+        onScroll={() => checkRead("tos")}
+        style={{ ...scrollBox, display: activeTab === "tos" ? "block" : "none" }}
+      >
+        {TERMS_OF_SERVICE_TEXT}
+      </div>
+      <div
+        ref={privacyRef}
+        onScroll={() => checkRead("privacy")}
+        style={{ ...scrollBox, display: activeTab === "privacy" ? "block" : "none" }}
+      >
+        {PRIVACY_POLICY_TEXT}
+      </div>
+
+      {!bothRead && (
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.28)", textAlign:"center" }}>
+          {!tosRead && !privacyRead
+            ? "Scroll through both documents to continue."
+            : !tosRead
+              ? "Scroll to the bottom of Terms of Service."
+              : "Scroll to the bottom of Privacy Policy."}
+        </div>
       )}
+
+      {err && <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center" }}>{err}</div>}
+
+      <button
+        type="button"
+        onClick={acceptTerms}
+        disabled={!bothRead || busy}
+        className="wc-btn"
+        style={{
+          width:"100%", padding:"14px 0", borderRadius:50, border:"none",
+          background: PAL.upload.inner, color:"#fff", fontSize:15,
+          cursor: !bothRead || busy ? "default" : "pointer",
+          fontWeight:700, transition:"all 0.15s", letterSpacing:0.1,
+          opacity: !bothRead || busy ? 0.38 : 1,
+        }}
+      >
+        {busy ? "Saving…" : "I have read and accept both documents."}
+      </button>
 
       <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
-        {onLogout && (
-          <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
-            Log out
-          </button>
-        )}
+        {onLogout && <button onClick={onLogout} className="wc-btn" style={linkBtn}>Log out</button>}
       </div>
     </Shell>
   );
@@ -3952,7 +4100,16 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
-  const onAcceptedLegal = () => {
+  // Called when onboarding completes → proceed to terms acceptance
+  const onOnboarded = () => {
+    setStep(0);
+    setDir("fwd");
+    setPhase("terms");
+    setSid(s => s + 1);
+  };
+
+  // Called when terms are accepted → proceed to upload
+  const onAcceptedTerms = () => {
     setStep(0);
     setDir("fwd");
     setPhase("upload");
@@ -4094,7 +4251,12 @@ export default function App() {
   if (phase === "auth")     return <Slide dir="fwd" id={sid}><Auth /></Slide>;
   if (phase === "onboarding") return (
     <Slide dir={dir} id={sid}>
-      <OnboardingFlow step={step} next={next} back={back} onAccepted={onAcceptedLegal} onLogout={logout} />
+      <OnboardingFlow step={step} next={next} onOnboarded={onOnboarded} onLogout={logout} />
+    </Slide>
+  );
+  if (phase === "terms") return (
+    <Slide dir="fwd" id={sid}>
+      <TermsFlow onAccepted={onAcceptedTerms} onLogout={logout} />
     </Slide>
   );
   if (phase === "history")  return <Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>;
