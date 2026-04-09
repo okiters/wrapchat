@@ -2297,15 +2297,98 @@ function capLargeGroup(messages) {
 // ─────────────────────────────────────────────────────────────────
 // LOCAL MATH
 // ─────────────────────────────────────────────────────────────────
-const STOP = new Set([
-  // English
-  ...("the a an and or but in on at to for of is it was he she they i you we my your our this that with be are have has had not so do did all can will just if up out about me him her them what how when where who which as from by more than then there their also too very really yeah yes no ok okay hey hi haha lol omg im its dont cant wont ive youre theyre get got go going like know think said one some any been would could should even still now here see come want say make time back other into over after well way need because much only just gonna gotta kinda wanna ill aint tho though cause cuz tbh ngl fr rn").split(" "),
-  // Turkish pronouns, conjunctions, prepositions, common filler
-  ...("ben benim bana beni bende benden sen senin sana seni sende senden biz bizim bize bizi bizde bizden siz sizin size sizi sizde sizden onlar onların onlara onları ve ya bir bu şu ile için de ki ama ancak fakat lakin çünkü eğer ise bile hem ne mi nasıl neden niçin nerede nereye nereden kim kimin kime kimi veya var yok daha çok az iyi kötü gibi kadar sadece artık hep hiç pek tam işte evet hayır tamam tabi tabii olur oldu olmuş oluyor olabilir olacak olsa abi abla şey yani aslında sanki galiba belki herhalde neyse peki ha he oha lan yani dee haa ama da da de ise olsa bile çünkü zaten hani dur bak gel git bak şimdi yok var mı değil misin misiniz miyim miyiz mısın mısınız oldu tamam oke okay peki bence sence herşey her şey falan filan madem keşke nasılsın iyiyim ne yapıyorsun ne var ne yok görüşürüz kolay gelsin sağol teşekkürler rica ederim").split(" ")
-]);
+const STOP_WORDS = new Set([
 
-// WhatsApp UI words that appear in exports — never count these
-const WA_NOISE = new Set("edited audio video sticker gif omitted attached photo document contact location poll missed call voice message deleted this message was deleted null undefined".split(" "));
+  // ── English ──
+  "i","me","my","myself","we","our","ours","ourselves","you","your","yours",
+  "yourself","he","him","his","she","her","hers","they","them","their","theirs",
+  "it","its","what","which","who","whom","this","that","these","those",
+  "am","is","are","was","were","be","been","being","have","has","had","do",
+  "does","did","will","would","shall","should","may","might","must","can","could",
+  "a","an","the","and","but","or","nor","so","yet","either","neither",
+  "not","nor","as","at","by","for","in","of","on","to","up","with","from",
+  "into","through","during","such","than","too","very","just","because",
+  "if","while","although","though","since","about","get","got","im",
+
+  // ── Turkish ──
+  "bir","bu","şu","o","ve","ile","de","da","ki","mi","mı","mu","mü",
+  "ben","sen","biz","siz","onlar","beni","seni","onu","bize","size","onlara",
+  "için","ama","fakat","lakin","ya","veya","gibi","kadar","daha","en","çok",
+  "az","ne","nasıl","neden","çünkü","eğer","ise","değil","var","yok","olan",
+  "oldu","olacak","oluyor","olmuş","işte","şey","diye","bile","hem","hiç","artık",
+
+  // ── Spanish ──
+  "yo","tú","él","ella","nosotros","ellos","ellas","me","te","se",
+  "lo","la","los","las","le","les","un","una","el","y","o","pero",
+  "que","si","en","de","a","con","por","para","sin","sobre","entre",
+  "como","muy","también","tampoco",
+
+  // ── Portuguese ──
+  "eu","tu","ele","ela","nós","eles","elas","me","te","se","um","uma",
+  "o","a","os","as","e","ou","mas","que","não","em","de","com","por",
+  "para","sem","sobre","entre","como","muito","também","já",
+
+  // ── French ──
+  "je","tu","il","elle","nous","vous","ils","elles","me","te","se",
+  "le","la","les","lui","leur","un","une","des","du","de","et","ou",
+  "mais","que","qui","dont","si","ne","pas","plus","très","aussi",
+  "encore","toujours","jamais","comment","pourquoi","tout","rien",
+
+  // ── German ──
+  "ich","du","er","sie","es","wir","ihr","mich","dich","sich","uns",
+  "euch","mir","dir","ihm","ihnen","ein","eine","einen","einem","einer",
+  "eines","der","die","das","den","dem","des","und","oder","aber","weil",
+  "dass","wenn","ob","nicht","kein","keine","auch","noch","schon","nur",
+  "so","sehr","eigentlich","irgendwie",
+
+  // ── Italian ──
+  "io","tu","lui","lei","noi","voi","loro","mi","ti","si","ci","vi",
+  "lo","la","li","le","gli","un","una","il","i","e","o","ma","perché",
+  "che","se","non","in","di","a","con","per","su","tra","fra","come",
+  "più","molto","anche","ancora","sempre","mai","tutto","niente",
+
+  // ── Arabic ──
+  "أنا","أنت","هو","هي","نحن","أنتم","هم","في","من","إلى","على","مع",
+  "عن","هذا","هذه","ذلك","تلك","التي","الذي","و","أو","لكن","لأن","إذا",
+  "لا","ما","كيف","لماذا","متى","أين","كل","بعض","هنا","هناك",
+
+  // ── WhatsApp UI — English ──
+  "image omitted","video omitted","audio omitted","voice omitted",
+  "sticker omitted","gif omitted","document omitted","contact omitted",
+  "media omitted","photo omitted","file omitted","location omitted",
+  "poll omitted","this message was deleted","you deleted this message",
+  "missed voice call","missed video call","message deleted",
+  "edited","forwarded","forwarded many times",
+
+  // ── WhatsApp UI — Turkish ──
+  "görüntü silindi","video silindi","ses silindi","belge silindi",
+  "konum silindi","çıkartma","bu mesaj silindi","mesaj silindi",
+  "cevapsız sesli arama","cevapsız görüntülü arama","düzenlendi","iletildi",
+
+  // ── WhatsApp UI — Spanish ──
+  "imagen omitida","video omitido","audio omitido","documento omitido",
+  "ubicación omitida","este mensaje fue eliminado","editado","reenviado",
+
+  // ── WhatsApp UI — Portuguese ──
+  "imagem ocultada","vídeo ocultado","áudio ocultado","documento ocultado",
+  "esta mensagem foi apagada","editada","encaminhada",
+
+  // ── WhatsApp UI — French ──
+  "image omise","vidéo omise","audio omis","document omis",
+  "ce message a été supprimé","modifié","transféré",
+
+  // ── WhatsApp UI — German ──
+  "bild weggelassen","video weggelassen","audio weggelassen","dokument weggelassen",
+  "diese nachricht wurde gelöscht","bearbeitet","weitergeleitet",
+
+  // ── WhatsApp UI — Italian ──
+  "immagine omessa","video omesso","audio omesso","documento omesso",
+  "questo messaggio è stato eliminato","modificato","inoltrato",
+
+  // ── WhatsApp UI — Arabic ──
+  "تم حذف هذه الرسالة","صورة محذوفة","فيديو محذوف","صوت محذوف",
+  "مستند محذوف","تم التعديل","تمت إعادة التوجيه",
+]);
 
 const ROMANCE_RE = /\b(love you|luv you|miss you|my love|baby|babe|bb|darling|good night love|good morning love|kiss you|date night|come over|sleep well|xoxo|sevgilim|askim|aşkım|canim|canım|ozledim|özledim|tatlim|tatlım|bebegim|bebeğim)\b/i;
 const FRIEND_RE = /\b(bestie|bro|broski|dude|girl|sis|mate|homie|kanka|knk|abi|abla)\b/i;
@@ -2317,7 +2400,72 @@ const CONTROL_RE = /\b(where are you|who are you with|why are you online|why wer
 const AGGRO_RE = /\b(stupid|idiot|shut up|hate you|leave me alone|you're crazy|you are crazy|disgusting|pathetic|annoying|i'm sick of this|i am sick of this|salak|gerizekal[ıi]|aptal|mal|siktir|siktir git|defol|yeter|bıktım|biktim|nefret ediyorum|manyak|saçma|sacma)\b/i;
 const BREAKUP_RE = /\b(it'?s over|we'?re done|i'?m done|im done|done with you|break up|breakup|goodbye forever|don't text me|dont text me|blocked you|bitti|bitsin|ayrıl|ayrilelim|ayrılalım|beni arama|yazma bana|engelledim|sildim seni)\b/i;
 const APOLOGY_RE = /\b(sorry|i'm sorry|i am sorry|my fault|forgive me|özür dilerim|ozur dilerim|affet|hata bendeydi|haklısın|haklisin)\b/i;
-const LAUGH_RE   = /\b(ha(ha)+|lol+|lmao+|lmfao+|hehe+|im dead|i'm dead|dying|dead)\b|😂|💀|🤣/i;
+const LAUGH_RE = new RegExp(
+  [
+    // Standard laugh patterns
+    "\\b(ha(ha)+|haha+|hahaha+|lol+|lmao+|lmfao+|hehe+|heh|hah|ahaha+|ahahah+|ahahha+|heheheh+)\\b",
+    // Death-laugh expressions
+    "\\b(im dead|i'm dead|dying|dead|ded|i'm deceased)\\b",
+    // Turkish/universal random keyboard mash (4+ chars of consonant clusters)
+    "\\b([sşkdgjfhbnmzxcvwq]{4,})\\b",
+    // Emojis
+    "[😂💀🤣]",
+  ].join("|"),
+  "i"
+);
+
+const RELATION_SIGNALS = [
+  {
+    key: "romantic",
+    re: /\b(babe|baby|bb|darling|my love|love you|luv you|sweetheart|honey|dear|sevgilim|aşkım|askım|canım|canim|tatlım|tatlim|bebeğim|bebegim|mi amor|mi vida|cariño|carino|te quiero|te amo|meu amor|minha vida|querido|querida|habibi|habibti|حبيبي|حبيبتي|mon amour|ma chérie|ma cherie|mon chéri|mon cheri|liebling|schatzi|mein schatz|amore mio|tesoro)\b/i,
+  },
+  {
+    key: "mother",
+    re: /\b(mom|mum|mama|mother|anne|annem|anneciğim|anneciim|mamá|mama|mãe|mamaí|أمي|ummi|maman|mère|mere|mama|mutter|mutti|mamma|madre)\b/i,
+  },
+  {
+    key: "father",
+    re: /\b(dad|dada|daddy|father|baba|babam|babaciğim|papá|papa|pai|أبي|abi|papa|père|pere|papa|vater|vati|papà|padre)\b/i,
+  },
+  {
+    key: "sibling",
+    re: /\b(sis|bro|brother|sister|kardeş|kardesim|ablam|abla|ağabey|agabey|hermano|hermana|irmão|irmã|أخي|أختي|frère|frere|sœur|soeur|bruder|schwester|fratello|sorella)\b/i,
+  },
+  {
+    key: "cousin",
+    re: /\b(cousin|kuzen|kuzenim|primo|prima|cousin|عمي|ابن عمي|cousin|cousin|cousine|vetter|kusine|cugino|cugina)\b/i,
+  },
+  {
+    key: "aunt",
+    re: /\b(aunt|auntie|teyze|hala|tía|tia|خالتي|عمتي|tante|tante|tante|zia)\b/i,
+  },
+  {
+    key: "uncle",
+    re: /\b(uncle|amca|dayı|dayi|tío|tio|عمي|خالي|oncle|onkel|zio)\b/i,
+  },
+  {
+    key: "friend",
+    re: /\b(bestie|dude|mate|homie|kanka|knk|amigo|amiga|colega|صاحبي|صديقي|pote|parceiro|ami|amie|copain|copine|Kumpel|alter|amico|amica)\b/i,
+  },
+];
+
+function detectRelationship(messages) {
+  const counts = {};
+  const sample = messages.slice(0, 800);
+  for (const msg of sample) {
+    if (!msg.body || /^<(Voice|Media) omitted>$/.test(msg.body)) continue;
+    for (const { key, re } of RELATION_SIGNALS) {
+      if (re.test(msg.body)) {
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    }
+  }
+  if (!Object.keys(counts).length) return null;
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  const confidence = top[1] >= 4 ? "high" : top[1] >= 2 ? "medium" : "low";
+  if (confidence === "low") return null;
+  return { detected: top[0], confidence, counts };
+}
 
 const DUO_CONTENT_SCREENS = 20;
 const GROUP_CONTENT_SCREENS = 19;
@@ -2743,7 +2891,7 @@ function spotDynamics({ messages, namesAll, namesSorted, msgCounts, starterCount
     .map(item => ({ date: item.date, title: item.title, detail: item.detail }));
 
   const maxToxicity = Math.max(...Object.values(toxicityScores), 0);
-  const toxicityLevel = maxToxicity >= 18 ? "High" : maxToxicity >= 9 ? "Moderate" : "Low";
+  const toxicityLevel = maxToxicity >= 18 ? "Heated" : maxToxicity >= 9 ? "Tense" : "Healthy";
   const toxicityBreakdown = toxicRank.slice(0, Math.min(isGroup ? 4 : 2, toxicRank.length)).map(name => {
     const item = stats[name];
     const reasons = [];
@@ -2755,9 +2903,9 @@ function spotDynamics({ messages, namesAll, namesSorted, msgCounts, starterCount
     return `${name}: ${Math.round(toxicityScores[name])} points${reasons.length ? ` • ${reasons.join(", ")}` : ""}`;
   });
   const toxicityReport =
-    toxicityLevel === "High"
+    toxicityLevel === "Heated"
       ? `High toxicity signal. The chat contains repeated pressure, escalation, or exit-style language that goes beyond one isolated argument.`
-      : toxicityLevel === "Moderate"
+      : toxicityLevel === "Tense"
         ? `Moderate toxicity signal. There are repeated patterns worth paying attention to, even if the sample is not hostile all the time.`
         : `Low toxicity signal. The sample has some tension markers, but they appear limited or inconsistent rather than dominant.`;
 
@@ -2793,7 +2941,7 @@ function localStats(messages) {
   messages.forEach(({body}) => {
     if (/media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i.test(body) || body.startsWith("http")) return;
     body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w => {
-      if (w.length>2 && !STOP.has(w) && !WA_NOISE.has(w) && !/^\d+$/.test(w)) wordFreq[w]=(wordFreq[w]||0)+1;
+      if (w.length>2 && !STOP_WORDS.has(w) && !/^\d+$/.test(w)) wordFreq[w]=(wordFreq[w]||0)+1;
     });
   });
   const topWords = Object.entries(wordFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
@@ -3700,6 +3848,11 @@ function deriveAccountaReportFromCore(core, math, relationshipType) {
 
 async function generateCoreAnalysisA(messages, math, relationshipType, chatLang = "en") {
   const chatText = buildSampleText(messages);
+  const detectedRel = detectRelationship(messages);
+  const relationshipLabel = detectedRel?.detected || null;
+  const relationshipLine = detectedRel
+    ? `Chat signal analysis detected they address each other as ${detectedRel.detected} (${detectedRel.confidence} confidence). Use "${detectedRel.detected}" when describing their relationship — never substitute "friend", "partner", or any other relationship word unless directly quoting the chat.`
+    : `No strong relational address terms were detected in the chat. Use the user-selected type "${relationshipType}" as the relationship label.`;
   const names = math.names || [];
   const isGroup = math.isGroup;
   const personCount = Math.min(names.length || 0, isGroup ? Math.min(names.length || 0, 6) : 2);
@@ -3790,20 +3943,21 @@ async function generateCoreAnalysisA(messages, math, relationshipType, chatLang 
   const system = buildAnalystSystemPrompt(
     "a sharp, observant chat analyst building a canonical core-analysis object that later reports will reuse",
     relationshipType,
-    `CORE-A SCOPE: relationship dynamic, communication patterns, funny moments, kindness moments, energy, love language, and growth trajectory. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. You will also receive EARLY and RECENT contiguous snapshots; use those specifically for growth/change fields, and use the event windows for specific moments and recurring patterns. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: In windows labelled "funny moment", the sequence is [trigger line] → [laugh reaction from a different person]. The funny person is the sender of the trigger line — the one whose message caused the other person to laugh. Do not attribute the humour to the person who laughed. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and energy/love-language reads, the actor is the sender of that exact line. For all "name" fields return ONLY the person's first name, with no explanation. Each timestamp already includes the day of week — read it directly and never calculate it yourself. Only report findings you can directly cite from the chat — if evidence is weak, use "None clearly identified". When quoting messages in any language, quote them as-is — do not translate them. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`,
+    `CORE-A SCOPE: relationship dynamic, communication patterns, funny moments, kindness moments, energy, love language, and growth trajectory. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. You will also receive EARLY and RECENT contiguous snapshots; use those specifically for growth/change fields, and use the event windows for specific moments and recurring patterns. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: Whenever you see a laugh reaction (😂, lol, lmao, 'im dead', 💀, 🤣, haha, or similar) from person B immediately following a line from person A, the funny person is person A — the one whose line caused the reaction. Never attribute humour to the person who is laughing. This rule applies everywhere in the chat, regardless of window label. RELATIONSHIP LANGUAGE: The user selected relationship type is "${relationshipType}". ${relationshipLine} Never infer or override the relationship type from tone, emoji use, or affection level alone — a warm message between cousins does not make them romantic partners, a casual message between partners does not make them friends. Always use the confirmed relationship label when describing who did something to whom. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and energy/love-language reads, the actor is the sender of that exact line. For all "name" fields return ONLY the person's first name, with no explanation. Each timestamp already includes the day of week — read it directly and never calculate it yourself. Only report findings you can directly cite from the chat — if evidence is weak, use "None clearly identified". QUOTE RULE: For these fields specifically — sweetMoment, tensionMoment, biggestTopic, dramaContext, toxicityReport, mostLovingMoment, mostEnergising, mostDraining — always try to include a short real quote from the chat inline within the sentence if one exists. Do not translate the quote — reproduce it exactly as written in the chat, in its original language. Format it naturally inside the sentence like: ('exact quote here'). Only skip the quote if no specific line clearly supports the finding. SUMMARY FIELD RULES: vibeOneLiner must capture the dominant emotional tone of the entire chat — never base it on a single moment, window, or exchange. insideJoke must be a recurring reference that appears in multiple windows — if you only saw it once, use 'None clearly identified'. biggestTopic must be the most consistently recurring subject across the full history, not the most dramatic single event. For all three fields: if you cannot confirm recurrence across multiple windows, do not claim it. When quoting messages in any language, quote them as-is — do not translate them. ALL PARTICIPANTS IN THIS CHAT: ${names.slice(0, isGroup ? names.length : 2).join(", ")}. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"} only — one entry per slotted participant. Participants not in the people array may still appear as senders in the windows. Track their behaviour for shared fields (dramaStarter, toxicPerson, funniestPerson, kindestPerson, etc.) but do not create people entries for them. Never fold an unslotted participant's actions into a slotted participant's entry.`,
     chatLang
   );
 
-  const userContent = `Here is a ${isGroup ? "group" : "two-person"} WhatsApp chat between ${names.slice(0, 6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages. The content below is divided into ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N · date · type ━━━. Windows are non-contiguous excerpts; do not infer connections between separate windows. Every line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that specific line.
+  const userContent = `Here is a ${isGroup ? "group" : "two-person"} WhatsApp chat between ${names.slice(0, 6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages. ${math.totalMessages > 10000 ? `This is a very large chat — every summary field (especially vibeOneLiner, biggestTopic, insideJoke) must reflect dominant patterns that recur across the full history. A single window is a tiny fraction of the whole. Never let one moment, joke, or exchange define a summary field. Weight only what appears repeatedly across multiple windows.` : ""} The content below is divided into ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N · date · type ━━━. Windows are non-contiguous excerpts; do not infer connections between separate windows. Every line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that specific line.
 
 IMPORTANT CONTEXT: ${isGroup ? `The least active member (the ghost) is ${math.ghost}. The conversation starter is ${math.convStarter}.` : `By reply time, ${math.ghostName} is slower to respond. The conversation starter is ${math.convStarter}. Local analysis found that ${math.funniestPerson} caused the most laugh reactions from the other person (${math.laughCausedBy?.[math.funniestPerson] || 0} times) — confirm or correct this based on the chat.`}
 
-EARLY SNAPSHOT (contiguous excerpt from the start of the chat):
+EARLY SNAPSHOT (contiguous excerpt from the start of the chat — use ONLY for growth/change fields: thenDepth, nowDepth, depthChange, whoChangedMore, whoChangedHow, topicsAppeared, topicsDisappeared, trajectory, trajectoryDetail, arcSummary):
 ${earlyText}
 
-RECENT SNAPSHOT (contiguous excerpt from the end of the chat):
+RECENT SNAPSHOT (contiguous excerpt from the end of the chat — use ONLY for the same growth/change fields listed above. Do not cite snapshot content for any other field):
 ${lateText}
 
+EVENT WINDOWS (use these for all non-growth fields — specific moments, quotes, patterns, kindness, humor, tension, red flags, love language, energy):
 ${chatText}
 
 Return exactly this JSON structure:
@@ -3816,6 +3970,11 @@ ${fields}`;
 
 async function generateCoreAnalysisB(messages, math, relationshipType, chatLang = "en") {
   const chatText = buildSampleText(messages);
+  const detectedRel = detectRelationship(messages);
+  const relationshipLabel = detectedRel?.detected || null;
+  const relationshipLine = detectedRel
+    ? `Chat signal analysis detected they address each other as ${detectedRel.detected} (${detectedRel.confidence} confidence). Use "${detectedRel.detected}" when describing their relationship — never substitute "friend", "partner", or any other relationship word unless directly quoting the chat.`
+    : `No strong relational address terms were detected in the chat. Use the user-selected type "${relationshipType}" as the relationship label.`;
   const names = math.names || [];
   const personCount = Math.min(names.length || 0, 2);
   const fields = `{
@@ -3882,7 +4041,7 @@ async function generateCoreAnalysisB(messages, math, relationshipType, chatLang 
   const system = buildAnalystSystemPrompt(
     "a careful risk, conflict, and accountability analyst building the canonical core-b object",
     relationshipType,
-    `CORE-B SCOPE: toxicity, health scores, apology patterns, conflict patterns, power balance, red flag moments, and accountability. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — never connect separate windows unless the messages explicitly link them. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — all behaviour belongs only to the sender on that exact line. Be conservative: one or two examples do not prove a stable pattern. If the balance is mixed, prefer "Balanced", "Tie", or "None clearly identified" over forcing one villain. For accountability: a promise is BROKEN only if there is clear evidence it was never fulfilled or the person explicitly backed out. A promise fulfilled late is still KEPT. Do not count vague ideas like "we should hang out sometime" as promises. Never combine two separate events into one story. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`,
+    `CORE-B SCOPE: toxicity, health scores, apology patterns, conflict patterns, power balance, red flag moments, and accountability. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — never connect separate windows unless the messages explicitly link them. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — all behaviour belongs only to the sender on that exact line. RELATIONSHIP LANGUAGE: The user selected relationship type is "${relationshipType}". ${relationshipLine} Never infer or override the relationship type from tone, emoji use, or affection level alone. Always use the confirmed relationship label when describing who did something to whom. Be conservative: one or two examples do not prove a stable pattern. If the balance is mixed, prefer "Balanced", "Tie", or "None clearly identified" over forcing one villain. For accountability: a promise is BROKEN only if there is clear evidence it was never fulfilled or the person explicitly backed out. A promise fulfilled late is still KEPT. Do not count vague ideas like "we should hang out sometime" as promises. Never combine two separate events into one story. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`,
     chatLang
   );
 
@@ -4252,191 +4411,7 @@ const PILL_LABEL = {
   toxicity:"Toxicity Report", lovelang:"Love Language", growth:"Growth Report", accounta:"Accountability", energy:"Energy Report",
 };
 
-const SHARE_CARD_WIDTH = 1080;
-const SHARE_URL = "wrapchat.app";
 
-function getShareCardSize() {
-  if (typeof window === "undefined") {
-    return { width: SHARE_CARD_WIDTH, height: 1920 };
-  }
-
-  const viewportWidth = Math.max(window.innerWidth || 0, 1);
-  const viewportHeight = Math.max(window.innerHeight || 0, 1);
-  const rawRatio = Math.max(viewportWidth, viewportHeight) / Math.max(Math.min(viewportWidth, viewportHeight), 1);
-  const portraitRatio = Math.min(Math.max(rawRatio, 1.6), 2.35);
-
-  return {
-    width: SHARE_CARD_WIDTH,
-    height: Math.round(SHARE_CARD_WIDTH * portraitRatio),
-  };
-}
-
-function shortName(name) {
-  return String(name || "").trim().split(/\s+/)[0] || "Someone";
-}
-
-function compactNumber(value) {
-  const num = Number(value || 0);
-  if (!Number.isFinite(num)) return "0";
-  if (num >= 1000000) return `${(num / 1000000).toFixed(num >= 10000000 ? 0 : 1).replace(/\.0$/, "")}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(num >= 10000 ? 0 : 1).replace(/\.0$/, "")}K`;
-  return `${num}`;
-}
-
-function clampCopy(value, max = 110) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
-  if (!text) return "Open the full WrapChat report for the full story.";
-  return text.length > max ? `${text.slice(0, max - 1).trim()}…` : text;
-}
-
-function formatShareScore(value, max = 10) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return `—/${max}`;
-  return `${Math.round(num)}/${max}`;
-}
-
-function getReportLabel(reportType) {
-  return REPORT_TYPES.find(r => r.id === reportType)?.label || "General Wrapped";
-}
-
-function buildShareCardData({ math, ai, reportType, displayLang = "en" }) {
-  if (!math) return null;
-
-  const names = Array.isArray(math.names) ? math.names.map(shortName).filter(Boolean) : [];
-  const duoLabel = names.length >= 2 ? `${names[0]} & ${names[1]}` : (names[0] || "Your chat");
-  const castLabel = math.isGroup
-    ? `${names.slice(0, 3).join(", ")}${names.length > 3 ? " +" : ""}`
-    : duoLabel;
-  const topFlag = normalizeRedFlags(ai?.redFlags)[0]?.title || math.redFlags?.[0]?.title || "Patterns worth a second look";
-  const report = reportType || "general";
-  const control = (value) => translateControlValue(displayLang, value);
-
-  const card = {
-    palette: report === "general" ? "finale" : (REPORT_TYPES.find(r => r.id === report)?.palette || "upload"),
-    reportLabel: getReportLabel(report),
-    eyebrow: math.isGroup ? "Group chat teaser" : "Private chat teaser",
-    title: math.isGroup ? "This group has lore." : "This chat has a personality.",
-    subtitle: `${compactNumber(math.totalMessages)} messages analyzed`,
-    stats: [
-      { label: "Cast", value: castLabel },
-      { label: "Volume", value: `${compactNumber(math.totalMessages)} msgs` },
-      { label: "Top month", value: math.topMonths?.[0]?.[0] || "Hidden in the full report" },
-    ],
-    insightLabel: "What WrapChat picked up",
-    insight: clampCopy(ai?.vibeOneLiner || ai?.relationshipSummary || "Enough patterns showed up to make the full report worth opening."),
-    cta: "Open the full report for the rest.",
-    shareText: "My WrapChat result card is ready.",
-  };
-
-  if (report === "toxicity") {
-    return {
-      ...card,
-      palette: "toxicity",
-      title: `Health score: ${formatShareScore(ai?.chatHealthScore)}`,
-      subtitle: math.isGroup ? "A teaser from the group toxicity report" : "A teaser from the toxicity report",
-      stats: [
-        { label: "Top flag", value: topFlag },
-        { label: "Power", value: clampCopy(control(ai?.powerHolder || "Balanced"), 24) },
-        { label: "Apologizes more", value: shortName(ai?.apologiesLeader?.name || names[0]) },
-      ],
-      insight: clampCopy(ai?.verdict || ai?.conflictPattern || "The card only shows the surface. The report shows the pattern."),
-      shareText: "I ran my chat through WrapChat's toxicity report.",
-    };
-  }
-
-  if (report === "lovelang") {
-    return {
-      ...card,
-      palette: "lovelang",
-      title: `Compatibility: ${formatShareScore(ai?.compatibilityScore)}`,
-      subtitle: "A teaser from the love language report",
-      stats: [
-        { label: names[0] || "Person A", value: clampCopy(control(ai?.personA?.language || "Hidden"), 22) },
-        { label: names[1] || "Person B", value: clampCopy(control(ai?.personB?.language || "Hidden"), 22) },
-        { label: "Gap", value: clampCopy(ai?.mismatch || "You should see the full report", 26) },
-      ],
-      insight: clampCopy(ai?.compatibilityRead || ai?.mostLovingMoment || "The full report breaks down how each person shows up."),
-      shareText: "I generated a WrapChat love language card.",
-    };
-  }
-
-  if (report === "growth") {
-    const trajectoryMap = { closer:"Getting closer", drifting:"Drifting apart", stable:"Holding steady" };
-    return {
-      ...card,
-      palette: "growth",
-      title: displayLang === "en" ? (trajectoryMap[ai?.trajectory] || "The arc changed.") : (control(ai?.trajectory) || "The arc changed."),
-      subtitle: "A teaser from the growth report",
-      stats: [
-        { label: "Then", value: clampCopy(ai?.thenDepth || "Different energy", 24) },
-        { label: "Now", value: clampCopy(ai?.nowDepth || "Different energy", 24) },
-        { label: "Changed more", value: shortName(ai?.whoChangedMore || "Someone") },
-      ],
-      insight: clampCopy(ai?.arcSummary || ai?.trajectoryDetail || "The full report compares early messages to recent ones."),
-      shareText: "I made a WrapChat growth card.",
-    };
-  }
-
-  if (report === "accounta") {
-    const personA = ai?.personA || {};
-    const personB = ai?.personB || {};
-    const mostReliable = (personA.score || 0) >= (personB.score || 0) ? personA : personB;
-    return {
-      ...card,
-      palette: "accounta",
-      title: "Receipts were found.",
-      subtitle: "A teaser from the accountability report",
-      stats: [
-        { label: "Promises", value: `${(personA.total || 0) + (personB.total || 0)}` },
-        { label: "Most reliable", value: shortName(mostReliable.name || names[0]) },
-        { label: "Top score", value: formatShareScore(mostReliable.score) },
-      ],
-      insight: clampCopy(ai?.overallVerdict || personA.detail || personB.detail || "The full report shows who followed through and who didn't."),
-      shareText: "I pulled an accountability teaser from WrapChat.",
-    };
-  }
-
-  if (report === "energy") {
-    return {
-      ...card,
-      palette: "energy",
-      title: "Energy check-in.",
-      subtitle: "A teaser from the energy report",
-      stats: [
-        { label: shortName(ai?.personA?.name || names[0]), value: formatShareScore(ai?.personA?.netScore) },
-        { label: shortName(ai?.personB?.name || names[1]), value: formatShareScore(ai?.personB?.netScore) },
-        { label: "Match", value: clampCopy(ai?.compatibility || "Open the report", 26) },
-      ],
-      insight: clampCopy(ai?.mostEnergising || ai?.mostDraining || "The full report shows what lifts the chat and what drains it."),
-      shareText: "I generated an energy card with WrapChat.",
-    };
-  }
-
-  if (math.isGroup) {
-    return {
-      ...card,
-      title: "Your group has main-character energy.",
-      stats: [
-        { label: "Main character", value: shortName(math.mainChar || names[0]) },
-        { label: "Ghost", value: shortName(math.ghost || names[names.length - 1]) },
-        { label: "Top word", value: `"${math.topWords?.[0]?.[0] || "..." }"` },
-      ],
-      insight: clampCopy(ai?.groupDynamic || ai?.vibeOneLiner || "The group dynamic is weirder and more revealing than this card admits."),
-      shareText: "My group chat got the WrapChat treatment.",
-    };
-  }
-
-  return {
-    ...card,
-    stats: [
-      { label: "Best streak", value: `${math.streak || 0} days` },
-      { label: "Ghost award", value: shortName(math.ghostName || names[1]) },
-      { label: "Funniest", value: shortName(ai?.funniestPerson || names[0]) },
-    ],
-    insight: clampCopy(ai?.relationshipSummary || ai?.vibeOneLiner || "The full report explains what this chat's whole deal actually is."),
-    shareText: "My WrapChat result card is ready.",
-  };
-}
 
 function canShareFiles(files) {
   if (!navigator?.share || !files?.length) return false;
@@ -4468,108 +4443,56 @@ function canvasToBlob(canvas) {
   });
 }
 
-function ShareCardRenderer({ cardData, captureRef, cardSize }) {
-  if (!cardData) return null;
-  const palette = PAL[cardData.palette] || PAL.upload;
-  const width = cardSize?.width || SHARE_CARD_WIDTH;
-  const height = cardSize?.height || 1920;
-  const pad = Math.round(width * 0.06);
-  const inset = Math.round(width * 0.022);
-
+function SharePicker({ open, busy, onCard, onSummary, onClose }) {
+  if (!open) return null;
+  const btnStyle = {
+    flex: 1,
+    background: "rgba(255,255,255,0.07)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 18,
+    padding: "20px 0",
+    color: "#fff",
+    cursor: busy ? "wait" : "pointer",
+    fontFamily: "inherit",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 6,
+  };
   return (
     <div
-      aria-hidden="true"
-      style={{
-        position:"fixed",
-        inset:0,
-        pointerEvents:"none",
-        overflow:"hidden",
-        opacity:0,
-        zIndex:-1,
-      }}
+      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)", zIndex:200, display:"flex", alignItems:"flex-end", justifyContent:"center" }}
+      onClick={onClose}
     >
       <div
-        ref={captureRef}
-        style={{
-          position:"absolute",
-          left:-(width + 200),
-          top:0,
-          width,
-          height,
-          boxSizing:"border-box",
-          padding:pad,
-          display:"flex",
-          flexDirection:"column",
-          justifyContent:"space-between",
-          color:"#fff",
-          background:`radial-gradient(circle at top left, ${palette.accent}44 0%, transparent 32%), radial-gradient(circle at bottom right, rgba(255,255,255,0.12) 0%, transparent 28%), linear-gradient(140deg, ${palette.bg} 0%, ${palette.inner} 100%)`,
-          fontFamily:"system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-          overflow:"hidden",
-          position:"relative",
-        }}
+        style={{ width:"min(420px,100%)", background:"#111118", border:"1px solid rgba(255,255,255,0.10)", borderRadius:"28px 28px 0 0", padding:"10px 20px 32px", boxShadow:"0 -20px 60px rgba(0,0,0,0.5)", color:"#fff" }}
+        onClick={e => e.stopPropagation()}
       >
-        <div style={{ position:"absolute", inset, border:"1px solid rgba(255,255,255,0.12)", borderRadius:36 }} />
-
-        <div style={{ position:"relative", zIndex:1, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
-          <div style={{ display:"flex", flexDirection:"column", gap:14, maxWidth:760 }}>
-            <div style={{ alignSelf:"flex-start", padding:"10px 18px", borderRadius:999, background:"rgba(255,255,255,0.12)", fontSize:20, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>
-              {cardData.reportLabel}
-            </div>
-            <div style={{ fontSize:22, color:"rgba(255,255,255,0.68)", fontWeight:600, letterSpacing:"0.04em", textTransform:"uppercase" }}>
-              {cardData.eyebrow}
-            </div>
-          </div>
-          <div style={{ fontSize:28, fontWeight:800, letterSpacing:"-0.04em", color:"rgba(255,255,255,0.9)" }}>WrapChat</div>
-        </div>
-
-        <div style={{ position:"relative", zIndex:1, display:"flex", flexDirection:"column", gap:26 }}>
-          <div style={{ fontSize:92, lineHeight:0.92, fontWeight:900, letterSpacing:"-0.06em", maxWidth:820 }}>
-            {cardData.title}
-          </div>
-          <div style={{ fontSize:34, lineHeight:1.35, color:"rgba(255,255,255,0.8)", maxWidth:760 }}>
-            {cardData.subtitle}
-          </div>
-
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:16 }}>
-            {cardData.stats.slice(0, 3).map((stat, index) => (
-              <div key={`${stat.label}-${index}`} style={{ background:"rgba(0,0,0,0.22)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:28, padding:"22px 24px", minHeight:144 }}>
-                <div style={{ fontSize:18, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.48)", marginBottom:14 }}>
-                  {stat.label}
-                </div>
-                <div style={{ fontSize:36, lineHeight:1.12, fontWeight:800, letterSpacing:"-0.04em", wordBreak:"break-word" }}>
-                  {stat.value}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:32, padding:"28px 30px" }}>
-            <div style={{ fontSize:18, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.48)", marginBottom:12 }}>
-              {cardData.insightLabel}
-            </div>
-            <div style={{ fontSize:36, lineHeight:1.35, color:"#fff", fontWeight:600 }}>
-              {cardData.insight}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ position:"relative", zIndex:1, display:"flex", justifyContent:"space-between", alignItems:"flex-end", gap:20 }}>
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            <div style={{ fontSize:28, lineHeight:1.3, color:"rgba(255,255,255,0.85)", fontWeight:700 }}>
-              {cardData.cta}
-            </div>
-            <div style={{ fontSize:24, lineHeight:1.3, color:"rgba(255,255,255,0.62)" }}>
-              Private card. Full details stay inside the app.
-            </div>
-          </div>
-          <div style={{ textAlign:"right" }}>
-            <div style={{ fontSize:26, fontWeight:800, color:"rgba(255,255,255,0.88)" }}>WrapChat</div>
-            <div style={{ fontSize:22, color:"rgba(255,255,255,0.62)", marginTop:6 }}>{SHARE_URL}</div>
-          </div>
+        <div style={{ width:36, height:4, borderRadius:999, background:"rgba(255,255,255,0.14)", margin:"0 auto 20px" }} />
+        <div style={{ fontSize:18, fontWeight:800, letterSpacing:-0.5, marginBottom:16 }}>Share</div>
+        <div style={{ display:"flex", gap:12 }}>
+          <button className="wc-btn" onClick={onCard} disabled={busy} style={btnStyle}>
+            <span style={{ fontSize:26 }}>🃏</span>
+            <span style={{ fontSize:14, fontWeight:700 }}>{busy ? "Saving…" : "Card"}</span>
+            <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)" }}>Current screen</span>
+          </button>
+          <button className="wc-btn" onClick={onSummary} disabled={busy} style={btnStyle}>
+            <span style={{ fontSize:26 }}>📋</span>
+            <span style={{ fontSize:14, fontWeight:700 }}>{busy ? "Saving…" : "Summary"}</span>
+            <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)" }}>Results overview</span>
+          </button>
         </div>
       </div>
     </div>
   );
+}
+
+// Converts AI health score (1–10, higher = healthier) to a display label.
+// Prefer this over local math toxicityLevel whenever AI data is available.
+function chatHealthLabel(score) {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return null;
+  return n >= 7 ? "Healthy" : n >= 4 ? "Tense" : "Heated";
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -4959,6 +4882,15 @@ function FeedbackButton({ onClick }) {
 
 function FeedbackSheet({ open, target, selected, note, submitting, onSelect, onNoteChange, onSubmit, onClose }) {
   const t = useT();
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (open && target) {
+      requestAnimationFrame(() => setVisible(true));
+    } else {
+      setVisible(false);
+    }
+  }, [open, target]);
+
   if (!open || !target) return null;
 
   return (
@@ -4966,12 +4898,13 @@ function FeedbackSheet({ open, target, selected, note, submitting, onSelect, onN
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.6)",
+        background: `rgba(0,0,0,${visible ? 0.6 : 0})`,
         backdropFilter: "blur(6px)",
         WebkitBackdropFilter: "blur(6px)",
         zIndex: 200,
         display: "flex",
         alignItems: "flex-end",
+        transition: "background 0.28s ease",
         justifyContent: "center",
         padding: "0 0 env(safe-area-inset-bottom, 0px)",
       }}
@@ -4997,6 +4930,8 @@ function FeedbackSheet({ open, target, selected, note, submitting, onSelect, onN
             boxShadow: "0 -20px 60px rgba(0,0,0,0.5)",
             color: "#fff",
             overflowY: "auto",
+            transform: visible ? "translateY(0)" : "translateY(100%)",
+            transition: "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
             overflowX: "hidden",
             overscrollBehavior: "contain",
             scrollbarWidth: "thin",
@@ -5283,10 +5218,10 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
   const duoFlags = normalizeRedFlags(ai?.redFlags).length ? normalizeRedFlags(ai?.redFlags) : s.redFlags;
   const evidenceTimeline = normalizeTimeline(ai?.evidenceTimeline).length ? normalizeTimeline(ai?.evidenceTimeline) : s.evidenceTimeline;
   const toxicityReport = ai?.toxicityReport || s.toxicityReport;
-  const toxicityLevel = s.toxicityLevel;
+  const toxicityLevel = chatHealthLabel(ai?.chatHealthScore) || s.toxicityLevel;
   const toxicityBreakdown = s.toxicityBreakdown;
   const casualScreens = [
-    <Shell sec="roast" prog={1} total={TOTAL}>
+    <Shell sec="roast" prog={1} total={TOTAL} feedback={feedback("Who's more obsessed?", 1)}>
       <T>{t("Who's more obsessed?")}</T>
       <div style={{width:"100%",marginTop:16}}>
         <Bar value={s.msgCounts[0]} max={mMax} color="#E06030" label={s.names[0]} />
@@ -5321,7 +5256,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="roast" prog={3} total={TOTAL}>
+    <Shell sec="roast" prog={3} total={TOTAL} feedback={feedback("The Last Word", 3)}>
       <T>{t("The Last Word")}</T>
       <Big>{s.convKiller}</Big>
       <Sub>{t("Sends the last message that nobody replies to — {count} times.", { count: s.convKillerCount })}</Sub>
@@ -5332,7 +5267,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovely" prog={4} total={TOTAL}>
+    <Shell sec="lovely" prog={4} total={TOTAL} feedback={feedback("Your longest streak", 4)}>
       <T>{t("Your longest streak")}</T>
       <Big>{t("{count} days", { count: s.streak })}</Big>
       <Sub>{t("Texted every single day for {count} days straight.", { count: s.streak })}</Sub>
@@ -5356,7 +5291,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovely" prog={7} total={TOTAL}>
+    <Shell sec="lovely" prog={7} total={TOTAL} feedback={feedback("Top 3 most active months", 7)}>
       <T>{t("Top 3 most active months")}</T>
       <div style={{display:"flex",gap:10,marginTop:16,width:"100%",justifyContent:"center"}}>
         {s.topMonths.map((m,i)=><MonthBadge key={i} month={m[0]} count={m[1]} medal={["🥇","🥈","🥉"][i]} />)}
@@ -5365,7 +5300,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovely" prog={6} total={TOTAL}>
+    <Shell sec="lovely" prog={6} total={TOTAL} feedback={feedback("Who always reaches out first?", 6)}>
       <T>{t("Who always reaches out first?")}</T>
       <Big>{s.convStarter}</Big>
       <Sub>{t("Started {pct} of all conversations.", { pct: s.convStarterPct })}</Sub>
@@ -5383,7 +5318,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="funny" prog={9} total={TOTAL}>
+    <Shell sec="funny" prog={9} total={TOTAL} feedback={feedback("Spirit emojis", 9)}>
       <T>{t("Spirit emojis")}</T>
       <div style={{display:"flex",gap:0,marginTop:16,width:"100%",justifyContent:"space-around"}}>
         {[0,1].map(i=>(
@@ -5397,13 +5332,13 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="funny" prog={10} total={TOTAL}>
+    <Shell sec="funny" prog={10} total={TOTAL} feedback={feedback("Top 10 most used words", 10)}>
       <T>{t("Top 10 most used words")}</T>
       <Words words={s.topWords} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="funny" prog={11} total={TOTAL}>
+    <Shell sec="funny" prog={11} total={TOTAL} feedback={feedback("Signature phrases", 11)}>
       <T>{t("Signature phrases")}</T>
       <div style={{display:"flex",gap:"1rem",marginTop:16,width:"100%",justifyContent:"center"}}>
         {[0,1].map(i=>(
@@ -5417,7 +5352,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="stats" prog={12} total={TOTAL}>
+    <Shell sec="stats" prog={12} total={TOTAL} feedback={feedback("Message length", 12)}>
       {(() => {
         const diff = Math.abs(s.avgMsgLen[0] - s.avgMsgLen[1]);
         const ratio = Math.max(...s.avgMsgLen) / Math.max(Math.min(...s.avgMsgLen), 1);
@@ -5447,7 +5382,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="stats" prog={13} total={TOTAL}>
+    <Shell sec="stats" prog={13} total={TOTAL} feedback={feedback("Media and links", 13)}>
       <T>{t("Media and links")}</T>
       <div style={{width:"100%",marginTop:16}}>
         <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.07em"}}>{t("Photos & videos")}</div>
@@ -5501,7 +5436,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="ai" prog={2} total={TOTAL}>
+    <Shell sec="ai" prog={2} total={TOTAL} feedback={feedback("Evidence log", 2)}>
       <T>{t("Evidence log")}</T>
       <EvidenceList items={evidenceTimeline} loading={aiLoading && !evidenceTimeline?.length} />
       <Nav back={back} next={next} />
@@ -5569,10 +5504,10 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
   const groupFlags = normalizeRedFlags(ai?.redFlags).length ? normalizeRedFlags(ai?.redFlags) : s.redFlags;
   const evidenceTimeline = normalizeTimeline(ai?.evidenceTimeline).length ? normalizeTimeline(ai?.evidenceTimeline) : s.evidenceTimeline;
   const toxicityReport = ai?.toxicityReport || s.toxicityReport;
-  const toxicityLevel = s.toxicityLevel;
+  const toxicityLevel = chatHealthLabel(ai?.chatHealthScore) || s.toxicityLevel;
   const toxicityBreakdown = s.toxicityBreakdown;
   const casualScreens = [
-    <Shell sec="roast" prog={1} total={TOTAL}>
+    <Shell sec="roast" prog={1} total={TOTAL} feedback={feedback("The Main Character", 1)}>
       <T>{t("The Main Character")}</T>
       <Big>{s.mainChar}</Big>
       <div style={{width:"100%",marginTop:10}}>
@@ -5597,7 +5532,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="roast" prog={3} total={TOTAL}>
+    <Shell sec="roast" prog={3} total={TOTAL} feedback={feedback("The Last Word", 3)}>
       <T>{t("The Last Word")}</T>
       <Big>{s.convKiller}</Big>
       <Sub>{t("Sends the last message that nobody replies to.")}</Sub>
@@ -5608,7 +5543,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovely" prog={4} total={TOTAL}>
+    <Shell sec="lovely" prog={4} total={TOTAL} feedback={feedback("Top 3 most active months", 4)}>
       <T>{t("Top 3 most active months")}</T>
       <div style={{display:"flex",gap:10,marginTop:16,width:"100%",justifyContent:"center"}}>
         {s.topMonths.map((m,i)=><MonthBadge key={i} month={m[0]} count={m[1]} medal={["🥇","🥈","🥉"][i]} />)}
@@ -5617,7 +5552,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovely" prog={5} total={TOTAL}>
+    <Shell sec="lovely" prog={5} total={TOTAL} feedback={feedback("Longest active streak", 5)}>
       <T>{t("Longest active streak")}</T>
       <Big>{t("{count} days", { count: s.streak })}</Big>
       <Sub>{t("The group kept the chat alive for {count} days straight.", { count: s.streak })}</Sub>
@@ -5656,20 +5591,20 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="funny" prog={9} total={TOTAL}>
+    <Shell sec="funny" prog={9} total={TOTAL} feedback={feedback("Group spirit emoji", 9)}>
       <T>{t("Group spirit emoji")}</T>
       <div style={{fontSize:90,textAlign:"center",marginTop:16,lineHeight:1,width:"100%"}}>{s.spiritEmoji[0]}</div>
       <Sub>{t("This one emoji basically summarises the entire group energy.")}</Sub>
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="funny" prog={10} total={TOTAL}>
+    <Shell sec="funny" prog={10} total={TOTAL} feedback={feedback("Top 10 most used words", 10)}>
       <T>{t("Top 10 most used words")}</T>
       <Words words={s.topWords} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="stats" prog={11} total={TOTAL}>
+    <Shell sec="stats" prog={11} total={TOTAL} feedback={feedback("The Novelist", 11)}>
       <T>{t("The Novelist")}</T>
       <Big>{s.novelist}</Big>
       <div style={{display:"flex",gap:0,marginTop:12,width:"100%",justifyContent:"space-around"}}>
@@ -5687,7 +5622,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="stats" prog={12} total={TOTAL}>
+    <Shell sec="stats" prog={12} total={TOTAL} feedback={feedback("Group roles", 12)}>
       <T>Group roles</T>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:16,width:"100%"}}>
         <Cell label={s.photographerIsVoice ? "Voice Note Addict" : "Photographer"} value={s.photographer} />
@@ -5744,7 +5679,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="ai" prog={2} total={TOTAL}>
+    <Shell sec="ai" prog={2} total={TOTAL} feedback={feedback("Evidence log", 2)}>
       <T>{t("Evidence log")}</T>
       <EvidenceList items={evidenceTimeline} loading={aiLoading && !evidenceTimeline?.length} />
       <Nav back={back} next={next} />
@@ -5766,7 +5701,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={5} total={TOTAL}>
+    <Shell sec="ai" prog={5} total={TOTAL} feedback={feedback("Support and strain", 5)}>
       <T>{t("Support and strain")}</T>
       <AICard label={t("Who keeps it going")} value={s.hype ? t("{name} started {pct} of conversations.", { name: s.hype, pct: s.convStarterPct }) : t("The group shares the conversation starts.")} loading={false} />
       <AICard label={t("Who goes quiet")} value={s.ghost ? t("{name} is the least active member in the sampled history.", { name: s.ghost }) : t("No clear ghost in this sample.")} loading={false} />
@@ -7621,7 +7556,7 @@ function MyResults({ onBack, onRestoreResult }) {
     const math = row.math_data   || {};
     switch (row.report_type) {
       case "general":  return `${(math.totalMessages || 0).toLocaleString()} messages`;
-      case "toxicity": return math.toxicityLevel || ai.toxicityLevel || "—";
+      case "toxicity": return chatHealthLabel(ai.chatHealthScore) || math.toxicityLevel || "—";
       case "lovelang": return ai.compatibilityScore != null ? `${ai.compatibilityScore}/10 compatibility` : "—";
       case "growth":   return translateControlValue(displayLang, ai.trajectory) || "—";
       case "accounta": return ai.overallVerdict || "—";
@@ -7798,14 +7733,13 @@ export default function App() {
   const [sid,              setSid]              = useState(0);
   const [resultsOrigin,    setResultsOrigin]    = useState("upload"); // "upload" | "history"
   const [shareBusy,        setShareBusy]        = useState(false);
-  const [shareCardSize,    setShareCardSize]    = useState(() => getShareCardSize());
+  const [sharePicker,      setSharePicker]      = useState(false);
   const [currentResultId,  setCurrentResultId]  = useState(null);
   const [feedbackTarget,   setFeedbackTarget]   = useState(null);
   const [feedbackChoice,   setFeedbackChoice]   = useState("");
   const [feedbackNote,     setFeedbackNote]     = useState("");
   const [feedbackBusy,     setFeedbackBusy]     = useState(false);
   const [feedbackThanks,   setFeedbackThanks]   = useState(false);
-  const shareCardRef = useRef(null);
   const resolvedUiLang = resolveUiLang(uiLangPref, detectedLang?.code);
 
   useEffect(() => {
@@ -7832,17 +7766,6 @@ export default function App() {
   // without being re-registered on every render.
   const phaseRef = useRef(phase);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
-
-  useEffect(() => {
-    const updateShareCardSize = () => setShareCardSize(getShareCardSize());
-    updateShareCardSize();
-    window.addEventListener("resize", updateShareCardSize);
-    window.addEventListener("orientationchange", updateShareCardSize);
-    return () => {
-      window.removeEventListener("resize", updateShareCardSize);
-      window.removeEventListener("orientationchange", updateShareCardSize);
-    };
-  }, []);
 
   useEffect(() => {
     if (!feedbackThanks) return undefined;
@@ -8113,41 +8036,34 @@ export default function App() {
     closeFeedback(true);
     if (ok) setFeedbackThanks(true);
   };
-  const shareCardData = buildShareCardData({ math, ai, reportType, displayLang: ai?.displayLanguage || chatLang });
-  const shareFilename = `wrapchat-${reportType || "general"}-card.png`;
-
-  const handleShareResult = async () => {
-    if (!shareCardRef.current || !shareCardData || shareBusy) return;
+  const captureScreen = async (filename) => {
+    if (shareBusy) return;
     setShareBusy(true);
+    setSharePicker(false);
     let blob = null;
     try {
+      const el = document.querySelector(".wc-root");
+      if (!el) return;
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      const canvas = await html2canvas(shareCardRef.current, {
+      const canvas = await html2canvas(el, {
         backgroundColor: null,
-        scale: 1,
+        scale: window.devicePixelRatio || 2,
         useCORS: true,
         logging: false,
-        width: shareCardSize.width,
-        height: shareCardSize.height,
       });
       blob = await canvasToBlob(canvas);
       const file = typeof File === "function"
-        ? new File([blob], shareFilename, { type: "image/png" })
+        ? new File([blob], filename, { type: "image/png" })
         : null;
-
       if (file && canShareFiles([file])) {
-        await navigator.share({
-          files: [file],
-          title: `WrapChat • ${shareCardData.reportLabel}`,
-          text: shareCardData.shareText,
-        });
+        await navigator.share({ files: [file], title: "WrapChat" });
       } else {
-        downloadBlob(blob, shareFilename);
+        downloadBlob(blob, filename);
       }
     } catch (error) {
       if (error?.name !== "AbortError") {
-        if (blob) downloadBlob(blob, shareFilename);
-        console.error("Share card capture failed", error);
+        if (blob) downloadBlob(blob, filename);
+        console.error("Screen capture failed", error);
       }
     } finally {
       setShareBusy(false);
@@ -8156,7 +8072,7 @@ export default function App() {
 
   const wrap = child => (
     <UILanguageContext.Provider value={{ uiLang: resolvedUiLang, uiLangPref, updateUiLangPref }}>
-      <ShareResultsContext.Provider value={shareCardData ? { onShare: handleShareResult, busy: shareBusy } : null}>
+      <ShareResultsContext.Provider value={{ onShare: () => setSharePicker(true), busy: shareBusy }}>
         <FeedbackContext.Provider value={{ openFeedback }}>
           <>
             <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}>
@@ -8166,7 +8082,13 @@ export default function App() {
                 </CloseResultsContext.Provider>
               </Slide>
             </div>
-            <ShareCardRenderer captureRef={shareCardRef} cardData={shareCardData} cardSize={shareCardSize} />
+            <SharePicker
+              open={sharePicker}
+              busy={shareBusy}
+              onCard={() => captureScreen(`wrapchat-${reportType || "general"}-card.png`)}
+              onSummary={() => captureScreen(`wrapchat-${reportType || "general"}-summary.png`)}
+              onClose={() => setSharePicker(false)}
+            />
             <FeedbackSheet
               open={!!feedbackTarget}
               target={feedbackTarget}
