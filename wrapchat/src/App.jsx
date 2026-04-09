@@ -22,6 +22,10 @@ const SlideContext = createContext({ dir: "fwd", id: 0 });
 // uiLang is the resolved code ("en","tr","es","pt","ar","fr","de","it").
 const UILanguageContext = createContext({ uiLang: "en", uiLangPref: "english", updateUiLangPref: () => {} });
 function useUILanguage() { return useContext(UILanguageContext); }
+function useT() {
+  const { uiLang } = useUILanguage();
+  return (key, vars) => translateUI(uiLang, key, vars);
+}
 
 function isAdminUser(user) {
   const email = String(user?.email || "").trim().toLowerCase();
@@ -166,6 +170,1876 @@ const LANG_META = {
   de: "German",
   it: "Italian",
 };
+
+const UI_TRANSLATIONS = {
+  en: {
+    "quips.duo.obsessed": [
+      `"{name}, you might want to check your screen time."`,
+      `"{name} is carrying this conversation on pure texting stamina."`,
+      `"Not obsessed, just extremely available. Sure, {name}."`,
+    ],
+    "quips.duo.responseBalanced": [
+      `"Both of you are equally responsive. No ghosts here."`,
+      `"Neither of you keeps the other waiting. Refreshing."`,
+      `"Both responsive, both showing up. This is what balance looks like."`,
+    ],
+    "quips.duo.ghost": [
+      `"{name} was 'busy'. Sure."`,
+      `"{name}: read at 14:32. Replied at... eventually."`,
+      `"{name} treats replies like a limited resource."`,
+    ],
+    "quips.duo.lastWord": [
+      `"{name} sends a message. The chat decides not to continue."`,
+      `"Last seen: {name}'s message, unanswered."`,
+      `"{name} has a gift for sending the final word."`,
+    ],
+    "quips.duo.streak100": [
+      `"{streak} days. That's not a streak, that's a lifestyle."`,
+      `"Over {streak} consecutive days. Whatever this is, it's real."`,
+      `"{streak} days straight. That's serious consistency."`,
+    ],
+    "quips.duo.streak30": [
+      `"{streak} days without a gap. That kind of consistency is rare."`,
+      `"A whole month-plus of showing up. That means something."`,
+      `"No gaps. No excuses. Just {streak} days straight."`,
+    ],
+    "quips.duo.streak10": [
+      `"{streak} days in a row. Not bad at all."`,
+      `"Okay, that's actually kind of cute."`,
+      `"A solid run. Something was clearly working during those {streak} days."`,
+    ],
+    "quips.duo.streakShort": [
+      `"{streak} days. Short but real."`,
+      `"Even a {streak}-day streak is something."`,
+      `"{streak} days of not missing each other still counts."`,
+    ],
+    "quips.duo.convStarter": [
+      `"Someone is always thinking of the other one first."`,
+      `"{name} is always the one who breaks the silence first."`,
+      `"The first text keeps coming from {name}. That says a lot."`,
+    ],
+    "quips.duo.messageLengthSimilar": [
+      `"Almost identical message lengths. Suspiciously balanced."`,
+      `"No novelist here, no texter either. Just two people typing about the same amount."`,
+      `"Balanced. No essays, no one-word replies. Suspiciously normal."`,
+    ],
+    "quips.duo.messageLengthDifferent": [
+      `"{novelist} treats every text like a letter to posterity."`,
+      `"Somewhere {novelist} is still typing."`,
+      `"{texter} replies. {novelist} responds. There's a difference."`,
+    ],
+    "quips.group.mainCharacter": [
+      `"{name}, this is basically your personal blog."`,
+      `"{name} came here to talk and is absolutely doing that."`,
+      `"Without {name} this chat would be a graveyard."`,
+    ],
+    "quips.group.ghost": [
+      `"{name} is here in spirit. Only in spirit."`,
+      `"{name} joined the group and immediately disappeared into witness protection."`,
+      `"A silent observer. A lurker. A mystery. {name}."`,
+    ],
+    "quips.group.lastWord": [
+      `"{name} sends a message. The group doesn't respond. Classic."`,
+      `"After {name}'s message, the group goes quiet every time."`,
+      `"{name} has a habit of sending messages into the void."`,
+    ],
+    "quips.group.streak100": [
+      `"{streak} days without a single gap. This group is built different."`,
+      `"Over {streak} consecutive days. That's not a group chat, that's a commitment."`,
+      `"Whatever keeps this group going, bottle it."`,
+    ],
+    "quips.group.streak30": [
+      `"{streak} days of showing up. That's a real group."`,
+      `"Not a single day off. This group has commitment in reverse."`,
+      `"Most group chats go quiet after two weeks. This one didn't."`,
+    ],
+    "quips.group.streak10": [
+      `"{streak} days in a row. The group was alive."`,
+      `"You all actually like each other. Surprising."`,
+      `"{streak} consecutive days. That's more than most groups manage."`,
+    ],
+    "quips.group.streakShort": [
+      `"{streak} days. Small but it counts."`,
+      `"A {streak}-day run still means something was happening."`,
+      `"Even {streak} days in a row takes effort."`,
+    ],
+    "quips.group.novelist": [
+      `"{name} types like the word limit doesn't exist."`,
+      `"{name} sends messages with full plot development."`,
+      `"If there is an essay in the group, {name} wrote it."`,
+    ],
+  },
+  tr: {
+    "Choose your language": "Dilini seç",
+    "English": "İngilizce",
+    "Auto-detect": "Otomatik algıla",
+    "Continue": "Devam et",
+    "Back": "Geri",
+    "Next": "İleri",
+    "See summary": "Özeti gör",
+    "Done": "Bitti",
+    "Start over": "Baştan başla",
+    "Share": "Paylaş",
+    "What's off about this?": "Burada yanlış olan ne?",
+    "Optional note": "İsteğe bağlı not",
+    "Cancel": "İptal",
+    "Submit": "Gönder",
+    "Sending…": "Gönderiliyor…",
+    "Got it, thank you.": "Tamamdır, teşekkürler.",
+    "Events are mixing": "Olaylar karışmış",
+    "Wrong person": "Yanlış kişi",
+    "Didn't happen": "Hiç yaşanmadı",
+    "Tone misread": "Ton yanlış okunmuş",
+    "Overclaiming": "Fazla iddialı",
+    "Missing context": "Bağlam eksik",
+    "Other": "Diğer",
+    "The Roast": "Kavrulma",
+    "The Lovely": "Tatlı Taraf",
+    "The Funny": "Komik Taraf",
+    "The Stats": "İstatistikler",
+    "Insight": "İçgörü",
+    "WrapChat": "WrapChat",
+    "Toxicity Report": "Toksisite Raporu",
+    "Love Language": "Sevgi Dili",
+    "Growth Report": "Gelişim Raporu",
+    "Accountability": "Sorumluluk",
+    "Energy Report": "Enerji Raporu",
+    "Choose your report": "Raporunu seç",
+    "Who is this chat with?": "Bu sohbet kiminle?",
+    "This helps the AI frame the analysis correctly.": "Bu, yapay zekanın analizi doğru çerçevelemesine yardımcı olur.",
+    "Partner": "Partner",
+    "Dating": "Flört",
+    "Ex": "Eski sevgili",
+    "Related": "Akraba",
+    "Friend": "Arkadaş",
+    "Colleague": "İş arkadaşı",
+    "Romantic partner or spouse": "Romantik partner ya da eş",
+    "Seeing each other or early stages": "Görüşüyorsunuz ya da ilişkinin başları",
+    "Former romantic partner": "Eski romantik partner",
+    "Parent, sibling or relative": "Ebeveyn, kardeş ya da akraba",
+    "Close friend or bestie": "Yakın arkadaş ya da kanka",
+    "Coworker or professional contact": "İş arkadaşı ya da profesyonel tanıdık",
+    "Someone you know": "Tanıdığın biri",
+    "Reading your messages...": "Mesajların okunuyor...",
+    "Finding the patterns...": "Örüntüler bulunuyor...",
+    "Figuring out who's funny...": "Kimin komik olduğu çözülüyor...",
+    "Detecting the drama...": "Dramalar tespit ediliyor...",
+    "Reading between the lines...": "Satır araları okunuyor...",
+    "Almost done...": "Neredeyse bitti...",
+    "Upload different file": "Farklı bir dosya yükle",
+    "Upload your chat": "Sohbetini yükle",
+    "Reading your chat…": "Sohbetin okunuyor…",
+    "My Results": "Sonuçlarım",
+    "Edit": "Düzenle",
+    "Your chats, unwrapped.": "Sohbetlerinin şifresi çözülüyor.",
+    "Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.": "Grup ya da ikili sohbet otomatik algılanır. Sohbetin yapay zekâ ile analiz edilir ve asla saklanmaz. Yalnızca sonuçlar kaydedilir.",
+    "UI language": "Arayüz dili",
+    "Report language": "Rapor dili",
+    "auto": "otomatik",
+    "changed": "değişti",
+    "Who's more obsessed?": "Kim daha takıntılı?",
+    "The Ghost Award": "Hayalet Ödülü",
+    "Response times": "Yanıt süreleri",
+    "Balanced": "Dengeli",
+    "The Last Word": "Son Sözü Söyleyen",
+    "Your longest streak": "En uzun seriniz",
+    "The Kindest One": "En Nazik Olan",
+    "The Hype Person": "Gaz Veren Kişi",
+    "The Funny One": "En Komik Olan",
+    "Spirit emojis": "Ruh emojileri",
+    "Group spirit emoji": "Grubun ruh emojisi",
+    "Top 10 most used words": "En çok kullanılan 10 kelime",
+    "Signature phrases": "İmza cümleler",
+    "Message length": "Mesaj uzunluğu",
+    "The Novelist vs The Texter": "Roman yazarı ve kısa mesajcı",
+    "The Novelist": "Roman yazarı",
+    "Media and links": "Medya ve linkler",
+    "What you actually talk about": "Aslında ne konuşuyorsunuz",
+    "The Drama Report": "Drama Raporu",
+    "What's really going on": "Aslında neler oluyor",
+    "Chat vibe": "Sohbet havası",
+    "Relationship reading": "İlişki yorumu",
+    "Evidence log": "Kanıt dökümü",
+    "What the chat shows": "Sohbetin gösterdiği şey",
+    "Toxicity scorecard": "Toksisite puan kartı",
+    "Tension snapshot": "Gerilim özeti",
+    "What keeps repeating": "Sürekli tekrar eden şey",
+    "Toxicity report": "Toksisite raporu",
+    "The Main Character": "Ana karakter",
+    "The Ghost": "Hayalet",
+    "Longest active streak": "En uzun aktif seri",
+    "Group roles": "Grup rolleri",
+    "Most missed member": "En çok özlenen üye",
+    "The group read": "Grup yorumu",
+    "Group vibe": "Grup havası",
+    "Group pattern read": "Grup örüntü yorumu",
+    "Support and strain": "Destek ve yük",
+    "Chat Health Score": "Sohbet Sağlık Puanı",
+    "Individual health scores": "Bireysel sağlık puanları",
+    "Who apologises more": "Kim daha çok özür diliyor",
+    "Red flag moments": "Kırmızı bayrak anları",
+    "Conflict pattern": "Çatışma örüntüsü",
+    "Power balance": "Güç dengesi",
+    "The verdict": "Son karar",
+    "Love language compatibility": "Sevgi dili uyumu",
+    "The language gap": "Dil farkı",
+    "Most loving moment": "En sevgi dolu an",
+    "Then vs Now": "O zaman ve şimdi",
+    "Who changed more": "Kim daha çok değişti",
+    "What changed in the chat": "Sohbette ne değişti",
+    "Relationship trajectory": "İlişkinin gidişatı",
+    "The arc": "Hikâye akışı",
+    "Promises made": "Verilen sözler",
+    "Most notable broken promise": "En dikkat çeken tutulmayan söz",
+    "Most notable kept promise": "En dikkat çeken tutulan söz",
+    "The overall verdict": "Genel karar",
+    "Net energy scores": "Net enerji puanları",
+    "Energy compatibility": "Enerji uyumu",
+    "Most energising moment": "En enerji veren an",
+    "Most draining moment": "En yoran an",
+    "How they do it": "Bunu nasıl yapıyor",
+    "Drops lines like": "Şöyle cümleler kuruyor",
+    "The sweetest moment": "En tatlı an",
+    "Why this person scores highest": "Bu kişi neden en yüksek puanı aldı",
+    "How arguments unfold": "Tartışmalar nasıl ilerliyor",
+    "Power dynamic": "Güç dinamiği",
+    "Final read": "Son yorum",
+    "Score breakdown": "Puan dökümü",
+    "Do they speak the same language?": "Aynı dili konuşuyorlar mı?",
+    "The moment": "O an",
+    "Compatibility read": "Uyum yorumu",
+    "How they changed": "Nasıl değiştiler",
+    "Topics that appeared": "Ortaya çıkan konular",
+    "Topics that faded": "Azalan konular",
+    "What the data shows": "Verinin gösterdiği",
+    "Overall verdict": "Genel karar",
+    "Pattern": "Örüntü",
+    "Positive energy": "Pozitif enerji",
+    "Draining patterns": "Yoran örüntüler",
+    "Most active 3 months": "En aktif 3 ay",
+    "avg chars": "ort. karakter",
+    "longest message": "en uzun mesaj",
+    "msgs": "mesaj",
+    "Photos & videos": "Fotoğraflar ve videolar",
+    "Voice memos": "Sesli notlar",
+    "Links shared": "Paylaşılan linkler",
+    "Your relationship, in data.": "İlişkin verilerle önünde.",
+    "Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.": "WhatsApp sohbetini okur ve aslında neler olduğunu gösterir. Kim varlık gösteriyor. Kim kayboluyor. Sohbeti kim taşıyor.",
+    "Start with your chat.": "Sohbetinle başla.",
+    "Upload. Analyse. See it clearly.": "Yükle. Analiz et. Net gör.",
+    "Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.": "Altı rapor. Toksisite, sevgi dilleri, sorumluluk, enerji, gelişim ve tam sohbet özetin. Sonuçlar bir dakikadan kısa sürede.",
+    "Open WhatsApp": "WhatsApp'ı aç",
+    "Tap the chat you want to analyse": "Analiz etmek istediğin sohbete dokun",
+    "Tap ··· menu → More → Export Chat": "··· menüsüne dokun → Daha fazla → Sohbeti dışa aktar",
+    "Choose Without Media": "Medya olmadan seç",
+    "Save the .txt file to your device": ".txt dosyasını cihazına kaydet",
+    "Toxicity": "Toksisite",
+    "Love Languages": "Sevgi Dilleri",
+    "Energy": "Enerji",
+    "Growth": "Gelişim",
+    "Chat Wrapped": "Sohbet Özeti",
+    "General Wrapped": "Genel Özet",
+    "The full Wrapped-style deep dive — stats, AI insights, and your chat personality.": "Wrapped tarzı tam derin inceleme: istatistikler, yapay zekâ içgörüleri ve sohbet kişiliğin.",
+    "Red flags, power imbalances, who apologises more, conflict patterns, health scores.": "Kırmızı bayraklar, güç dengesizlikleri, kimin daha çok özür dilediği, çatışma örüntüleri ve sağlık puanları.",
+    "Love Language Report": "Sevgi Dili Raporu",
+    "How each person shows affection, mapped to the 5 love languages. Works for friends too.": "Her kişinin sevgisini nasıl gösterdiğini 5 sevgi diline göre haritalar. Arkadaşlıklar için de çalışır.",
+    "First 3 months vs last 3 months — are you growing together or drifting apart?": "İlk 3 ay ve son 3 ay karşılaştırması: beraber mi büyüyorsunuz, yoksa uzaklaşıyor musunuz?",
+    "Accountability Report": "Sorumluluk Raporu",
+    "Promises made in the chat and whether they were followed through. Receipts for both.": "Sohbette verilen sözler ve tutulup tutulmadıkları. Her iki taraf için de kanıtlar.",
+    "Who brings good energy vs drains it — net energy score per person.": "Kim iyi enerji getiriyor, kim tüketiyor: kişi başına net enerji puanı.",
+    "quips.duo.obsessed": [
+      `"{name}, ekran sürene bir bakman gerekebilir."`,
+      `"{name} bu sohbeti saf mesajlaşma dayanıklılığıyla taşıyor."`,
+      `"Takıntı değil, sadece aşırı müsait. Tabii {name}."`,
+    ],
+    "quips.duo.responseBalanced": [
+      `"İkiniz de aynı derecede hızlı dönüyorsunuz. Burada hayalet yok."`,
+      `"Kimse diğerini bekletmiyor. Ferahlatıcı."`,
+      `"İkiniz de cevap veriyor, ikiniz de varlık gösteriyor. Denge böyle bir şey."`,
+    ],
+    "quips.duo.ghost": [
+      `"{name} 'meşguldüm' dedi. Tabii."`,
+      `"{name}: mesajı okudu, sonra... bir ara cevap verdi."`,
+      `"{name} cevapları sınırlı kaynak gibi kullanıyor."`,
+    ],
+    "quips.duo.lastWord": [
+      `"{name} mesaj atıyor. Sohbet devam etmemeye karar veriyor."`,
+      `"Son görülen: {name}'in cevapsız mesajı."`,
+      `"{name} son sözü söyleme konusunda özel yetenekli."`,
+    ],
+    "quips.duo.streak100": [
+      `"{streak} gün. Buna seri değil, yaşam tarzı denir."`,
+      `"{streak} gün üst üste. Bu her neyse gerçek."`,
+      `"{streak} gün boyunca kesintisiz. Ciddi bir tutarlılık."`,
+    ],
+    "quips.duo.streak30": [
+      `"{streak} gün aralıksız. Böyle bir istikrar nadir."`,
+      `"Bir aydan fazla süre boyunca sürekli var olmak bir şey anlatır."`,
+      `"Bahane yok, boşluk yok. Sadece {streak} gün üst üste."`,
+    ],
+    "quips.duo.streak10": [
+      `"{streak} gün üst üste. Hiç fena değil."`,
+      `"Tamam, bu aslında biraz tatlı."`,
+      `"O {streak} gün boyunca bir şeyler net şekilde iyi gidiyordu."`,
+    ],
+    "quips.duo.streakShort": [
+      `"{streak} gün. Kısa ama gerçek."`,
+      `"Bir {streak} günlük seri bile bir şeydir."`,
+      `"{streak} gün boyunca birbirini kaçırmamak yine sayılır."`,
+    ],
+    "quips.duo.convStarter": [
+      `"Birisi hep önce diğerini düşünüyor."`,
+      `"{name} sessizliği ilk bozan kişi olmaya devam ediyor."`,
+      `"İlk mesajın sürekli {name}'den gelmesi çok şey söylüyor."`,
+    ],
+    "quips.duo.messageLengthSimilar": [
+      `"Mesaj uzunlukları neredeyse aynı. Şüpheli derecede dengeli."`,
+      `"Burada ne romancı var ne de tek kelimelik mesajcı. Sadece benzer uzunlukta yazan iki kişi."`,
+      `"Dengeli. Ne destan ne tek kelimelik cevap. Şüpheli derecede normal."`,
+    ],
+    "quips.duo.messageLengthDifferent": [
+      `"{novelist} her mesajı gelecek nesillere mektup gibi görüyor."`,
+      `"Bir yerlerde {novelist} hâlâ yazıyor."`,
+      `"{texter} cevap veriyor. {novelist} ise yanıt değil, paragraf gönderiyor."`,
+    ],
+    "quips.group.mainCharacter": [
+      `"{name}, bu resmen senin kişisel blogun."`,
+      `"{name} konuşmaya gelmiş ve gerçekten konuşuyor."`,
+      `"{name} olmasa bu sohbet mezarlık olurdu."`,
+    ],
+    "quips.group.ghost": [
+      `"{name} sadece ruhen burada."`,
+      `"{name} gruba katıldı ve anında kayıplara karıştı."`,
+      `"Sessiz gözlemci. Gizemli izleyici. {name}."`,
+    ],
+    "quips.group.lastWord": [
+      `"{name} mesaj atıyor. Grup cevap vermiyor. Klasik."`,
+      `"{name}'in mesajından sonra grup her seferinde sessizleşiyor."`,
+      `"{name} mesajları boşluğa göndermeyi alışkanlık hâline getirmiş."`,
+    ],
+    "quips.group.streak100": [
+      `"{streak} gün tek bir boşluk bile olmadan. Bu grup farklı."`,
+      `"{streak} gün üst üste. Bu grup sohbetten çok taahhüt."`,
+      `"Bu grubu ayakta tutan şeyi şişeleyip satmak lazım."`,
+    ],
+    "quips.group.streak30": [
+      `"{streak} gün boyunca ortadasınız. Bu gerçek bir grup."`,
+      `"Tek bir gün bile boş yok. Bu grubun tersinden bağlılık sorunu var."`,
+      `"Çoğu grup iki haftada susar. Bu grup susmadı."`,
+    ],
+    "quips.group.streak10": [
+      `"{streak} gün üst üste. Grup yaşıyormuş."`,
+      `"Demek ki hepiniz birbirinizi gerçekten seviyorsunuz. Şaşırtıcı."`,
+      `"{streak} gün üst üste. Çoğu grubun becerdiğinden fazla."`,
+    ],
+    "quips.group.streakShort": [
+      `"{streak} gün. Küçük ama sayılır."`,
+      `"Bir {streak} günlük seri bile grupta bir şeyler olduğunu gösterir."`,
+      `"Arka arkaya {streak} gün bile emek ister."`,
+    ],
+    "quips.group.novelist": [
+      `"{name} sanki kelime sınırı yokmuş gibi yazıyor."`,
+      `"{name} mesaj değil, tam hikâye gönderiyor."`,
+      `"Grupta bir deneme yazısı varsa onu {name} yazmıştır."`,
+    ],
+    // ── Missing strings added ──
+    "Red flag {index}": "Kırmızı bayrak {index}",
+    "This pattern showed up enough to feel worth watching.": "Bu örüntü dikkat çekecek kadar sık karşımıza çıktı.",
+    "Evidence": "Kanıt",
+    "{pct}% of all messages came from {name}.": "Tüm mesajların %{pct}'i {name}'den geldi.",
+    "{name} avg reply:": "{name} ort. yanıt:",
+    "Sends the last message that nobody replies to — {count} times.": "Yanıtsız kalan son mesajı gönderen kişi — {count} kez.",
+    "Sends the last message that nobody replies to.": "Yanıtsız kalan son mesajı gönderen kişi.",
+    "{count} days": "{count} gün",
+    "Texted every single day for {count} days straight.": "{count} gün boyunca her gün mesajlaştınız.",
+    "Top 3 most active months": "En aktif 3 ay",
+    "{month} was your month. Something was going on.": "{month} sizin ayınızdı. Bir şeyler oluyordu.",
+    "Who always reaches out first?": "Her zaman ilk kim yazıyor?",
+    "Started {pct} of all conversations.": "Tüm konuşmaların %{pct}'ini başlattı.",
+    "These two emojis basically ARE this chat.": "Bu iki emoji bu sohbeti tam olarak özetliyor.",
+    "The phrases that define each of you.": "Her birinizi tanımlayan cümleler.",
+    "Biggest topic": "En büyük konu",
+    "Most tense moment": "En gergin an",
+    "A chaotic, wholesome connection.": "Kaotik ama sağlıklı bir bağ.",
+    "Powered by AI — your messages never left your device.": "Yapay zekâ destekli — mesajların hiçbir zaman cihazını terk etmedi.",
+    "Observed pattern": "Gözlemlenen örüntü",
+    "Concrete example": "Somut örnek",
+    "Main topic": "Ana konu",
+    "Pattern note": "Örüntü notu",
+    "The strongest pattern is shown above.": "En belirgin örüntü yukarıda gösterilmektedir.",
+    "Overall read": "Genel yorum",
+    "This mode is meant to surface patterns and examples, not make the decision for you.": "Bu mod sana karar vermek için değil, örüntüleri ve örnekleri göstermek için tasarlandı.",
+    "{count} messages total. Why are they even here?": "Toplam {count} mesaj. Neden buradalar ki?",
+    "The group was most alive in {month}.": "Grup en çok {month} ayında aktifti.",
+    "The group kept the chat alive for {count} days straight.": "Grup, sohbeti {count} gün boyunca kesintisiz canlı tuttu.",
+    "Started {pct} of all conversations. The engine of this group.": "Tüm konuşmaların %{pct}'ini başlattı. Bu grubun motoru.",
+    "Why {name} is the hype": "{name} neden gaz veriyor",
+    "This one emoji basically summarises the entire group energy.": "Bu tek emoji grubun tüm enerjisini özetliyor.",
+    "Their longest message was mostly about \"{topic}\".": "En uzun mesajı büyük ölçüde \"{topic}\" hakkındaydı.",
+    "The inside joke": "Grup içi şaka",
+    "When they go quiet, the group feels it.": "Sessiz kaldığında, grup bunu hissediyor.",
+    "Group dynamic": "Grup dinamiği",
+    "Chaotic. Wholesome. Somehow still going.": "Kaotik. Sağlıklı. Bir şekilde hâlâ devam ediyor.",
+    "Who keeps it going": "Kim devam ettiriyor",
+    "{name} started {pct} of conversations.": "{name} konuşmaların %{pct}'ini başlattı.",
+    "The group shares the conversation starts.": "Grup konuşma başlatmayı paylaşıyor.",
+    "Who goes quiet": "Kim sessizleşiyor",
+    "{name} is the least active member in the sampled history.": "{name}, örneklenen geçmişte en az aktif üye.",
+    "No clear ghost in this sample.": "Bu örnekte belirgin bir hayalet yok.",
+    "Out of 10 — based on conflict patterns, communication style, and overall dynamic.": "10 üzerinden — çatışma örüntüleri, iletişim tarzı ve genel dinamiğe göre.",
+    "Verdict": "Karar",
+    "Overall chat health score.": "Genel sohbet sağlık puanı.",
+    "Reflects patterns in this sample — not a final judgment.": "Bu örnekteki örüntüleri yansıtır — kesin bir yargı değildir.",
+    "{name}'s love language": "{name}'in sevgi dili",
+    "How they show it": "Bunu nasıl gösteriyor",
+    "Early messages": "Erken mesajlar",
+    "Recent messages": "Son mesajlar",
+    "promises": "söz",
+    "{name}'s accountability": "{name}'in sorumluluğu",
+    "kept": "tutuldu",
+    "broken": "bozuldu",
+    "{name}'s energy": "{name}'in enerjisi",
+    "messages": "mesaj",
+    "Skip": "Geç",
+    "Log out": "Çıkış yap",
+    "Feedback Inbox": "Geri Bildirim Kutusu",
+    "Large group detected — analysing the top {cap} members out of {count}.": "Büyük grup algılandı — {count} üyeden en aktif {cap} tanesi analiz ediliyor.",
+  },
+  es: {
+    "Choose your language": "Elige tu idioma",
+    "English": "Inglés",
+    "Auto-detect": "Detección automática",
+    "Continue": "Continuar",
+    "Back": "Atrás",
+    "Next": "Siguiente",
+    "See summary": "Ver resumen",
+    "Done": "Listo",
+    "Start over": "Empezar de nuevo",
+    "Share": "Compartir",
+    "What's off about this?": "¿Qué está mal aquí?",
+    "Optional note": "Nota opcional",
+    "Cancel": "Cancelar",
+    "Submit": "Enviar",
+    "Sending…": "Enviando…",
+    "Got it, thank you.": "Entendido, gracias.",
+    "Events are mixing": "Se mezclan los eventos",
+    "Wrong person": "Persona equivocada",
+    "Didn't happen": "No ocurrió",
+    "Tone misread": "Tono mal interpretado",
+    "Overclaiming": "Afirma demasiado",
+    "Missing context": "Falta contexto",
+    "Other": "Otro",
+    "The Roast": "La Quemada",
+    "The Lovely": "Lo Tierno",
+    "The Funny": "Lo Divertido",
+    "The Stats": "Las Estadísticas",
+    "Insight": "Insight",
+    "WrapChat": "WrapChat",
+    "Toxicity Report": "Informe de Toxicidad",
+    "Love Language": "Lenguaje del Amor",
+    "Growth Report": "Informe de Evolución",
+    "Accountability": "Responsabilidad",
+    "Energy Report": "Informe de Energía",
+    "Choose your report": "Elige tu informe",
+    "Who is this chat with?": "¿Con quién es este chat?",
+    "This helps the AI frame the analysis correctly.": "Esto ayuda a la IA a enfocar bien el análisis.",
+    "Partner": "Pareja",
+    "Dating": "Saliendo",
+    "Ex": "Ex",
+    "Related": "Familia",
+    "Friend": "Amigo",
+    "Colleague": "Colega",
+    "Romantic partner or spouse": "Pareja romántica o cónyuge",
+    "Seeing each other or early stages": "Conociéndose o en etapas iniciales",
+    "Former romantic partner": "Expareja romántica",
+    "Parent, sibling or relative": "Padre, hermano o familiar",
+    "Close friend or bestie": "Amigo cercano o mejor amigo",
+    "Coworker or professional contact": "Compañero de trabajo o contacto profesional",
+    "Someone you know": "Alguien que conoces",
+    "Reading your messages...": "Leyendo tus mensajes...",
+    "Finding the patterns...": "Buscando los patrones...",
+    "Figuring out who's funny...": "Viendo quién es el gracioso...",
+    "Detecting the drama...": "Detectando el drama...",
+    "Reading between the lines...": "Leyendo entre líneas...",
+    "Almost done...": "Casi listo...",
+    "Upload different file": "Subir otro archivo",
+    "Upload your chat": "Sube tu chat",
+    "Reading your chat…": "Leyendo tu chat…",
+    "My Results": "Mis resultados",
+    "Edit": "Editar",
+    "Your chats, unwrapped.": "Tus chats, al descubierto.",
+    "Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.": "Se detecta automáticamente si es grupo o dúo. Tu chat se analiza con IA y nunca se guarda. Solo se guardan los resultados.",
+    "UI language": "Idioma de la interfaz",
+    "Report language": "Idioma del informe",
+    "auto": "auto",
+    "changed": "cambiado",
+    "quips.duo.obsessed": [`"{name}, quizá deberías revisar tu tiempo de pantalla."`,`"{name} está sosteniendo esta conversación con pura resistencia al texto."`,`"No es obsesión, solo demasiada disponibilidad. Claro, {name}."`],
+    "quips.duo.responseBalanced": [`"Ambos responden igual de rápido. No hay fantasmas aquí."`,`"Nadie deja esperando a la otra persona. Se agradece."`,`"Los dos aparecen y responden. Así se ve el equilibrio."`],
+    "quips.duo.ghost": [`"Claro, {name} estaba 'ocupado'."`,`"{name}: leyó el mensaje y respondió... eventualmente."`,`"{name} trata las respuestas como un recurso limitado."`],
+    "quips.duo.lastWord": [`"{name} manda un mensaje y la conversación termina ahí."`,`"Última escena: el mensaje de {name}, sin respuesta."`,`"{name} tiene talento para poner la última palabra."`],
+    "quips.duo.streak100": [`"{streak} días. Eso no es una racha, es un estilo de vida."`,`"Más de {streak} días seguidos. Lo que sea esto, es real."`,`"{streak} días seguidos. Eso es consistencia seria."`],
+    "quips.duo.streak30": [`"{streak} días sin huecos. Eso es raro."`,`"Más de un mes apareciendo. Eso significa algo."`,`"Sin pausas, sin excusas. Solo {streak} días seguidos."`],
+    "quips.duo.streak10": [`"{streak} días seguidos. Nada mal."`,`"Vale, eso sí es un poco tierno."`,`"Algo estaba funcionando en esos {streak} días."`],
+    "quips.duo.streakShort": [`"{streak} días. Corto, pero real."`,`"Incluso una racha de {streak} días cuenta."`,`"{streak} días sin dejar de hablar también suma."`],
+    "quips.duo.convStarter": [`"Alguien piensa primero en la otra persona cada vez."`,`"{name} siempre rompe el silencio primero."`,`"El primer mensaje sigue viniendo de {name}. Eso dice mucho."`],
+    "quips.duo.messageLengthSimilar": [`"Mensajes casi idénticos. Sospechosamente equilibrado."`,`"Aquí no hay novelista ni minimalista. Solo dos personas escribiendo parecido."`,`"Equilibrado. Sin ensayos, sin respuestas de una palabra."`],
+    "quips.duo.messageLengthDifferent": [`"{novelist} trata cada mensaje como una carta para la posteridad."`,`"En algún lugar, {novelist} sigue escribiendo."`,`"{texter} responde. {novelist} redacta."`],
+    "quips.group.mainCharacter": [`"{name}, esto es básicamente tu blog personal."`,`"{name} vino a hablar y claramente lo está haciendo."`,`"Sin {name}, este chat sería un cementerio."`],
+    "quips.group.ghost": [`"{name} está aquí solo en espíritu."`,`"{name} entró al grupo y desapareció al instante."`,`"Observador silencioso. Misterio total. {name}."`],
+    "quips.group.lastWord": [`"{name} manda un mensaje. El grupo no responde. Clásico."`,`"Después del mensaje de {name}, el grupo se calla cada vez."`,`"{name} tiene la costumbre de lanzar mensajes al vacío."`],
+    "quips.group.streak100": [`"{streak} días sin un solo hueco. Este grupo es distinto."`,`"Más de {streak} días seguidos. Esto ya es compromiso."`,`"Lo que mantiene vivo a este grupo debería venderse."`],
+    "quips.group.streak30": [`"{streak} días apareciendo. Eso es un grupo de verdad."`,`"Ni un día libre. Este grupo va en serio."`,`"La mayoría de los grupos mueren en dos semanas. Este no."`],
+    "quips.group.streak10": [`"{streak} días seguidos. El grupo estaba vivo."`,`"Parece que sí se caen bien. Sorpresa."`,`"{streak} días seguidos. Más que la mayoría de los grupos."`],
+    "quips.group.streakShort": [`"{streak} días. Poco, pero cuenta."`,`"Una racha de {streak} días igual significa algo."`,`"Incluso {streak} días seguidos requieren ganas."`],
+    "quips.group.novelist": [`"{name} escribe como si no existiera límite de palabras."`,`"{name} manda mensajes con desarrollo completo de trama."`,`"Si hay un ensayo en el grupo, lo escribió {name}."`],
+    "msgs": "msgs",
+    "Red flag {index}": "Señal de alerta {index}",
+    "This pattern showed up enough to feel worth watching.": "Este patrón apareció lo suficiente como para prestarle atención.",
+    "Evidence": "Evidencia",
+    "Who's more obsessed?": "¿Quién está más obsesionado?",
+    "{pct}% of all messages came from {name}.": "El {pct}% de todos los mensajes vino de {name}.",
+    "Response times": "Tiempos de respuesta",
+    "Balanced": "Equilibrado",
+    "{name} avg reply:": "{name} respuesta prom.:",
+    "The Ghost Award": "El Premio Fantasma",
+    "What's really going on": "Lo que realmente está pasando",
+    "The Last Word": "La Última Palabra",
+    "Sends the last message that nobody replies to — {count} times.": "Envía el último mensaje que nadie responde — {count} veces.",
+    "Sends the last message that nobody replies to.": "Envía el último mensaje que nadie responde.",
+    "Your longest streak": "Tu racha más larga",
+    "{count} days": "{count} días",
+    "Texted every single day for {count} days straight.": "Mensajes cada día durante {count} días seguidos.",
+    "The Kindest One": "La Persona Más Amable",
+    "The sweetest moment": "El momento más tierno",
+    "Top 3 most active months": "Los 3 meses más activos",
+    "{month} was your month. Something was going on.": "{month} fue vuestro mes. Algo estaba pasando.",
+    "Who always reaches out first?": "¿Quién siempre escribe primero?",
+    "Started {pct} of all conversations.": "Inició el {pct}% de todas las conversaciones.",
+    "The Funny One": "El Más Gracioso",
+    "Drops lines like": "Suelta frases como",
+    "Spirit emojis": "Emojis espíritu",
+    "These two emojis basically ARE this chat.": "Estos dos emojis básicamente SON este chat.",
+    "Top 10 most used words": "Las 10 palabras más usadas",
+    "Signature phrases": "Frases características",
+    "The phrases that define each of you.": "Las frases que definen a cada uno.",
+    "avg chars": "caract. prom.",
+    "longest message": "mensaje más largo",
+    "Media and links": "Medios y enlaces",
+    "Photos & videos": "Fotos y vídeos",
+    "Voice memos": "Notas de voz",
+    "Links shared": "Enlaces compartidos",
+    "What you actually talk about": "De qué habláis realmente",
+    "Biggest topic": "Tema principal",
+    "Most tense moment": "El momento más tenso",
+    "The Drama Report": "El Informe de Drama",
+    "How they do it": "Cómo lo hace",
+    "Chat vibe": "Ambiente del chat",
+    "A chaotic, wholesome connection.": "Una conexión caótica y sana.",
+    "Powered by AI — your messages never left your device.": "Impulsado por IA — tus mensajes nunca salieron de tu dispositivo.",
+    "Relationship reading": "Lectura de la relación",
+    "Observed pattern": "Patrón observado",
+    "Concrete example": "Ejemplo concreto",
+    "Evidence log": "Registro de evidencias",
+    "What the chat shows": "Lo que muestra el chat",
+    "Toxicity scorecard": "Tarjeta de toxicidad",
+    "Why this person scores highest": "Por qué esta persona puntúa más alto",
+    "Tension snapshot": "Instantánea de tensión",
+    "What keeps repeating": "Lo que sigue repitiéndose",
+    "Main topic": "Tema principal",
+    "Pattern note": "Nota sobre el patrón",
+    "The strongest pattern is shown above.": "El patrón más fuerte se muestra arriba.",
+    "Toxicity report": "Informe de toxicidad",
+    "Overall read": "Lectura general",
+    "Score breakdown": "Desglose de puntuación",
+    "This mode is meant to surface patterns and examples, not make the decision for you.": "Este modo sirve para mostrar patrones y ejemplos, no para decidir por ti.",
+    "The Main Character": "El Personaje Principal",
+    "The Ghost": "El Fantasma",
+    "{count} messages total. Why are they even here?": "{count} mensajes en total. ¿Por qué están aquí?",
+    "The group was most alive in {month}.": "El grupo estuvo más activo en {month}.",
+    "Longest active streak": "Racha activa más larga",
+    "The group kept the chat alive for {count} days straight.": "El grupo mantuvo el chat vivo durante {count} días seguidos.",
+    "The Hype Person": "El Animador del Grupo",
+    "Started {pct} of all conversations. The engine of this group.": "Inició el {pct}% de todas las conversaciones. El motor del grupo.",
+    "Why {name} is the hype": "Por qué {name} anima el grupo",
+    "Group spirit emoji": "Emoji espíritu del grupo",
+    "This one emoji basically summarises the entire group energy.": "Este emoji resume básicamente toda la energía del grupo.",
+    "The Novelist": "El Novelista",
+    "Their longest message was mostly about \"{topic}\".": "Su mensaje más largo trató principalmente sobre \"{topic}\".",
+    "The inside joke": "El chiste interno",
+    "Most missed member": "El miembro más echado de menos",
+    "When they go quiet, the group feels it.": "Cuando se calla, el grupo lo nota.",
+    "The group read": "La lectura del grupo",
+    "Group dynamic": "Dinámica del grupo",
+    "Group vibe": "Ambiente del grupo",
+    "Chaotic. Wholesome. Somehow still going.": "Caótico. Sano. De alguna forma sigue adelante.",
+    "Group pattern read": "Lectura del patrón del grupo",
+    "Support and strain": "Apoyo y tensión",
+    "Who keeps it going": "Quién lo mantiene vivo",
+    "{name} started {pct} of conversations.": "{name} inició el {pct}% de las conversaciones.",
+    "The group shares the conversation starts.": "El grupo comparte el inicio de las conversaciones.",
+    "Who goes quiet": "Quién se calla",
+    "{name} is the least active member in the sampled history.": "{name} es el miembro menos activo en el historial analizado.",
+    "No clear ghost in this sample.": "No hay un fantasma claro en esta muestra.",
+    "Chat Health Score": "Puntuación de Salud del Chat",
+    "Out of 10 — based on conflict patterns, communication style, and overall dynamic.": "Sobre 10 — basado en patrones de conflicto, estilo de comunicación y dinámica general.",
+    "Verdict": "Veredicto",
+    "Individual health scores": "Puntuaciones individuales de salud",
+    "Who apologises more": "Quién se disculpa más",
+    "Red flag moments": "Momentos de alerta",
+    "Conflict pattern": "Patrón de conflicto",
+    "How arguments unfold": "Cómo se desarrollan las discusiones",
+    "Power balance": "Equilibrio de poder",
+    "Power dynamic": "Dinámica de poder",
+    "The verdict": "El veredicto",
+    "Overall chat health score.": "Puntuación general de salud del chat.",
+    "Final read": "Lectura final",
+    "Reflects patterns in this sample — not a final judgment.": "Refleja patrones en esta muestra — no es un juicio definitivo.",
+    "{name}'s love language": "El lenguaje del amor de {name}",
+    "How they show it": "Cómo lo muestra",
+    "The language gap": "La brecha del lenguaje",
+    "Do they speak the same language?": "¿Hablan el mismo idioma?",
+    "Most loving moment": "El momento más amoroso",
+    "The moment": "El momento",
+    "Love language compatibility": "Compatibilidad del lenguaje del amor",
+    "Compatibility read": "Lectura de compatibilidad",
+    "Then vs Now": "Antes vs Ahora",
+    "Early messages": "Mensajes tempranos",
+    "Recent messages": "Mensajes recientes",
+    "Who changed more": "Quién cambió más",
+    "How they changed": "Cómo cambiaron",
+    "What changed in the chat": "Qué cambió en el chat",
+    "Topics that appeared": "Temas que aparecieron",
+    "Topics that faded": "Temas que desaparecieron",
+    "Relationship trajectory": "Trayectoria de la relación",
+    "What the data shows": "Lo que muestran los datos",
+    "The arc": "El arco",
+    "Promises made": "Promesas hechas",
+    "promises": "promesas",
+    "Overall verdict": "Veredicto general",
+    "{name}'s accountability": "Responsabilidad de {name}",
+    "kept": "cumplidas",
+    "broken": "incumplidas",
+    "Pattern": "Patrón",
+    "Most notable broken promise": "La promesa incumplida más notable",
+    "Most notable kept promise": "La promesa cumplida más notable",
+    "Net energy scores": "Puntuaciones netas de energía",
+    "Energy compatibility": "Compatibilidad de energía",
+    "{name}'s energy": "La energía de {name}",
+    "Positive energy": "Energía positiva",
+    "Draining patterns": "Patrones agotadores",
+    "Most energising moment": "El momento más energizante",
+    "Most draining moment": "El momento más agotador",
+    "messages": "mensajes",
+    "Your relationship, in data.": "Tu relación, en datos.",
+    "Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.": "Lee tu chat de WhatsApp y te muestra lo que realmente pasa. Quién aparece. Quién desaparece. Quién lleva la conversación.",
+    "Skip": "Omitir",
+    "Start with your chat.": "Empieza con tu chat.",
+    "Upload. Analyse. See it clearly.": "Sube. Analiza. Vélo claramente.",
+    "Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.": "Seis informes. Toxicidad, lenguajes del amor, responsabilidad, energía, crecimiento y tu chat completo resumido. Resultados en menos de un minuto.",
+    "Log out": "Cerrar sesión",
+    "Feedback Inbox": "Bandeja de comentarios",
+    "Large group detected — analysing the top {cap} members out of {count}.": "Grupo grande detectado — analizando los {cap} miembros más activos de {count}.",
+  },
+  pt: {
+    "Choose your language": "Escolha seu idioma",
+    "English": "Inglês",
+    "Auto-detect": "Detecção automática",
+    "Continue": "Continuar",
+    "Back": "Voltar",
+    "Next": "Próximo",
+    "See summary": "Ver resumo",
+    "Done": "Concluir",
+    "Start over": "Começar de novo",
+    "Share": "Compartilhar",
+    "What's off about this?": "O que está errado aqui?",
+    "Optional note": "Observação opcional",
+    "Cancel": "Cancelar",
+    "Submit": "Enviar",
+    "Sending…": "Enviando…",
+    "Got it, thank you.": "Entendi, obrigada.",
+    "Events are mixing": "Os eventos se misturaram",
+    "Wrong person": "Pessoa errada",
+    "Didn't happen": "Não aconteceu",
+    "Tone misread": "Tom mal interpretado",
+    "Overclaiming": "Exagero na conclusão",
+    "Missing context": "Falta contexto",
+    "Other": "Outro",
+    "The Roast": "A Zoeira",
+    "The Lovely": "O Fofo",
+    "The Funny": "O Engraçado",
+    "The Stats": "As Estatísticas",
+    "Insight": "Insight",
+    "WrapChat": "WrapChat",
+    "Toxicity Report": "Relatório de Toxicidade",
+    "Love Language": "Linguagem do Amor",
+    "Growth Report": "Relatório de Crescimento",
+    "Accountability": "Responsabilidade",
+    "Energy Report": "Relatório de Energia",
+    "Choose your report": "Escolha seu relatório",
+    "Who is this chat with?": "Com quem é esta conversa?",
+    "This helps the AI frame the analysis correctly.": "Isso ajuda a IA a enquadrar a análise corretamente.",
+    "Partner": "Parceiro",
+    "Dating": "Ficando",
+    "Ex": "Ex",
+    "Related": "Família",
+    "Friend": "Amigo",
+    "Colleague": "Colega",
+    "Romantic partner or spouse": "Parceiro romântico ou cônjuge",
+    "Seeing each other or early stages": "Se conhecendo ou no começo",
+    "Former romantic partner": "Ex-parceiro romântico",
+    "Parent, sibling or relative": "Pai, mãe, irmão ou parente",
+    "Close friend or bestie": "Amigo próximo ou melhor amigo",
+    "Coworker or professional contact": "Colega de trabalho ou contato profissional",
+    "Someone you know": "Alguém que você conhece",
+    "Reading your messages...": "Lendo suas mensagens...",
+    "Finding the patterns...": "Encontrando os padrões...",
+    "Figuring out who's funny...": "Descobrindo quem é engraçado...",
+    "Detecting the drama...": "Detectando o drama...",
+    "Reading between the lines...": "Lendo nas entrelinhas...",
+    "Almost done...": "Quase pronto...",
+    "Upload different file": "Enviar outro arquivo",
+    "Upload your chat": "Envie sua conversa",
+    "Reading your chat…": "Lendo sua conversa…",
+    "My Results": "Meus resultados",
+    "Edit": "Editar",
+    "Your chats, unwrapped.": "Seus chats, revelados.",
+    "Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.": "Grupo ou dupla detectado automaticamente. Sua conversa é analisada por IA e nunca armazenada. Apenas os resultados são salvos.",
+    "UI language": "Idioma da interface",
+    "Report language": "Idioma do relatório",
+    "auto": "auto",
+    "changed": "alterado",
+    "quips.duo.obsessed": [`"{name}, talvez seja bom conferir seu tempo de tela."`,`"{name} está carregando essa conversa no puro fôlego de digitação."`,`"Não é obsessão, é só disponibilidade demais. Claro, {name}."`],
+    "quips.duo.responseBalanced": [`"Os dois respondem no mesmo ritmo. Nada de fantasmas aqui."`,`"Ninguém deixa o outro esperando. Raro e bonito."`,`"Os dois aparecem e respondem. Isso sim é equilíbrio."`],
+    "quips.duo.ghost": [`"Claro, {name} estava 'ocupado'."`,`"{name}: leu a mensagem e respondeu... eventualmente."`,`"{name} trata resposta como recurso escasso."`],
+    "quips.duo.lastWord": [`"{name} manda uma mensagem e a conversa morre ali."`,`"Última cena: a mensagem de {name}, sem resposta."`,`"{name} tem dom para dar a última palavra."`],
+    "quips.duo.streak100": [`"{streak} dias. Isso não é sequência, é estilo de vida."`,`"Mais de {streak} dias seguidos. O que quer que seja isso, é real."`,`"{streak} dias seguidos. Consistência séria."`],
+    "quips.duo.streak30": [`"{streak} dias sem pausa. Isso é raro."`,`"Mais de um mês aparecendo. Isso significa alguma coisa."`,`"Sem falhas, sem desculpas. Só {streak} dias seguidos."`],
+    "quips.duo.streak10": [`"{streak} dias seguidos. Nada mal."`,`"Ok, isso é bem fofo."`,`"Alguma coisa estava funcionando nesses {streak} dias."`],
+    "quips.duo.streakShort": [`"{streak} dias. Curto, mas real."`,`"Até uma sequência de {streak} dias conta."`,`"{streak} dias sem se perder de vista já dizem algo."`],
+    "quips.duo.convStarter": [`"Alguém está sempre pensando no outro primeiro."`,`"{name} é sempre quem quebra o silêncio."`,`"A primeira mensagem continua vindo de {name}. Isso diz muito."`],
+    "quips.duo.messageLengthSimilar": [`"Mensagens quase iguais. Equilíbrio suspeito."`,`"Sem novelista, sem minimalista. Só duas pessoas escrevendo parecido."`,`"Equilibrado. Sem textão, sem resposta de uma palavra."`],
+    "quips.duo.messageLengthDifferent": [`"{novelist} trata cada mensagem como carta para a posteridade."`,`"Em algum lugar, {novelist} ainda está digitando."`,`"{texter} responde. {novelist} desenvolve."`],
+    "quips.group.mainCharacter": [`"{name}, isso aqui é basicamente seu blog pessoal."`,`"{name} veio para falar e claramente está falando."`,`"Sem {name}, esse grupo virava cemitério."`],
+    "quips.group.ghost": [`"{name} está aqui só em espírito."`,`"{name} entrou no grupo e sumiu."`,`"Observador silencioso. Mistério total. {name}."`],
+    "quips.group.lastWord": [`"{name} manda uma mensagem. O grupo não responde. Clássico."`,`"Depois da mensagem de {name}, o grupo silencia."`,`"{name} tem o hábito de mandar mensagem para o vazio."`],
+    "quips.group.streak100": [`"{streak} dias sem uma única pausa. Esse grupo é diferente."`,`"Mais de {streak} dias seguidos. Isso já é compromisso."`,`"O que mantém esse grupo vivo merecia virar produto."`],
+    "quips.group.streak30": [`"{streak} dias aparecendo. Isso é grupo de verdade."`,`"Nem um dia de folga. Esse grupo leva a sério."`,`"A maioria dos grupos morre em duas semanas. Esse não."`],
+    "quips.group.streak10": [`"{streak} dias seguidos. O grupo estava vivo."`,`"Vocês realmente gostam uns dos outros. Surpreendente."`,`"{streak} dias seguidos. Mais do que a maioria dos grupos consegue."`],
+    "quips.group.streakShort": [`"{streak} dias. Pequeno, mas conta."`,`"Uma sequência de {streak} dias ainda diz algo."`,`"Até {streak} dias seguidos exigem esforço."`],
+    "quips.group.novelist": [`"{name} escreve como se não existisse limite de palavras."`,`"{name} manda mensagem com arco completo de história."`,`"Se há um ensaio no grupo, foi {name} que escreveu."`],
+    "msgs": "msgs",
+    "Red flag {index}": "Sinal de alerta {index}",
+    "This pattern showed up enough to feel worth watching.": "Este padrão apareceu vezes suficientes para valer atenção.",
+    "Evidence": "Evidência",
+    "Who's more obsessed?": "Quem está mais obcecado?",
+    "{pct}% of all messages came from {name}.": "{pct}% de todas as mensagens vieram de {name}.",
+    "Response times": "Tempos de resposta",
+    "Balanced": "Equilibrado",
+    "{name} avg reply:": "{name} resp. média:",
+    "The Ghost Award": "O Prêmio Fantasma",
+    "What's really going on": "O que está realmente acontecendo",
+    "The Last Word": "A Última Palavra",
+    "Sends the last message that nobody replies to — {count} times.": "Manda a última mensagem que ninguém responde — {count} vezes.",
+    "Sends the last message that nobody replies to.": "Manda a última mensagem que ninguém responde.",
+    "Your longest streak": "Sua maior sequência",
+    "{count} days": "{count} dias",
+    "Texted every single day for {count} days straight.": "Mensagens todos os dias por {count} dias seguidos.",
+    "The Kindest One": "A Pessoa Mais Gentil",
+    "The sweetest moment": "O momento mais doce",
+    "Top 3 most active months": "Os 3 meses mais ativos",
+    "{month} was your month. Something was going on.": "{month} foi o mês de vocês. Algo estava acontecendo.",
+    "Who always reaches out first?": "Quem sempre escreve primeiro?",
+    "Started {pct} of all conversations.": "Iniciou {pct}% de todas as conversas.",
+    "The Funny One": "O Mais Engraçado",
+    "Drops lines like": "Solta frases como",
+    "Spirit emojis": "Emojis espírito",
+    "These two emojis basically ARE this chat.": "Esses dois emojis basicamente SÃO esse chat.",
+    "Top 10 most used words": "As 10 palavras mais usadas",
+    "Signature phrases": "Frases características",
+    "The phrases that define each of you.": "As frases que definem cada um de vocês.",
+    "avg chars": "caract. méd.",
+    "longest message": "mensagem mais longa",
+    "Media and links": "Mídia e links",
+    "Photos & videos": "Fotos e vídeos",
+    "Voice memos": "Notas de voz",
+    "Links shared": "Links compartilhados",
+    "What you actually talk about": "O que vocês realmente falam",
+    "Biggest topic": "Tema principal",
+    "Most tense moment": "O momento mais tenso",
+    "The Drama Report": "O Relatório de Drama",
+    "How they do it": "Como fazem isso",
+    "Chat vibe": "Vibe do chat",
+    "A chaotic, wholesome connection.": "Uma conexão caótica e saudável.",
+    "Powered by AI — your messages never left your device.": "Alimentado por IA — suas mensagens nunca saíram do seu dispositivo.",
+    "Relationship reading": "Leitura do relacionamento",
+    "Observed pattern": "Padrão observado",
+    "Concrete example": "Exemplo concreto",
+    "Evidence log": "Registro de evidências",
+    "What the chat shows": "O que o chat mostra",
+    "Toxicity scorecard": "Cartão de toxicidade",
+    "Why this person scores highest": "Por que esta pessoa tem a pontuação mais alta",
+    "Tension snapshot": "Retrato da tensão",
+    "What keeps repeating": "O que fica se repetindo",
+    "Main topic": "Tema principal",
+    "Pattern note": "Nota sobre o padrão",
+    "The strongest pattern is shown above.": "O padrão mais forte é mostrado acima.",
+    "Toxicity report": "Relatório de toxicidade",
+    "Overall read": "Leitura geral",
+    "Score breakdown": "Detalhamento da pontuação",
+    "This mode is meant to surface patterns and examples, not make the decision for you.": "Este modo serve para mostrar padrões e exemplos, não para decidir por você.",
+    "The Main Character": "O Personagem Principal",
+    "The Ghost": "O Fantasma",
+    "{count} messages total. Why are they even here?": "{count} mensagens no total. Por que estão aqui mesmo?",
+    "The group was most alive in {month}.": "O grupo esteve mais ativo em {month}.",
+    "Longest active streak": "Maior sequência ativa",
+    "The group kept the chat alive for {count} days straight.": "O grupo manteve o chat vivo por {count} dias seguidos.",
+    "The Hype Person": "O Animador do Grupo",
+    "Started {pct} of all conversations. The engine of this group.": "Iniciou {pct}% de todas as conversas. O motor do grupo.",
+    "Why {name} is the hype": "Por que {name} anima o grupo",
+    "Group spirit emoji": "Emoji espírito do grupo",
+    "This one emoji basically summarises the entire group energy.": "Esse emoji basicamente resume toda a energia do grupo.",
+    "The Novelist": "O Romancista",
+    "Their longest message was mostly about \"{topic}\".": "Sua mensagem mais longa foi principalmente sobre \"{topic}\".",
+    "The inside joke": "A piada interna",
+    "Most missed member": "O membro que mais faz falta",
+    "When they go quiet, the group feels it.": "Quando ficam em silêncio, o grupo sente.",
+    "The group read": "A leitura do grupo",
+    "Group dynamic": "Dinâmica do grupo",
+    "Group vibe": "Vibe do grupo",
+    "Chaotic. Wholesome. Somehow still going.": "Caótico. Saudável. De algum jeito ainda está rolando.",
+    "Group pattern read": "Leitura do padrão do grupo",
+    "Support and strain": "Apoio e tensão",
+    "Who keeps it going": "Quem mantém vivo",
+    "{name} started {pct} of conversations.": "{name} iniciou {pct}% das conversas.",
+    "The group shares the conversation starts.": "O grupo divide os inícios das conversas.",
+    "Who goes quiet": "Quem fica em silêncio",
+    "{name} is the least active member in the sampled history.": "{name} é o membro menos ativo no histórico analisado.",
+    "No clear ghost in this sample.": "Sem fantasma claro nesta amostra.",
+    "Chat Health Score": "Pontuação de Saúde do Chat",
+    "Out of 10 — based on conflict patterns, communication style, and overall dynamic.": "De 10 — baseado em padrões de conflito, estilo de comunicação e dinâmica geral.",
+    "Verdict": "Veredicto",
+    "Individual health scores": "Pontuações individuais de saúde",
+    "Who apologises more": "Quem pede mais desculpas",
+    "Red flag moments": "Momentos de alerta",
+    "Conflict pattern": "Padrão de conflito",
+    "How arguments unfold": "Como as discussões se desenvolvem",
+    "Power balance": "Equilíbrio de poder",
+    "Power dynamic": "Dinâmica de poder",
+    "The verdict": "O veredicto",
+    "Overall chat health score.": "Pontuação geral de saúde do chat.",
+    "Final read": "Leitura final",
+    "Reflects patterns in this sample — not a final judgment.": "Reflete padrões nesta amostra — não é um julgamento final.",
+    "{name}'s love language": "A linguagem do amor de {name}",
+    "How they show it": "Como demonstra",
+    "The language gap": "A diferença de linguagem",
+    "Do they speak the same language?": "Falam a mesma linguagem?",
+    "Most loving moment": "O momento mais amoroso",
+    "The moment": "O momento",
+    "Love language compatibility": "Compatibilidade de linguagem do amor",
+    "Compatibility read": "Leitura de compatibilidade",
+    "Then vs Now": "Antes vs Agora",
+    "Early messages": "Mensagens iniciais",
+    "Recent messages": "Mensagens recentes",
+    "Who changed more": "Quem mudou mais",
+    "How they changed": "Como mudaram",
+    "What changed in the chat": "O que mudou no chat",
+    "Topics that appeared": "Temas que surgiram",
+    "Topics that faded": "Temas que sumiram",
+    "Relationship trajectory": "Trajetória do relacionamento",
+    "What the data shows": "O que os dados mostram",
+    "The arc": "O arco",
+    "Promises made": "Promessas feitas",
+    "promises": "promessas",
+    "Overall verdict": "Veredicto geral",
+    "{name}'s accountability": "Responsabilidade de {name}",
+    "kept": "cumpridas",
+    "broken": "quebradas",
+    "Pattern": "Padrão",
+    "Most notable broken promise": "A promessa quebrada mais notável",
+    "Most notable kept promise": "A promessa cumprida mais notável",
+    "Net energy scores": "Pontuações líquidas de energia",
+    "Energy compatibility": "Compatibilidade de energia",
+    "{name}'s energy": "A energia de {name}",
+    "Positive energy": "Energia positiva",
+    "Draining patterns": "Padrões desgastantes",
+    "Most energising moment": "O momento mais energizante",
+    "Most draining moment": "O momento mais desgastante",
+    "messages": "mensagens",
+    "Your relationship, in data.": "Seu relacionamento, em dados.",
+    "Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.": "Lê seu chat do WhatsApp e mostra o que está realmente acontecendo. Quem aparece. Quem some. Quem carrega a conversa.",
+    "Skip": "Pular",
+    "Start with your chat.": "Comece com seu chat.",
+    "Upload. Analyse. See it clearly.": "Envie. Analise. Veja com clareza.",
+    "Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.": "Seis relatórios. Toxicidade, linguagens do amor, responsabilidade, energia, crescimento e seu chat completo resumido. Resultados em menos de um minuto.",
+    "Log out": "Sair",
+    "Feedback Inbox": "Caixa de feedback",
+    "Large group detected — analysing the top {cap} members out of {count}.": "Grupo grande detectado — analisando os {cap} membros mais ativos de {count}.",
+  },
+  ar: {
+    "Choose your language": "اختر لغتك",
+    "English": "الإنجليزية",
+    "Auto-detect": "كشف تلقائي",
+    "Continue": "متابعة",
+    "Back": "رجوع",
+    "Next": "التالي",
+    "See summary": "عرض الملخص",
+    "Done": "تم",
+    "Start over": "ابدأ من جديد",
+    "Share": "مشاركة",
+    "What's off about this?": "ما غير الصحيح هنا؟",
+    "Optional note": "ملاحظة اختيارية",
+    "Cancel": "إلغاء",
+    "Submit": "إرسال",
+    "Sending…": "جارٍ الإرسال…",
+    "Got it, thank you.": "وصلت، شكرًا لك.",
+    "Events are mixing": "الأحداث مختلطة",
+    "Wrong person": "الشخص غير صحيح",
+    "Didn't happen": "لم يحدث",
+    "Tone misread": "تم فهم النبرة بشكل خاطئ",
+    "Overclaiming": "استنتاج مبالغ فيه",
+    "Missing context": "السياق ناقص",
+    "Other": "أخرى",
+    "The Roast": "التحميص",
+    "The Lovely": "اللطيف",
+    "The Funny": "المضحك",
+    "The Stats": "الإحصاءات",
+    "Insight": "رؤية",
+    "WrapChat": "WrapChat",
+    "Toxicity Report": "تقرير السمية",
+    "Love Language": "لغة الحب",
+    "Growth Report": "تقرير التطور",
+    "Accountability": "المساءلة",
+    "Energy Report": "تقرير الطاقة",
+    "Choose your report": "اختر تقريرك",
+    "Who is this chat with?": "مع من هذه المحادثة؟",
+    "This helps the AI frame the analysis correctly.": "هذا يساعد الذكاء الاصطناعي على فهم التحليل بشكل صحيح.",
+    "Partner": "شريك",
+    "Dating": "مواعدة",
+    "Ex": "حبيب سابق",
+    "Related": "عائلة",
+    "Friend": "صديق",
+    "Colleague": "زميل",
+    "Romantic partner or spouse": "شريك عاطفي أو زوج/زوجة",
+    "Seeing each other or early stages": "تعارف أو بداية العلاقة",
+    "Former romantic partner": "شريك عاطفي سابق",
+    "Parent, sibling or relative": "أب أو أم أو أخ أو قريب",
+    "Close friend or bestie": "صديق مقرب أو أعز صديق",
+    "Coworker or professional contact": "زميل عمل أو جهة اتصال مهنية",
+    "Someone you know": "شخص تعرفه",
+    "Reading your messages...": "جارٍ قراءة رسائلك...",
+    "Finding the patterns...": "جارٍ العثور على الأنماط...",
+    "Figuring out who's funny...": "جارٍ معرفة من هو المضحك...",
+    "Detecting the drama...": "جارٍ رصد الدراما...",
+    "Reading between the lines...": "جارٍ القراءة بين السطور...",
+    "Almost done...": "اقتربنا من الانتهاء...",
+    "Upload different file": "ارفع ملفًا آخر",
+    "Upload your chat": "ارفع محادثتك",
+    "Reading your chat…": "جارٍ قراءة محادثتك…",
+    "My Results": "نتائجي",
+    "Edit": "تعديل",
+    "Your chats, unwrapped.": "محادثاتك كما هي.",
+    "Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.": "يتم اكتشاف المجموعة أو المحادثة الثنائية تلقائيًا. يتم تحليل محادثتك بالذكاء الاصطناعي ولا يتم حفظها أبدًا. يتم حفظ النتائج فقط.",
+    "UI language": "لغة الواجهة",
+    "Report language": "لغة التقرير",
+    "auto": "تلقائي",
+    "changed": "تم التغيير",
+    "quips.duo.obsessed": [`"{name}، ربما عليك مراجعة وقت الشاشة."`,`"{name} يحمل هذه المحادثة بقوة الأصابع فقط."`,`"ليس هوسًا، فقط حضور زائد جدًا. طبعًا يا {name}."`],
+    "quips.duo.responseBalanced": [`"كلاكما يرد بالسرعة نفسها. لا أشباح هنا."`,`"لا أحد يترك الآخر منتظرًا. شيء جميل فعلًا."`,`"كلاكما حاضر ويرد. هكذا يبدو التوازن."`],
+    "quips.duo.ghost": [`"أكيد كان {name} 'مشغولًا'."`,`"{name}: قرأ الرسالة ورد... في وقت ما لاحقًا."`,`"{name} يتعامل مع الردود كأنها مورد محدود."`],
+    "quips.duo.lastWord": [`"{name} يرسل رسالة وتنتهي المحادثة هناك."`,`"آخر ما شوهد: رسالة {name} بلا رد."`,`"{name} لديه موهبة في قول الكلمة الأخيرة."`],
+    "quips.duo.streak100": [`"{streak} يومًا. هذه ليست سلسلة بل أسلوب حياة."`,`"أكثر من {streak} يومًا متتاليًا. أيًا كان هذا فهو حقيقي."`,`"{streak} يومًا متتاليًا. هذا ثبات جاد."`],
+    "quips.duo.streak30": [`"{streak} يومًا بلا انقطاع. هذا نادر."`,`"أكثر من شهر من الحضور المستمر. هذا يعني شيئًا."`,`"لا فجوات ولا أعذار. فقط {streak} يومًا متتاليًا."`],
+    "quips.duo.streak10": [`"{streak} أيام متتالية. ليس سيئًا أبدًا."`,`"حسنًا، هذا لطيف فعلًا."`,`"كان هناك شيء يسير بشكل جيد خلال {streak} أيام."`],
+    "quips.duo.streakShort": [`"{streak} أيام. قصيرة لكنها حقيقية."`,`"حتى سلسلة من {streak} أيام تُحسب."`,`"{streak} أيام من عدم الانقطاع ما زالت تعني شيئًا."`],
+    "quips.duo.convStarter": [`"هناك من يفكر في الآخر أولًا كل مرة."`,`"{name} هو دائمًا من يكسر الصمت أولًا."`,`"الرسالة الأولى ما زالت تأتي من {name}. هذا يقول الكثير."`],
+    "quips.duo.messageLengthSimilar": [`"طول الرسائل متقارب جدًا. توازن مريب."`,`"لا روائي هنا ولا مقتصد. فقط شخصان يكتبان بالمقدار نفسه تقريبًا."`,`"متوازن. لا مقالات طويلة ولا ردود بكلمة واحدة."`],
+    "quips.duo.messageLengthDifferent": [`"{novelist} يتعامل مع كل رسالة كأنها رسالة للتاريخ."`,`"في مكان ما، ما زال {novelist} يكتب."`,`"{texter} يرد، أما {novelist} فيكتب فصلًا."`],
+    "quips.group.mainCharacter": [`"{name}، هذه المدونة الشخصية الخاصة بك تقريبًا."`,`"{name} جاء ليتكلم وهو يفعل ذلك فعلًا."`,`"من دون {name} يصبح هذا الشات مقبرة."`],
+    "quips.group.ghost": [`"{name} موجود بالروح فقط."`,`"{name} دخل المجموعة ثم اختفى فورًا."`,`"مراقب صامت. لغز كامل. {name}."`],
+    "quips.group.lastWord": [`"{name} يرسل رسالة. المجموعة لا ترد. كلاسيكي."`,`"بعد رسالة {name} تصمت المجموعة كل مرة."`,`"{name} اعتاد إرسال الرسائل إلى الفراغ."`],
+    "quips.group.streak100": [`"{streak} يومًا بلا أي انقطاع. هذه المجموعة مختلفة."`,`"أكثر من {streak} يومًا متتاليًا. هذا التزام حقيقي."`,`"ما يُبقي هذه المجموعة حية يستحق أن يُباع."`],
+    "quips.group.streak30": [`"{streak} يومًا من الظهور المستمر. هذه مجموعة حقيقية."`,`"ولا يوم راحة واحد. هذه المجموعة تأخذ الأمر بجدية."`,`"معظم المجموعات تموت خلال أسبوعين. هذه لا."`],
+    "quips.group.streak10": [`"{streak} أيام متتالية. كانت المجموعة حية فعلًا."`,`"يبدو أنكم فعلًا تحبون بعضكم. مفاجأة."`,`"{streak} أيام متتالية. أكثر مما تفعله معظم المجموعات."`],
+    "quips.group.streakShort": [`"{streak} أيام. قليل لكنه يُحسب."`,`"حتى سلسلة من {streak} أيام تعني أن شيئًا ما كان يحدث."`,`"حتى {streak} أيام متتالية تحتاج جهدًا."`],
+    "quips.group.novelist": [`"{name} يكتب وكأنه لا يوجد حد للكلمات."`,`"{name} يرسل رسائل فيها تطور كامل للحبكة."`,`"إذا كان هناك مقال في المجموعة فقد كتبه {name}."`],
+    "msgs": "رسائل",
+    "Red flag {index}": "علامة تحذير {index}",
+    "This pattern showed up enough to feel worth watching.": "ظهر هذا النمط بما يكفي ليستحق الانتباه.",
+    "Evidence": "دليل",
+    "Who's more obsessed?": "من هو الأكثر هوساً؟",
+    "{pct}% of all messages came from {name}.": "{pct}٪ من جميع الرسائل جاءت من {name}.",
+    "Response times": "أوقات الرد",
+    "Balanced": "متوازن",
+    "{name} avg reply:": "متوسط رد {name}:",
+    "The Ghost Award": "جائزة الشبح",
+    "What's really going on": "ما الذي يحدث فعلاً",
+    "The Last Word": "الكلمة الأخيرة",
+    "Sends the last message that nobody replies to — {count} times.": "يرسل آخر رسالة لا يرد عليها أحد — {count} مرة.",
+    "Sends the last message that nobody replies to.": "يرسل آخر رسالة لا يرد عليها أحد.",
+    "Your longest streak": "أطول سلسلة لك",
+    "{count} days": "{count} أيام",
+    "Texted every single day for {count} days straight.": "تراسلتم كل يوم لمدة {count} أيام متتالية.",
+    "The Kindest One": "أكثرهم لطفاً",
+    "The sweetest moment": "أجمل لحظة",
+    "Top 3 most active months": "أكثر 3 أشهر نشاطاً",
+    "{month} was your month. Something was going on.": "{month} كان شهركم. كان ثمة شيء يحدث.",
+    "Who always reaches out first?": "من يكتب أولاً دائماً؟",
+    "Started {pct} of all conversations.": "بدأ {pct}٪ من جميع المحادثات.",
+    "The Funny One": "الأكثر طرافة",
+    "Drops lines like": "يلقي عبارات مثل",
+    "Spirit emojis": "رموز الروح",
+    "These two emojis basically ARE this chat.": "هذان الرمزان هما هذا الدردشة بالأساس.",
+    "Top 10 most used words": "أكثر 10 كلمات استخداماً",
+    "Signature phrases": "العبارات المميزة",
+    "The phrases that define each of you.": "العبارات التي تُعرّف كل واحد منكم.",
+    "avg chars": "متوسط الأحرف",
+    "longest message": "أطول رسالة",
+    "Media and links": "الوسائط والروابط",
+    "Photos & videos": "الصور ومقاطع الفيديو",
+    "Voice memos": "الرسائل الصوتية",
+    "Links shared": "الروابط المشاركة",
+    "What you actually talk about": "ما الذي تتحدثون عنه فعلاً",
+    "Biggest topic": "الموضوع الرئيسي",
+    "Most tense moment": "اللحظة الأشد توتراً",
+    "The Drama Report": "تقرير الدراما",
+    "How they do it": "كيف يفعل ذلك",
+    "Chat vibe": "أجواء المحادثة",
+    "A chaotic, wholesome connection.": "تواصل فوضوي لكنه صحي.",
+    "Powered by AI — your messages never left your device.": "مدعوم بالذكاء الاصطناعي — رسائلك لم تغادر جهازك قط.",
+    "Relationship reading": "قراءة العلاقة",
+    "Observed pattern": "النمط الملاحظ",
+    "Concrete example": "مثال ملموس",
+    "Evidence log": "سجل الأدلة",
+    "What the chat shows": "ما تُظهره المحادثة",
+    "Toxicity scorecard": "بطاقة السمية",
+    "Why this person scores highest": "لماذا حصل هذا الشخص على أعلى نقاط",
+    "Tension snapshot": "لقطة التوتر",
+    "What keeps repeating": "ما يتكرر باستمرار",
+    "Main topic": "الموضوع الرئيسي",
+    "Pattern note": "ملاحظة النمط",
+    "The strongest pattern is shown above.": "النمط الأقوى موضح أعلاه.",
+    "Toxicity report": "تقرير السمية",
+    "Overall read": "القراءة العامة",
+    "Score breakdown": "تفصيل النقاط",
+    "This mode is meant to surface patterns and examples, not make the decision for you.": "هذا الوضع مصمم لإظهار الأنماط والأمثلة، وليس لاتخاذ القرار نيابةً عنك.",
+    "The Main Character": "الشخصية الرئيسية",
+    "The Ghost": "الشبح",
+    "{count} messages total. Why are they even here?": "{count} رسالة إجمالاً. لماذا هم هنا أصلاً؟",
+    "The group was most alive in {month}.": "كانت المجموعة في أوج نشاطها في {month}.",
+    "Longest active streak": "أطول سلسلة نشاط",
+    "The group kept the chat alive for {count} days straight.": "حافظت المجموعة على استمرار الدردشة لمدة {count} أيام متتالية.",
+    "The Hype Person": "محرك الحماس",
+    "Started {pct} of all conversations. The engine of this group.": "بدأ {pct}٪ من جميع المحادثات. محرك هذه المجموعة.",
+    "Why {name} is the hype": "لماذا {name} هو مصدر الحماس",
+    "Group spirit emoji": "رمز روح المجموعة",
+    "This one emoji basically summarises the entire group energy.": "هذا الرمز يلخص بشكل أساسي طاقة المجموعة بأكملها.",
+    "The Novelist": "كاتب الروايات",
+    "Their longest message was mostly about \"{topic}\".": "كانت رسالتهم الأطول تتناول بشكل رئيسي \"{topic}\".",
+    "The inside joke": "النكتة الداخلية",
+    "Most missed member": "العضو الأكثر افتقاداً",
+    "When they go quiet, the group feels it.": "حين يصمتون، تشعر المجموعة بذلك.",
+    "The group read": "قراءة المجموعة",
+    "Group dynamic": "ديناميكية المجموعة",
+    "Group vibe": "أجواء المجموعة",
+    "Chaotic. Wholesome. Somehow still going.": "فوضوي. صحي. ولا يزال مستمراً بطريقة ما.",
+    "Group pattern read": "قراءة نمط المجموعة",
+    "Support and strain": "الدعم والضغط",
+    "Who keeps it going": "من يُبقيها مستمرة",
+    "{name} started {pct} of conversations.": "بدأ {name} {pct}٪ من المحادثات.",
+    "The group shares the conversation starts.": "تُشارك المجموعة في بدء المحادثات.",
+    "Who goes quiet": "من يصمت",
+    "{name} is the least active member in the sampled history.": "{name} هو العضو الأقل نشاطاً في السجل المحلل.",
+    "No clear ghost in this sample.": "لا يوجد شبح واضح في هذه العينة.",
+    "Chat Health Score": "نقاط صحة المحادثة",
+    "Out of 10 — based on conflict patterns, communication style, and overall dynamic.": "من 10 — بناءً على أنماط الصراع وأسلوب التواصل والديناميكية العامة.",
+    "Verdict": "الحكم",
+    "Individual health scores": "نقاط الصحة الفردية",
+    "Who apologises more": "من يعتذر أكثر",
+    "Red flag moments": "لحظات الإنذار",
+    "Conflict pattern": "نمط الصراع",
+    "How arguments unfold": "كيف تتطور الخلافات",
+    "Power balance": "توازن القوى",
+    "Power dynamic": "ديناميكية القوة",
+    "The verdict": "الحكم",
+    "Overall chat health score.": "نقاط الصحة العامة للمحادثة.",
+    "Final read": "القراءة النهائية",
+    "Reflects patterns in this sample — not a final judgment.": "يعكس أنماطاً في هذه العينة — وليس حكماً نهائياً.",
+    "{name}'s love language": "لغة الحب عند {name}",
+    "How they show it": "كيف يُظهر ذلك",
+    "The language gap": "الفجوة اللغوية",
+    "Do they speak the same language?": "هل يتحدثان اللغة ذاتها؟",
+    "Most loving moment": "أكثر لحظة حنواً",
+    "The moment": "اللحظة",
+    "Love language compatibility": "توافق لغة الحب",
+    "Compatibility read": "قراءة التوافق",
+    "Then vs Now": "الماضي مقابل الحاضر",
+    "Early messages": "الرسائل الأولى",
+    "Recent messages": "الرسائل الأخيرة",
+    "Who changed more": "من تغير أكثر",
+    "How they changed": "كيف تغيروا",
+    "What changed in the chat": "ما الذي تغير في المحادثة",
+    "Topics that appeared": "الموضوعات التي ظهرت",
+    "Topics that faded": "الموضوعات التي تلاشت",
+    "Relationship trajectory": "مسار العلاقة",
+    "What the data shows": "ما تُظهره البيانات",
+    "The arc": "القوس",
+    "Promises made": "الوعود المُعطاة",
+    "promises": "وعود",
+    "Overall verdict": "الحكم العام",
+    "{name}'s accountability": "مسؤولية {name}",
+    "kept": "مُوفَّى بها",
+    "broken": "مُخلَف بها",
+    "Pattern": "النمط",
+    "Most notable broken promise": "الوعد المُخلَف الأبرز",
+    "Most notable kept promise": "الوعد المُوفَّى الأبرز",
+    "Net energy scores": "نقاط الطاقة الصافية",
+    "Energy compatibility": "توافق الطاقة",
+    "{name}'s energy": "طاقة {name}",
+    "Positive energy": "طاقة إيجابية",
+    "Draining patterns": "أنماط مُستنزِفة",
+    "Most energising moment": "أكثر لحظة محفزة للطاقة",
+    "Most draining moment": "أكثر لحظة مُستنزِفة",
+    "messages": "رسائل",
+    "Your relationship, in data.": "علاقتك، في بيانات.",
+    "Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.": "يقرأ محادثتك على واتساب ويُريك ما يحدث فعلاً. من يظهر. من يختفي. من يحمل المحادثة.",
+    "Skip": "تخطي",
+    "Start with your chat.": "ابدأ بمحادثتك.",
+    "Upload. Analyse. See it clearly.": "ارفع. حلّل. انظر بوضوح.",
+    "Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.": "ستة تقارير. السمية، لغات الحب، المسؤولية، الطاقة، النمو، وملخص محادثتك الكاملة. نتائج في أقل من دقيقة.",
+    "Log out": "تسجيل الخروج",
+    "Feedback Inbox": "صندوق التعليقات",
+    "Large group detected — analysing the top {cap} members out of {count}.": "تم اكتشاف مجموعة كبيرة — يتم تحليل أكثر {cap} أعضاء نشاطاً من أصل {count}.",
+  },
+  fr: {
+    "Choose your language": "Choisissez votre langue",
+    "English": "Anglais",
+    "Auto-detect": "Détection automatique",
+    "Continue": "Continuer",
+    "Back": "Retour",
+    "Next": "Suivant",
+    "See summary": "Voir le résumé",
+    "Done": "Terminé",
+    "Start over": "Recommencer",
+    "Share": "Partager",
+    "What's off about this?": "Qu'est-ce qui ne va pas ici ?",
+    "Optional note": "Note facultative",
+    "Cancel": "Annuler",
+    "Submit": "Envoyer",
+    "Sending…": "Envoi…",
+    "Got it, thank you.": "Bien noté, merci.",
+    "Events are mixing": "Les événements sont mélangés",
+    "Wrong person": "Mauvaise personne",
+    "Didn't happen": "Ça ne s'est pas produit",
+    "Tone misread": "Le ton est mal interprété",
+    "Overclaiming": "Conclusion trop poussée",
+    "Missing context": "Contexte manquant",
+    "Other": "Autre",
+    "The Roast": "Le Roast",
+    "The Lovely": "Le Doux",
+    "The Funny": "Le Drôle",
+    "The Stats": "Les Stats",
+    "Insight": "Insight",
+    "WrapChat": "WrapChat",
+    "Toxicity Report": "Rapport de Toxicité",
+    "Love Language": "Langage de l'Amour",
+    "Growth Report": "Rapport d'Évolution",
+    "Accountability": "Responsabilité",
+    "Energy Report": "Rapport d'Énergie",
+    "Choose your report": "Choisissez votre rapport",
+    "Who is this chat with?": "Avec qui est ce chat ?",
+    "This helps the AI frame the analysis correctly.": "Cela aide l'IA à cadrer correctement l'analyse.",
+    "Partner": "Partenaire",
+    "Dating": "Fréquentation",
+    "Ex": "Ex",
+    "Related": "Famille",
+    "Friend": "Ami",
+    "Colleague": "Collègue",
+    "Romantic partner or spouse": "Partenaire romantique ou conjoint",
+    "Seeing each other or early stages": "Vous vous voyez ou c'est le début",
+    "Former romantic partner": "Ancien partenaire romantique",
+    "Parent, sibling or relative": "Parent, frère, sœur ou proche",
+    "Close friend or bestie": "Ami proche ou meilleur ami",
+    "Coworker or professional contact": "Collègue ou contact professionnel",
+    "Someone you know": "Quelqu'un que vous connaissez",
+    "Reading your messages...": "Lecture de vos messages...",
+    "Finding the patterns...": "Recherche des schémas...",
+    "Figuring out who's funny...": "On cherche qui est drôle...",
+    "Detecting the drama...": "Détection du drama...",
+    "Reading between the lines...": "Lecture entre les lignes...",
+    "Almost done...": "Presque fini...",
+    "Upload different file": "Téléverser un autre fichier",
+    "Upload your chat": "Téléversez votre chat",
+    "Reading your chat…": "Lecture de votre chat…",
+    "My Results": "Mes résultats",
+    "Edit": "Modifier",
+    "Your chats, unwrapped.": "Vos chats, déballés.",
+    "Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.": "Groupe ou duo détecté automatiquement. Votre chat est analysé par l'IA et n'est jamais stocké. Seuls les résultats sont enregistrés.",
+    "UI language": "Langue de l'interface",
+    "Report language": "Langue du rapport",
+    "auto": "auto",
+    "changed": "modifié",
+    "quips.duo.obsessed": [`"{name}, tu devrais peut-être regarder ton temps d'écran."`,`"{name} porte cette conversation à la seule force des pouces."`,`"Pas obsédé, juste très disponible. Bien sûr, {name}."`],
+    "quips.duo.responseBalanced": [`"Vous répondez tous les deux au même rythme. Pas de fantôme ici."`,`"Personne ne fait attendre l'autre. C'est rare."`,`"Vous êtes présents tous les deux. Voilà à quoi ressemble l'équilibre."`],
+    "quips.duo.ghost": [`"Bien sûr, {name} était 'occupé'."`,`"{name} : a lu le message et a répondu... plus tard."`,`"{name} traite les réponses comme une ressource limitée."`],
+    "quips.duo.lastWord": [`"{name} envoie un message et la conversation s'arrête là."`,`"Dernière image : le message de {name}, sans réponse."`,`"{name} a un vrai talent pour avoir le dernier mot."`],
+    "quips.duo.streak100": [`"{streak} jours. Ce n'est plus une série, c'est un mode de vie."`,`"Plus de {streak} jours d'affilée. Quoi que ce soit, c'est réel."`,`"{streak} jours d'affilée. Une vraie régularité."`],
+    "quips.duo.streak30": [`"{streak} jours sans trou. C'est rare."`,`"Plus d'un mois de présence continue. Ça veut dire quelque chose."`,`"Pas de pause, pas d'excuse. Juste {streak} jours d'affilée."`],
+    "quips.duo.streak10": [`"{streak} jours d'affilée. Pas mal du tout."`,`"Bon, c'est franchement mignon."`,`"Quelque chose marchait clairement pendant ces {streak} jours."`],
+    "quips.duo.streakShort": [`"{streak} jours. Court, mais réel."`,`"Même une série de {streak} jours compte."`,`"{streak} jours sans se manquer, ça compte aussi."`],
+    "quips.duo.convStarter": [`"Quelqu'un pense toujours à l'autre en premier."`,`"{name} est toujours celui qui brise le silence en premier."`,`"Le premier message vient encore de {name}. Ça en dit long."`],
+    "quips.duo.messageLengthSimilar": [`"Longueur des messages presque identique. Suspectement équilibré."`,`"Pas de romancier ici, pas de minimaliste non plus. Juste deux personnes qui écrivent pareil."`,`"Équilibré. Ni romans, ni réponses en un mot."`],
+    "quips.duo.messageLengthDifferent": [`"{novelist} traite chaque texto comme une lettre à la postérité."`,`"Quelque part, {novelist} est encore en train d'écrire."`,`"{texter} répond. {novelist} développe."`],
+    "quips.group.mainCharacter": [`"{name}, ce groupe est pratiquement ton blog personnel."`,`"{name} est venu parler, et ça se voit."`,`"Sans {name}, ce chat serait un cimetière."`],
+    "quips.group.ghost": [`"{name} n'est là qu'en esprit."`,`"{name} a rejoint le groupe puis a disparu."`,`"Observateur silencieux. Mystère complet. {name}."`],
+    "quips.group.lastWord": [`"{name} envoie un message. Le groupe ne répond pas. Classique."`,`"Après le message de {name}, le groupe se tait à chaque fois."`,`"{name} a l'habitude d'envoyer des messages dans le vide."`],
+    "quips.group.streak100": [`"{streak} jours sans une seule pause. Ce groupe est à part."`,`"Plus de {streak} jours d'affilée. Là, on parle d'engagement."`,`"Ce qui garde ce groupe vivant devrait être mis en bouteille."`],
+    "quips.group.streak30": [`"{streak} jours de présence. C'est un vrai groupe."`,`"Pas un seul jour de pause. Ce groupe est investi."`,`"La plupart des groupes meurent en deux semaines. Pas celui-ci."`],
+    "quips.group.streak10": [`"{streak} jours d'affilée. Le groupe était vivant."`,`"Vous vous aimez vraiment bien. Surprise."`,`"{streak} jours d'affilée. Plus que la plupart des groupes."`],
+    "quips.group.streakShort": [`"{streak} jours. Petit, mais ça compte."`,`"Même une série de {streak} jours veut dire quelque chose."`,`"Même {streak} jours d'affilée demandent un effort."`],
+    "quips.group.novelist": [`"{name} écrit comme s'il n'y avait aucune limite de mots."`,`"{name} envoie des messages avec un vrai arc narratif."`,`"S'il y a une dissertation dans le groupe, c'est {name} qui l'a écrite."`],
+    "msgs": "msgs",
+    "Red flag {index}": "Signal d'alerte {index}",
+    "This pattern showed up enough to feel worth watching.": "Ce schéma est apparu assez souvent pour mériter attention.",
+    "Evidence": "Preuve",
+    "Who's more obsessed?": "Qui est le plus obsédé ?",
+    "{pct}% of all messages came from {name}.": "{pct}% de tous les messages viennent de {name}.",
+    "Response times": "Temps de réponse",
+    "Balanced": "Équilibré",
+    "{name} avg reply:": "{name} rép. moy. :",
+    "The Ghost Award": "Le Prix Fantôme",
+    "What's really going on": "Ce qui se passe vraiment",
+    "The Last Word": "Le Dernier Mot",
+    "Sends the last message that nobody replies to — {count} times.": "Envoie le dernier message sans réponse — {count} fois.",
+    "Sends the last message that nobody replies to.": "Envoie le dernier message sans réponse.",
+    "Your longest streak": "Votre plus longue série",
+    "{count} days": "{count} jours",
+    "Texted every single day for {count} days straight.": "Messages chaque jour pendant {count} jours d'affilée.",
+    "The Kindest One": "La Personne La Plus Gentille",
+    "The sweetest moment": "Le moment le plus doux",
+    "Top 3 most active months": "Les 3 mois les plus actifs",
+    "{month} was your month. Something was going on.": "{month} était votre mois. Il se passait quelque chose.",
+    "Who always reaches out first?": "Qui écrit toujours en premier ?",
+    "Started {pct} of all conversations.": "A lancé {pct}% de toutes les conversations.",
+    "The Funny One": "Le Plus Drôle",
+    "Drops lines like": "Balance des vannes comme",
+    "Spirit emojis": "Emojis esprits",
+    "These two emojis basically ARE this chat.": "Ces deux emojis SONT littéralement ce chat.",
+    "Top 10 most used words": "Les 10 mots les plus utilisés",
+    "Signature phrases": "Phrases caractéristiques",
+    "The phrases that define each of you.": "Les phrases qui définissent chacun de vous.",
+    "avg chars": "caract. moy.",
+    "longest message": "message le plus long",
+    "Media and links": "Médias et liens",
+    "Photos & videos": "Photos et vidéos",
+    "Voice memos": "Notes vocales",
+    "Links shared": "Liens partagés",
+    "What you actually talk about": "De quoi vous parlez vraiment",
+    "Biggest topic": "Sujet principal",
+    "Most tense moment": "Le moment le plus tendu",
+    "The Drama Report": "Le Rapport Drama",
+    "How they do it": "Comment ils le font",
+    "Chat vibe": "Ambiance du chat",
+    "A chaotic, wholesome connection.": "Un lien chaotique mais sain.",
+    "Powered by AI — your messages never left your device.": "Alimenté par l'IA — vos messages n'ont jamais quitté votre appareil.",
+    "Relationship reading": "Lecture de la relation",
+    "Observed pattern": "Schéma observé",
+    "Concrete example": "Exemple concret",
+    "Evidence log": "Journal de preuves",
+    "What the chat shows": "Ce que montre le chat",
+    "Toxicity scorecard": "Tableau de toxicité",
+    "Why this person scores highest": "Pourquoi cette personne a le score le plus élevé",
+    "Tension snapshot": "Aperçu de la tension",
+    "What keeps repeating": "Ce qui se répète",
+    "Main topic": "Sujet principal",
+    "Pattern note": "Note sur le schéma",
+    "The strongest pattern is shown above.": "Le schéma le plus fort est affiché ci-dessus.",
+    "Toxicity report": "Rapport de toxicité",
+    "Overall read": "Lecture globale",
+    "Score breakdown": "Détail des scores",
+    "This mode is meant to surface patterns and examples, not make the decision for you.": "Ce mode est conçu pour faire ressortir des schémas et des exemples, pas pour décider à votre place.",
+    "The Main Character": "Le Personnage Principal",
+    "The Ghost": "Le Fantôme",
+    "{count} messages total. Why are they even here?": "{count} messages au total. Pourquoi sont-ils là d'ailleurs ?",
+    "The group was most alive in {month}.": "Le groupe était le plus actif en {month}.",
+    "Longest active streak": "Plus longue série active",
+    "The group kept the chat alive for {count} days straight.": "Le groupe a maintenu le chat vivant pendant {count} jours d'affilée.",
+    "The Hype Person": "L'Animateur du Groupe",
+    "Started {pct} of all conversations. The engine of this group.": "A lancé {pct}% de toutes les conversations. Le moteur de ce groupe.",
+    "Why {name} is the hype": "Pourquoi {name} anime le groupe",
+    "Group spirit emoji": "Emoji esprit du groupe",
+    "This one emoji basically summarises the entire group energy.": "Cet emoji résume à lui seul toute l'énergie du groupe.",
+    "The Novelist": "Le Romancier",
+    "Their longest message was mostly about \"{topic}\".": "Leur message le plus long portait surtout sur \"{topic}\".",
+    "The inside joke": "La blague interne",
+    "Most missed member": "Le membre qui manque le plus",
+    "When they go quiet, the group feels it.": "Quand ils se taisent, le groupe le ressent.",
+    "The group read": "La lecture du groupe",
+    "Group dynamic": "Dynamique du groupe",
+    "Group vibe": "Ambiance du groupe",
+    "Chaotic. Wholesome. Somehow still going.": "Chaotique. Sain. Et pourtant toujours là.",
+    "Group pattern read": "Lecture du schéma du groupe",
+    "Support and strain": "Soutien et tension",
+    "Who keeps it going": "Qui maintient le groupe en vie",
+    "{name} started {pct} of conversations.": "{name} a lancé {pct}% des conversations.",
+    "The group shares the conversation starts.": "Le groupe partage les débuts de conversation.",
+    "Who goes quiet": "Qui se tait",
+    "{name} is the least active member in the sampled history.": "{name} est le membre le moins actif dans l'historique analysé.",
+    "No clear ghost in this sample.": "Pas de fantôme évident dans cet échantillon.",
+    "Chat Health Score": "Score de Santé du Chat",
+    "Out of 10 — based on conflict patterns, communication style, and overall dynamic.": "Sur 10 — basé sur les schémas de conflit, le style de communication et la dynamique générale.",
+    "Verdict": "Verdict",
+    "Individual health scores": "Scores de santé individuels",
+    "Who apologises more": "Qui s'excuse le plus",
+    "Red flag moments": "Moments d'alerte",
+    "Conflict pattern": "Schéma de conflit",
+    "How arguments unfold": "Comment les disputes se déroulent",
+    "Power balance": "Équilibre du pouvoir",
+    "Power dynamic": "Dynamique du pouvoir",
+    "The verdict": "Le verdict",
+    "Overall chat health score.": "Score de santé global du chat.",
+    "Final read": "Lecture finale",
+    "Reflects patterns in this sample — not a final judgment.": "Reflète des schémas dans cet échantillon — pas un jugement définitif.",
+    "{name}'s love language": "Le langage de l'amour de {name}",
+    "How they show it": "Comment ils le montrent",
+    "The language gap": "Le fossé de langage",
+    "Do they speak the same language?": "Parlent-ils le même langage ?",
+    "Most loving moment": "Le moment le plus tendre",
+    "The moment": "Le moment",
+    "Love language compatibility": "Compatibilité de langage de l'amour",
+    "Compatibility read": "Lecture de compatibilité",
+    "Then vs Now": "Avant vs Maintenant",
+    "Early messages": "Messages du début",
+    "Recent messages": "Messages récents",
+    "Who changed more": "Qui a le plus changé",
+    "How they changed": "Comment ils ont changé",
+    "What changed in the chat": "Ce qui a changé dans le chat",
+    "Topics that appeared": "Sujets apparus",
+    "Topics that faded": "Sujets disparus",
+    "Relationship trajectory": "Trajectoire de la relation",
+    "What the data shows": "Ce que montrent les données",
+    "The arc": "L'arc",
+    "Promises made": "Promesses faites",
+    "promises": "promesses",
+    "Overall verdict": "Verdict général",
+    "{name}'s accountability": "La responsabilité de {name}",
+    "kept": "tenues",
+    "broken": "brisées",
+    "Pattern": "Schéma",
+    "Most notable broken promise": "La promesse brisée la plus notable",
+    "Most notable kept promise": "La promesse tenue la plus notable",
+    "Net energy scores": "Scores d'énergie nets",
+    "Energy compatibility": "Compatibilité d'énergie",
+    "{name}'s energy": "L'énergie de {name}",
+    "Positive energy": "Énergie positive",
+    "Draining patterns": "Schémas épuisants",
+    "Most energising moment": "Le moment le plus énergisant",
+    "Most draining moment": "Le moment le plus épuisant",
+    "messages": "messages",
+    "Your relationship, in data.": "Votre relation, en données.",
+    "Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.": "Lit votre chat WhatsApp et vous montre ce qui se passe vraiment. Qui est présent. Qui disparaît. Qui porte la conversation.",
+    "Skip": "Passer",
+    "Start with your chat.": "Commencez par votre chat.",
+    "Upload. Analyse. See it clearly.": "Importez. Analysez. Voyez clairement.",
+    "Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.": "Six rapports. Toxicité, langages de l'amour, responsabilité, énergie, croissance et votre chat complet résumé. Résultats en moins d'une minute.",
+    "Log out": "Se déconnecter",
+    "Feedback Inbox": "Boîte de retours",
+    "Large group detected — analysing the top {cap} members out of {count}.": "Grand groupe détecté — analyse des {cap} membres les plus actifs sur {count}.",
+  },
+  de: {
+    "Choose your language": "Wähle deine Sprache",
+    "English": "Englisch",
+    "Auto-detect": "Automatisch erkennen",
+    "Continue": "Weiter",
+    "Back": "Zurück",
+    "Next": "Weiter",
+    "See summary": "Zusammenfassung ansehen",
+    "Done": "Fertig",
+    "Start over": "Neu starten",
+    "Share": "Teilen",
+    "What's off about this?": "Was stimmt hier nicht?",
+    "Optional note": "Optionale Notiz",
+    "Cancel": "Abbrechen",
+    "Submit": "Senden",
+    "Sending…": "Wird gesendet…",
+    "Got it, thank you.": "Verstanden, danke.",
+    "Events are mixing": "Ereignisse werden vermischt",
+    "Wrong person": "Falsche Person",
+    "Didn't happen": "Ist nicht passiert",
+    "Tone misread": "Ton falsch gelesen",
+    "Overclaiming": "Zu starke Behauptung",
+    "Missing context": "Kontext fehlt",
+    "Other": "Andere",
+    "The Roast": "Der Roast",
+    "The Lovely": "Das Süße",
+    "The Funny": "Das Lustige",
+    "The Stats": "Die Stats",
+    "Insight": "Insight",
+    "WrapChat": "WrapChat",
+    "Toxicity Report": "Toxizitätsbericht",
+    "Love Language": "Liebessprache",
+    "Growth Report": "Entwicklungsbericht",
+    "Accountability": "Verlässlichkeit",
+    "Energy Report": "Energiebericht",
+    "Choose your report": "Wähle deinen Bericht",
+    "Who is this chat with?": "Mit wem ist dieser Chat?",
+    "This helps the AI frame the analysis correctly.": "Das hilft der KI, die Analyse richtig einzuordnen.",
+    "Partner": "Partner",
+    "Dating": "Dating",
+    "Ex": "Ex",
+    "Related": "Familie",
+    "Friend": "Freund",
+    "Colleague": "Kollege",
+    "Romantic partner or spouse": "Romantischer Partner oder Ehepartner",
+    "Seeing each other or early stages": "Ihr trefft euch oder seid in der Anfangsphase",
+    "Former romantic partner": "Ehemaliger romantischer Partner",
+    "Parent, sibling or relative": "Elternteil, Geschwisterteil oder Verwandte",
+    "Close friend or bestie": "Enge Freundin oder bester Freund",
+    "Coworker or professional contact": "Arbeitskollege oder beruflicher Kontakt",
+    "Someone you know": "Jemand, den du kennst",
+    "Reading your messages...": "Deine Nachrichten werden gelesen...",
+    "Finding the patterns...": "Muster werden gefunden...",
+    "Figuring out who's funny...": "Es wird herausgefunden, wer lustig ist...",
+    "Detecting the drama...": "Drama wird erkannt...",
+    "Reading between the lines...": "Zwischen den Zeilen lesen...",
+    "Almost done...": "Fast fertig...",
+    "Upload different file": "Andere Datei hochladen",
+    "Upload your chat": "Chat hochladen",
+    "Reading your chat…": "Dein Chat wird gelesen…",
+    "My Results": "Meine Ergebnisse",
+    "Edit": "Bearbeiten",
+    "Your chats, unwrapped.": "Deine Chats, aufgedeckt.",
+    "Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.": "Gruppe oder Duo wird automatisch erkannt. Dein Chat wird von KI analysiert und nie gespeichert. Nur die Ergebnisse werden gespeichert.",
+    "UI language": "Oberflächensprache",
+    "Report language": "Berichtssprache",
+    "auto": "auto",
+    "changed": "geändert",
+    "quips.duo.obsessed": [`"{name}, du solltest vielleicht mal auf deine Bildschirmzeit schauen."`,`"{name} trägt diese Unterhaltung nur mit Tipp-Ausdauer."`,`"Nicht besessen, nur sehr verfügbar. Klar, {name}."`],
+    "quips.duo.responseBalanced": [`"Ihr antwortet beide gleich schnell. Keine Geister hier."`,`"Niemand lässt die andere Person warten. Erfrischend."`,`"Ihr seid beide da und antwortet beide. So sieht Balance aus."`],
+    "quips.duo.ghost": [`"Klar, {name} war 'beschäftigt'."`,`"{name}: Nachricht gelesen und... irgendwann geantwortet."`,`"{name} behandelt Antworten wie eine begrenzte Ressource."`],
+    "quips.duo.lastWord": [`"{name} schickt eine Nachricht. Danach ist Schluss."`,`"Zuletzt gesehen: die unbeantwortete Nachricht von {name}."`,`"{name} hat Talent für das letzte Wort."`],
+    "quips.duo.streak100": [`"{streak} Tage. Das ist kein Streak mehr, das ist ein Lebensstil."`,`"Mehr als {streak} Tage am Stück. Was auch immer das ist, es ist echt."`,`"{streak} Tage in Folge. Das ist ernsthafte Konstanz."`],
+    "quips.duo.streak30": [`"{streak} Tage ohne Lücke. Das ist selten."`,`"Mehr als einen Monat lang konsequent da sein. Das bedeutet etwas."`,`"Keine Pausen, keine Ausreden. Nur {streak} Tage am Stück."`],
+    "quips.duo.streak10": [`"{streak} Tage in Folge. Gar nicht schlecht."`,`"Okay, das ist tatsächlich ziemlich süß."`,`"Irgendetwas lief in diesen {streak} Tagen ziemlich gut."`],
+    "quips.duo.streakShort": [`"{streak} Tage. Kurz, aber echt."`,`"Auch ein {streak}-Tage-Streak zählt."`,`"{streak} Tage lang nicht abreißen zu lassen, zählt auch."`],
+    "quips.duo.convStarter": [`"Jemand denkt immer zuerst an die andere Person."`,`"{name} ist immer die Person, die zuerst die Stille bricht."`,`"Die erste Nachricht kommt immer wieder von {name}. Das sagt einiges."`],
+    "quips.duo.messageLengthSimilar": [`"Fast identische Nachrichtenlängen. Verdächtig ausgeglichen."`,`"Kein Romanautor, kein Kurztexter. Einfach zwei Menschen mit ähnlicher Länge."`,`"Ausgeglichen. Keine Romane, keine Ein-Wort-Antworten."`],
+    "quips.duo.messageLengthDifferent": [`"{novelist} behandelt jede Nachricht wie einen Brief an die Nachwelt."`,`"Irgendwo tippt {novelist} immer noch."`,`"{texter} antwortet. {novelist} formuliert aus."`],
+    "quips.group.mainCharacter": [`"{name}, das hier ist im Grunde dein persönlicher Blog."`,`"{name} ist gekommen, um zu reden, und macht genau das."`,`"Ohne {name} wäre dieser Chat ein Friedhof."`],
+    "quips.group.ghost": [`"{name} ist nur im Geiste hier."`,`"{name} ist der Gruppe beigetreten und sofort verschwunden."`,`"Stiller Beobachter. Komplettes Rätsel. {name}."`],
+    "quips.group.lastWord": [`"{name} schickt eine Nachricht. Die Gruppe antwortet nicht. Klassiker."`,`"Nach der Nachricht von {name} wird die Gruppe jedes Mal still."`,`"{name} schickt Nachrichten gern ins Leere."`],
+    "quips.group.streak100": [`"{streak} Tage ohne eine einzige Pause. Diese Gruppe ist anders."`,`"Mehr als {streak} Tage am Stück. Das ist echtes Commitment."`,`"Was diese Gruppe am Leben hält, sollte man abfüllen."`],
+    "quips.group.streak30": [`"{streak} Tage lang präsent. Das ist eine echte Gruppe."`,`"Kein einziger freier Tag. Diese Gruppe meint es ernst."`,`"Die meisten Gruppen sterben nach zwei Wochen. Diese nicht."`],
+    "quips.group.streak10": [`"{streak} Tage in Folge. Die Gruppe war lebendig."`,`"Ihr mögt euch offenbar wirklich. Überraschend."`,`"{streak} Tage in Folge. Mehr als die meisten Gruppen schaffen."`],
+    "quips.group.streakShort": [`"{streak} Tage. Klein, aber zählt."`,`"Auch ein {streak}-Tage-Lauf sagt etwas aus."`,`"Selbst {streak} Tage in Folge brauchen Einsatz."`],
+    "quips.group.novelist": [`"{name} schreibt, als gäbe es kein Wortlimit."`,`"{name} schickt Nachrichten mit kompletter Handlung."`,`"Wenn es in der Gruppe einen Essay gibt, hat ihn {name} geschrieben."`],
+    "msgs": "Nachr.",
+    "Red flag {index}": "Warnsignal {index}",
+    "This pattern showed up enough to feel worth watching.": "Dieses Muster tauchte oft genug auf, um es im Blick zu behalten.",
+    "Evidence": "Beleg",
+    "Who's more obsessed?": "Wer ist besessener?",
+    "{pct}% of all messages came from {name}.": "{pct}% aller Nachrichten kamen von {name}.",
+    "Response times": "Antwortzeiten",
+    "Balanced": "Ausgeglichen",
+    "{name} avg reply:": "{name} Ø Antwort:",
+    "The Ghost Award": "Der Geister-Award",
+    "What's really going on": "Was wirklich los ist",
+    "The Last Word": "Das Letzte Wort",
+    "Sends the last message that nobody replies to — {count} times.": "Schickt die letzte Nachricht, auf die niemand antwortet — {count} Mal.",
+    "Sends the last message that nobody replies to.": "Schickt die letzte Nachricht, auf die niemand antwortet.",
+    "Your longest streak": "Eure längste Serie",
+    "{count} days": "{count} Tage",
+    "Texted every single day for {count} days straight.": "Jeden Tag Nachrichten für {count} Tage am Stück.",
+    "The Kindest One": "Die Freundlichste Person",
+    "The sweetest moment": "Der süßeste Moment",
+    "Top 3 most active months": "Die 3 aktivsten Monate",
+    "{month} was your month. Something was going on.": "{month} war euer Monat. Da war was los.",
+    "Who always reaches out first?": "Wer schreibt immer als Erstes?",
+    "Started {pct} of all conversations.": "Hat {pct}% aller Gespräche begonnen.",
+    "The Funny One": "Die Lustigste Person",
+    "Drops lines like": "Bringt Sprüche wie",
+    "Spirit emojis": "Geist-Emojis",
+    "These two emojis basically ARE this chat.": "Diese zwei Emojis SIND im Grunde dieser Chat.",
+    "Top 10 most used words": "Die 10 meistgenutzten Wörter",
+    "Signature phrases": "Charakteristische Phrasen",
+    "The phrases that define each of you.": "Die Phrasen, die jeden von euch definieren.",
+    "avg chars": "Ø Zeichen",
+    "longest message": "längste Nachricht",
+    "Media and links": "Medien und Links",
+    "Photos & videos": "Fotos & Videos",
+    "Voice memos": "Sprachmemos",
+    "Links shared": "Geteilte Links",
+    "What you actually talk about": "Worüber ihr wirklich redet",
+    "Biggest topic": "Hauptthema",
+    "Most tense moment": "Der angespannteste Moment",
+    "The Drama Report": "Der Drama-Bericht",
+    "How they do it": "Wie sie es machen",
+    "Chat vibe": "Chat-Stimmung",
+    "A chaotic, wholesome connection.": "Eine chaotische, gesunde Verbindung.",
+    "Powered by AI — your messages never left your device.": "KI-gestützt — deine Nachrichten haben dein Gerät nie verlassen.",
+    "Relationship reading": "Beziehungsanalyse",
+    "Observed pattern": "Beobachtetes Muster",
+    "Concrete example": "Konkretes Beispiel",
+    "Evidence log": "Belegprotokoll",
+    "What the chat shows": "Was der Chat zeigt",
+    "Toxicity scorecard": "Toxizitätskarte",
+    "Why this person scores highest": "Warum diese Person am höchsten punktet",
+    "Tension snapshot": "Spannungsmoment",
+    "What keeps repeating": "Was sich wiederholt",
+    "Main topic": "Hauptthema",
+    "Pattern note": "Musternotiz",
+    "The strongest pattern is shown above.": "Das stärkste Muster ist oben dargestellt.",
+    "Toxicity report": "Toxizitätsbericht",
+    "Overall read": "Gesamteinschätzung",
+    "Score breakdown": "Punkteaufschlüsselung",
+    "This mode is meant to surface patterns and examples, not make the decision for you.": "Dieser Modus soll Muster und Beispiele aufzeigen, nicht die Entscheidung für dich treffen.",
+    "The Main Character": "Die Hauptfigur",
+    "The Ghost": "Der Geist",
+    "{count} messages total. Why are they even here?": "{count} Nachrichten insgesamt. Warum sind sie überhaupt hier?",
+    "The group was most alive in {month}.": "Die Gruppe war im {month} am aktivsten.",
+    "Longest active streak": "Längste aktive Serie",
+    "The group kept the chat alive for {count} days straight.": "Die Gruppe hielt den Chat {count} Tage am Stück am Leben.",
+    "The Hype Person": "Die Stimmungsmacherin",
+    "Started {pct} of all conversations. The engine of this group.": "Hat {pct}% aller Gespräche begonnen. Der Motor dieser Gruppe.",
+    "Why {name} is the hype": "Warum {name} die Stimmung macht",
+    "Group spirit emoji": "Gruppen-Geist-Emoji",
+    "This one emoji basically summarises the entire group energy.": "Dieses eine Emoji fasst die gesamte Gruppenenergie zusammen.",
+    "The Novelist": "Der Romanautor",
+    "Their longest message was mostly about \"{topic}\".": "Ihre längste Nachricht handelte hauptsächlich von \"{topic}\".",
+    "The inside joke": "Der Insider",
+    "Most missed member": "Das am meisten vermisste Mitglied",
+    "When they go quiet, the group feels it.": "Wenn sie still werden, spürt die Gruppe es.",
+    "The group read": "Die Gruppenanalyse",
+    "Group dynamic": "Gruppendynamik",
+    "Group vibe": "Gruppenatmosphäre",
+    "Chaotic. Wholesome. Somehow still going.": "Chaotisch. Gesund. Irgendwie läuft es noch.",
+    "Group pattern read": "Gruppenmmusteranalyse",
+    "Support and strain": "Unterstützung und Belastung",
+    "Who keeps it going": "Wer hält es am Laufen",
+    "{name} started {pct} of conversations.": "{name} hat {pct}% der Gespräche begonnen.",
+    "The group shares the conversation starts.": "Die Gruppe teilt sich die Gesprächseröffnungen.",
+    "Who goes quiet": "Wer wird still",
+    "{name} is the least active member in the sampled history.": "{name} ist das inaktivste Mitglied im analysierten Verlauf.",
+    "No clear ghost in this sample.": "Kein eindeutiger Geist in dieser Stichprobe.",
+    "Chat Health Score": "Chat-Gesundheits-Score",
+    "Out of 10 — based on conflict patterns, communication style, and overall dynamic.": "Von 10 — basierend auf Konfliktmustern, Kommunikationsstil und Gesamtdynamik.",
+    "Verdict": "Urteil",
+    "Individual health scores": "Individuelle Gesundheits-Scores",
+    "Who apologises more": "Wer entschuldigt sich öfter",
+    "Red flag moments": "Warnsignal-Momente",
+    "Conflict pattern": "Konfliktmuster",
+    "How arguments unfold": "Wie Streitigkeiten eskalieren",
+    "Power balance": "Machtgleichgewicht",
+    "Power dynamic": "Machtdynamik",
+    "The verdict": "Das Urteil",
+    "Overall chat health score.": "Gesamt-Gesundheits-Score des Chats.",
+    "Final read": "Abschließende Einschätzung",
+    "Reflects patterns in this sample — not a final judgment.": "Spiegelt Muster in dieser Stichprobe wider — kein endgültiges Urteil.",
+    "{name}'s love language": "{name}s Liebessprache",
+    "How they show it": "Wie sie es zeigen",
+    "The language gap": "Die Sprach-Lücke",
+    "Do they speak the same language?": "Sprechen sie dieselbe Sprache?",
+    "Most loving moment": "Der liebevollste Moment",
+    "The moment": "Der Moment",
+    "Love language compatibility": "Kompatibilität der Liebessprachen",
+    "Compatibility read": "Kompatibilitätsanalyse",
+    "Then vs Now": "Damals vs Heute",
+    "Early messages": "Frühe Nachrichten",
+    "Recent messages": "Aktuelle Nachrichten",
+    "Who changed more": "Wer hat sich mehr verändert",
+    "How they changed": "Wie sie sich verändert haben",
+    "What changed in the chat": "Was sich im Chat verändert hat",
+    "Topics that appeared": "Themen, die auftauchten",
+    "Topics that faded": "Themen, die verschwanden",
+    "Relationship trajectory": "Beziehungsverlauf",
+    "What the data shows": "Was die Daten zeigen",
+    "The arc": "Der Bogen",
+    "Promises made": "Gemachte Versprechen",
+    "promises": "Versprechen",
+    "Overall verdict": "Gesamturteil",
+    "{name}'s accountability": "{name}s Verlässlichkeit",
+    "kept": "gehalten",
+    "broken": "gebrochen",
+    "Pattern": "Muster",
+    "Most notable broken promise": "Das auffälligste gebrochene Versprechen",
+    "Most notable kept promise": "Das auffälligste gehaltene Versprechen",
+    "Net energy scores": "Netto-Energie-Scores",
+    "Energy compatibility": "Energiekompatibilität",
+    "{name}'s energy": "{name}s Energie",
+    "Positive energy": "Positive Energie",
+    "Draining patterns": "Kräftezehrende Muster",
+    "Most energising moment": "Der energiereichste Moment",
+    "Most draining moment": "Der erschöpfendste Moment",
+    "messages": "Nachrichten",
+    "Your relationship, in data.": "Deine Beziehung, in Daten.",
+    "Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.": "Liest deinen WhatsApp-Chat und zeigt dir, was wirklich los ist. Wer da ist. Wer ghostet. Wer das Gespräch trägt.",
+    "Skip": "Überspringen",
+    "Start with your chat.": "Fang mit deinem Chat an.",
+    "Upload. Analyse. See it clearly.": "Hochladen. Analysieren. Klar sehen.",
+    "Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.": "Sechs Berichte. Toxizität, Liebessprachen, Verlässlichkeit, Energie, Wachstum und dein vollständiger Chat zusammengefasst. Ergebnisse in weniger als einer Minute.",
+    "Log out": "Abmelden",
+    "Feedback Inbox": "Feedback-Postfach",
+    "Large group detected — analysing the top {cap} members out of {count}.": "Große Gruppe erkannt — die {cap} aktivsten Mitglieder von {count} werden analysiert.",
+  },
+  it: {
+    "Choose your language": "Scegli la tua lingua",
+    "English": "Inglese",
+    "Auto-detect": "Rilevamento automatico",
+    "Continue": "Continua",
+    "Back": "Indietro",
+    "Next": "Avanti",
+    "See summary": "Vedi riepilogo",
+    "Done": "Fatto",
+    "Start over": "Ricomincia",
+    "Share": "Condividi",
+    "What's off about this?": "Cosa non torna qui?",
+    "Optional note": "Nota facoltativa",
+    "Cancel": "Annulla",
+    "Submit": "Invia",
+    "Sending…": "Invio in corso…",
+    "Got it, thank you.": "Ricevuto, grazie.",
+    "Events are mixing": "Gli eventi si stanno confondendo",
+    "Wrong person": "Persona sbagliata",
+    "Didn't happen": "Non è successo",
+    "Tone misread": "Tono interpretato male",
+    "Overclaiming": "Conclusione esagerata",
+    "Missing context": "Manca contesto",
+    "Other": "Altro",
+    "The Roast": "Il Roast",
+    "The Lovely": "Il Tenero",
+    "The Funny": "Il Divertente",
+    "The Stats": "Le Statistiche",
+    "Insight": "Insight",
+    "WrapChat": "WrapChat",
+    "Toxicity Report": "Report Tossicità",
+    "Love Language": "Linguaggio dell'Amore",
+    "Growth Report": "Report Evoluzione",
+    "Accountability": "Affidabilità",
+    "Energy Report": "Report Energia",
+    "Choose your report": "Scegli il tuo report",
+    "Who is this chat with?": "Con chi è questa chat?",
+    "This helps the AI frame the analysis correctly.": "Questo aiuta l'IA a inquadrare correttamente l'analisi.",
+    "Partner": "Partner",
+    "Dating": "Frequentazione",
+    "Ex": "Ex",
+    "Related": "Famiglia",
+    "Friend": "Amico",
+    "Colleague": "Collega",
+    "Romantic partner or spouse": "Partner romantico o coniuge",
+    "Seeing each other or early stages": "Vi frequentate o siete alle prime fasi",
+    "Former romantic partner": "Ex partner romantico",
+    "Parent, sibling or relative": "Genitore, fratello, sorella o parente",
+    "Close friend or bestie": "Amico stretto o migliore amico",
+    "Coworker or professional contact": "Collega o contatto professionale",
+    "Someone you know": "Qualcuno che conosci",
+    "Reading your messages...": "Sto leggendo i tuoi messaggi...",
+    "Finding the patterns...": "Sto trovando gli schemi...",
+    "Figuring out who's funny...": "Sto capendo chi è il più divertente...",
+    "Detecting the drama...": "Sto rilevando il drama...",
+    "Reading between the lines...": "Sto leggendo tra le righe...",
+    "Almost done...": "Quasi fatto...",
+    "Upload different file": "Carica un file diverso",
+    "Upload your chat": "Carica la tua chat",
+    "Reading your chat…": "Sto leggendo la tua chat…",
+    "My Results": "I miei risultati",
+    "Edit": "Modifica",
+    "Your chats, unwrapped.": "Le tue chat, svelate.",
+    "Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.": "Gruppo o duo rilevato automaticamente. La tua chat viene analizzata dall'IA e non viene mai archiviata. Vengono salvati solo i risultati.",
+    "UI language": "Lingua interfaccia",
+    "Report language": "Lingua del report",
+    "auto": "auto",
+    "changed": "modificato",
+    "quips.duo.obsessed": [`"{name}, forse dovresti controllare il tuo tempo schermo."`,`"{name} sta reggendo questa conversazione con pura resistenza da tastiera."`,`"Non è ossessione, è solo troppa disponibilità. Certo, {name}."`],
+    "quips.duo.responseBalanced": [`"Rispondete entrambi allo stesso ritmo. Nessun fantasma qui."`,`"Nessuno lascia l'altro in attesa. Rinfrescante."`,`"Entrambi rispondete, entrambi ci siete. Questo è equilibrio."`],
+    "quips.duo.ghost": [`"Certo, {name} era 'occupato'."`,`"{name}: ha letto il messaggio e ha risposto... alla fine."`,`"{name} tratta le risposte come una risorsa limitata."`],
+    "quips.duo.lastWord": [`"{name} manda un messaggio e la conversazione finisce lì."`,`"Ultima scena: il messaggio di {name}, senza risposta."`,`"{name} ha un talento naturale per l'ultima parola."`],
+    "quips.duo.streak100": [`"{streak} giorni. Non è una streak, è uno stile di vita."`,`"Più di {streak} giorni di fila. Qualunque cosa sia, è reale."`,`"{streak} giorni consecutivi. È una costanza seria."`],
+    "quips.duo.streak30": [`"{streak} giorni senza buchi. È raro."`,`"Più di un mese di presenza costante. Significa qualcosa."`,`"Niente pause, niente scuse. Solo {streak} giorni di fila."`],
+    "quips.duo.streak10": [`"{streak} giorni di fila. Niente male."`,`"Ok, questo è davvero carino."`,`"Qualcosa funzionava chiaramente in quei {streak} giorni."`],
+    "quips.duo.streakShort": [`"{streak} giorni. Breve ma vero."`,`"Anche una streak di {streak} giorni conta."`,`"{streak} giorni senza sparire contano comunque."`],
+    "quips.duo.convStarter": [`"Qualcuno pensa sempre all'altra persona per primo."`,`"{name} è sempre quello che rompe il silenzio per primo."`,`"Il primo messaggio continua ad arrivare da {name}. Dice molto."`],
+    "quips.duo.messageLengthSimilar": [`"Lunghezze quasi identiche. Sospettosamente equilibrato."`,`"Niente romanziere, niente minimalista. Solo due persone che scrivono più o meno uguale."`,`"Equilibrato. Niente poemi, niente risposte da una parola."`],
+    "quips.duo.messageLengthDifferent": [`"{novelist} tratta ogni messaggio come una lettera ai posteri."`,`"Da qualche parte {novelist} sta ancora scrivendo."`,`"{texter} risponde. {novelist} sviluppa."`],
+    "quips.group.mainCharacter": [`"{name}, questo è praticamente il tuo blog personale."`,`"{name} è venuto qui per parlare, e si vede."`,`"Senza {name}, questa chat sarebbe un cimitero."`],
+    "quips.group.ghost": [`"{name} è qui solo spiritualmente."`,`"{name} è entrato nel gruppo ed è sparito subito."`,`"Osservatore silenzioso. Mistero totale. {name}."`],
+    "quips.group.lastWord": [`"{name} manda un messaggio. Il gruppo non risponde. Classico."`,`"Dopo il messaggio di {name}, il gruppo si zittisce ogni volta."`,`"{name} ha l'abitudine di mandare messaggi nel vuoto."`],
+    "quips.group.streak100": [`"{streak} giorni senza una sola pausa. Questo gruppo è diverso."`,`"Più di {streak} giorni di fila. Qui si parla di impegno."`,`"Quello che tiene vivo questo gruppo andrebbe imbottigliato."`],
+    "quips.group.streak30": [`"{streak} giorni di presenza. Questo è un vero gruppo."`,`"Nemmeno un giorno di pausa. Questo gruppo fa sul serio."`,`"La maggior parte dei gruppi muore dopo due settimane. Questo no."`],
+    "quips.group.streak10": [`"{streak} giorni di fila. Il gruppo era vivo."`,`"Vi piacete davvero. Sorprendente."`,`"{streak} giorni di fila. Più di quanto facciano la maggior parte dei gruppi."`],
+    "quips.group.streakShort": [`"{streak} giorni. Poco, ma conta."`,`"Anche una streak di {streak} giorni significa qualcosa."`,`"Perfino {streak} giorni di fila richiedono impegno."`],
+    "quips.group.novelist": [`"{name} scrive come se non esistesse un limite di parole."`,`"{name} manda messaggi con uno sviluppo completo della trama."`,`"Se c'è un saggio nel gruppo, lo ha scritto {name}."`],
+    "msgs": "msg",
+    "Red flag {index}": "Segnale d'allarme {index}",
+    "This pattern showed up enough to feel worth watching.": "Questo schema è apparso abbastanza da meritare attenzione.",
+    "Evidence": "Prova",
+    "Who's more obsessed?": "Chi è più ossessionato?",
+    "{pct}% of all messages came from {name}.": "Il {pct}% di tutti i messaggi è venuto da {name}.",
+    "Response times": "Tempi di risposta",
+    "Balanced": "Equilibrato",
+    "{name} avg reply:": "{name} risp. media:",
+    "The Ghost Award": "Il Premio Fantasma",
+    "What's really going on": "Cosa sta succedendo davvero",
+    "The Last Word": "L'Ultima Parola",
+    "Sends the last message that nobody replies to — {count} times.": "Manda l'ultimo messaggio a cui nessuno risponde — {count} volte.",
+    "Sends the last message that nobody replies to.": "Manda l'ultimo messaggio a cui nessuno risponde.",
+    "Your longest streak": "La tua serie più lunga",
+    "{count} days": "{count} giorni",
+    "Texted every single day for {count} days straight.": "Messaggi ogni giorno per {count} giorni di fila.",
+    "The Kindest One": "La Persona Più Gentile",
+    "The sweetest moment": "Il momento più dolce",
+    "Top 3 most active months": "I 3 mesi più attivi",
+    "{month} was your month. Something was going on.": "{month} era il vostro mese. Stava succedendo qualcosa.",
+    "Who always reaches out first?": "Chi scrive sempre per primo?",
+    "Started {pct} of all conversations.": "Ha avviato il {pct}% di tutte le conversazioni.",
+    "The Funny One": "Il Più Divertente",
+    "Drops lines like": "Lascia cadere frasi come",
+    "Spirit emojis": "Emoji spirito",
+    "These two emojis basically ARE this chat.": "Queste due emoji SONO fondamentalmente questa chat.",
+    "Top 10 most used words": "Le 10 parole più usate",
+    "Signature phrases": "Frasi caratteristiche",
+    "The phrases that define each of you.": "Le frasi che definiscono ognuno di voi.",
+    "avg chars": "car. medi",
+    "longest message": "messaggio più lungo",
+    "Media and links": "Media e link",
+    "Photos & videos": "Foto e video",
+    "Voice memos": "Note vocali",
+    "Links shared": "Link condivisi",
+    "What you actually talk about": "Di cosa parlate davvero",
+    "Biggest topic": "Argomento principale",
+    "Most tense moment": "Il momento più teso",
+    "The Drama Report": "Il Rapporto Drama",
+    "How they do it": "Come lo fanno",
+    "Chat vibe": "Atmosfera della chat",
+    "A chaotic, wholesome connection.": "Un legame caotico ma sano.",
+    "Powered by AI — your messages never left your device.": "Alimentato dall'IA — i tuoi messaggi non hanno mai lasciato il tuo dispositivo.",
+    "Relationship reading": "Lettura della relazione",
+    "Observed pattern": "Schema osservato",
+    "Concrete example": "Esempio concreto",
+    "Evidence log": "Registro delle prove",
+    "What the chat shows": "Cosa mostra la chat",
+    "Toxicity scorecard": "Scheda della tossicità",
+    "Why this person scores highest": "Perché questa persona ha il punteggio più alto",
+    "Tension snapshot": "Istantanea della tensione",
+    "What keeps repeating": "Cosa continua a ripetersi",
+    "Main topic": "Argomento principale",
+    "Pattern note": "Nota sullo schema",
+    "The strongest pattern is shown above.": "Lo schema più forte è mostrato sopra.",
+    "Toxicity report": "Rapporto sulla tossicità",
+    "Overall read": "Lettura generale",
+    "Score breakdown": "Dettaglio del punteggio",
+    "This mode is meant to surface patterns and examples, not make the decision for you.": "Questa modalità serve a evidenziare schemi ed esempi, non a decidere per te.",
+    "The Main Character": "Il Personaggio Principale",
+    "The Ghost": "Il Fantasma",
+    "{count} messages total. Why are they even here?": "{count} messaggi in totale. Perché ci sono qui?",
+    "The group was most alive in {month}.": "Il gruppo era più attivo a {month}.",
+    "Longest active streak": "Serie attiva più lunga",
+    "The group kept the chat alive for {count} days straight.": "Il gruppo ha tenuto la chat viva per {count} giorni di fila.",
+    "The Hype Person": "L'Animatore del Gruppo",
+    "Started {pct} of all conversations. The engine of this group.": "Ha avviato il {pct}% di tutte le conversazioni. Il motore del gruppo.",
+    "Why {name} is the hype": "Perché {name} anima il gruppo",
+    "Group spirit emoji": "Emoji spirito del gruppo",
+    "This one emoji basically summarises the entire group energy.": "Questa emoji riassume praticamente tutta l'energia del gruppo.",
+    "The Novelist": "Il Romanziere",
+    "Their longest message was mostly about \"{topic}\".": "Il loro messaggio più lungo riguardava principalmente \"{topic}\".",
+    "The inside joke": "La battuta interna",
+    "Most missed member": "Il membro più rimpianto",
+    "When they go quiet, the group feels it.": "Quando tacciono, il gruppo lo sente.",
+    "The group read": "La lettura del gruppo",
+    "Group dynamic": "Dinamica del gruppo",
+    "Group vibe": "Atmosfera del gruppo",
+    "Chaotic. Wholesome. Somehow still going.": "Caotico. Sano. In qualche modo ancora attivo.",
+    "Group pattern read": "Lettura dello schema del gruppo",
+    "Support and strain": "Supporto e tensione",
+    "Who keeps it going": "Chi lo mantiene vivo",
+    "{name} started {pct} of conversations.": "{name} ha avviato il {pct}% delle conversazioni.",
+    "The group shares the conversation starts.": "Il gruppo condivide i punti di partenza delle conversazioni.",
+    "Who goes quiet": "Chi si fa silenzioso",
+    "{name} is the least active member in the sampled history.": "{name} è il membro meno attivo nella cronologia analizzata.",
+    "No clear ghost in this sample.": "Nessun fantasma evidente in questo campione.",
+    "Chat Health Score": "Punteggio di Salute della Chat",
+    "Out of 10 — based on conflict patterns, communication style, and overall dynamic.": "Su 10 — basato su schemi di conflitto, stile di comunicazione e dinamica generale.",
+    "Verdict": "Verdetto",
+    "Individual health scores": "Punteggi di salute individuali",
+    "Who apologises more": "Chi si scusa di più",
+    "Red flag moments": "Momenti di allarme",
+    "Conflict pattern": "Schema di conflitto",
+    "How arguments unfold": "Come si sviluppano le discussioni",
+    "Power balance": "Equilibrio del potere",
+    "Power dynamic": "Dinamica del potere",
+    "The verdict": "Il verdetto",
+    "Overall chat health score.": "Punteggio generale di salute della chat.",
+    "Final read": "Lettura finale",
+    "Reflects patterns in this sample — not a final judgment.": "Riflette schemi in questo campione — non è un giudizio definitivo.",
+    "{name}'s love language": "Il linguaggio dell'amore di {name}",
+    "How they show it": "Come lo mostrano",
+    "The language gap": "Il divario di linguaggio",
+    "Do they speak the same language?": "Parlano la stessa lingua?",
+    "Most loving moment": "Il momento più amorevole",
+    "The moment": "Il momento",
+    "Love language compatibility": "Compatibilità del linguaggio dell'amore",
+    "Compatibility read": "Lettura della compatibilità",
+    "Then vs Now": "Prima vs Ora",
+    "Early messages": "Messaggi iniziali",
+    "Recent messages": "Messaggi recenti",
+    "Who changed more": "Chi è cambiato di più",
+    "How they changed": "Come sono cambiati",
+    "What changed in the chat": "Cosa è cambiato nella chat",
+    "Topics that appeared": "Argomenti apparsi",
+    "Topics that faded": "Argomenti scomparsi",
+    "Relationship trajectory": "Traiettoria della relazione",
+    "What the data shows": "Cosa mostrano i dati",
+    "The arc": "L'arco",
+    "Promises made": "Promesse fatte",
+    "promises": "promesse",
+    "Overall verdict": "Verdetto generale",
+    "{name}'s accountability": "L'affidabilità di {name}",
+    "kept": "mantenute",
+    "broken": "infrante",
+    "Pattern": "Schema",
+    "Most notable broken promise": "La promessa infranta più significativa",
+    "Most notable kept promise": "La promessa mantenuta più significativa",
+    "Net energy scores": "Punteggi netti di energia",
+    "Energy compatibility": "Compatibilità energetica",
+    "{name}'s energy": "L'energia di {name}",
+    "Positive energy": "Energia positiva",
+    "Draining patterns": "Schemi logoranti",
+    "Most energising moment": "Il momento più energizzante",
+    "Most draining moment": "Il momento più logorante",
+    "messages": "messaggi",
+    "Your relationship, in data.": "La tua relazione, in dati.",
+    "Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.": "Legge la tua chat WhatsApp e ti mostra cosa sta succedendo davvero. Chi è presente. Chi sparisce. Chi porta avanti la conversazione.",
+    "Skip": "Salta",
+    "Start with your chat.": "Inizia con la tua chat.",
+    "Upload. Analyse. See it clearly.": "Carica. Analizza. Vedi chiaramente.",
+    "Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.": "Sei report. Tossicità, linguaggi dell'amore, affidabilità, energia, crescita e la tua chat completa riassunta. Risultati in meno di un minuto.",
+    "Log out": "Esci",
+    "Feedback Inbox": "Casella di feedback",
+    "Large group detected — analysing the top {cap} members out of {count}.": "Gruppo grande rilevato — analisi dei {cap} membri più attivi su {count}.",
+  },
+};
+
+const SUPPORTED_UI_LANGS = new Set(Object.keys(LANG_META));
+function normalizeUiLangPref(value) {
+  return value === "auto" ? "auto" : "english";
+}
+function normalizeUiLangCode(value) {
+  const code = String(value || "en").trim().toLowerCase();
+  return SUPPORTED_UI_LANGS.has(code) ? code : "en";
+}
+function resolveUiLang(uiLangPref, detectedCode) {
+  return normalizeUiLangPref(uiLangPref) === "auto"
+    ? normalizeUiLangCode(detectedCode)
+    : "en";
+}
+function formatUITranslation(value, vars = {}) {
+  if (typeof value !== "string") return value;
+  return value.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? "");
+}
+function translateUI(lang, key, vars = {}) {
+  const code = normalizeUiLangCode(lang);
+  const raw = UI_TRANSLATIONS[code]?.[key] ?? UI_TRANSLATIONS.en?.[key] ?? key;
+  if (Array.isArray(raw)) return raw.map(item => formatUITranslation(item, vars));
+  return formatUITranslation(raw, vars);
+}
 
 // High-frequency stopwords that are strongly characteristic of each language.
 // Overlap with other languages is intentional — scoring across all languages
@@ -1181,8 +3055,8 @@ async function callClaude(systemPrompt, userContent, maxTokens = 1500) {
 }
 
 const CORE_ANALYSIS_VERSION = 2;
-const CORE_A_MAX_TOKENS = 2200;
-const CORE_B_MAX_TOKENS = 2200;
+const CORE_A_MAX_TOKENS = 2600;
+const CORE_B_MAX_TOKENS = 2600;
 
 function buildRelationshipContextBlock(relType) {
   const relCtx = relContextStr(relType);
@@ -1195,7 +3069,7 @@ function buildLangInstruction(chatLang) {
   if (!chatLang || chatLang === "en") return "";
   const label = LANG_META[chatLang];
   if (!label) return "";
-  return `\n\nLANGUAGE INSTRUCTION: You must respond entirely in ${label}. Every field in your JSON response must be written in ${label}. Do not use English unless ${label} is English. If you cannot confidently respond in ${label}, default to English.`;
+  return `\n\nOUTPUT LANGUAGE: Write all free-text fields (sentences, summaries, descriptions, examples, context, verdicts, reasons, and analysis) in ${label}. The JSON structure and all key names must remain exactly as specified in the schema.\n\nThe following fields are schema-critical control tokens — reproduce them EXACTLY as listed here, with zero translation:\n- "language" (careStyle): must be one of exactly: Words of Affirmation / Acts of Service / Receiving Gifts / Quality Time / Physical Touch / Mixed\n- "depthChange": must be one of exactly: deeper / shallower / about the same\n- "trajectory": must be one of exactly: closer / drifting / stable\n- "type" (energy): must be one of exactly: net positive / mixed / net draining\n- "dramaStarter": a first name as written in the chat, or exactly "Shared", or exactly "None clearly identified"\n- "toxicPerson": a first name as written in the chat, or exactly "Tie", or exactly "None clearly identified"\n- "funniestPerson": a first name as written in the chat, or exactly "None clearly identified"\n- "kindestPerson": a first name as written in the chat, or exactly "None clearly identified"\n- "whoChangedMore": a first name as written in the chat, or exactly "Both equally"\n- "powerHolder": a first name as written in the chat, or exactly "Balanced"\n- "person" in promise/apology fields: a first name as written in the chat, or exactly "None clearly identified"\n- All "name" fields: the exact first name as it appears in the chat\nDo NOT translate, paraphrase, or modify these control tokens under any circumstances. All descriptive text fields — everything else — must be in ${label}.`;
 }
 
 function buildAnalystSystemPrompt(role, relationshipType, extraRules = "", chatLang = "en") {
@@ -1261,6 +3135,54 @@ function normalizePromiseMoment(item) {
   };
 }
 
+// Normalize schema-critical enum values that Claude may translate despite instructions.
+// Maps common translations back to canonical English control tokens so the app's
+// UI mappings (arrowMap, trajMap, love-language labels) keep working.
+const LOVE_LANG_CANONICAL = [
+  "Words of Affirmation",
+  "Acts of Service",
+  "Receiving Gifts",
+  "Quality Time",
+  "Physical Touch",
+  "Mixed",
+];
+function normalizeLoveLanguage(v) {
+  const s = String(v || "").trim();
+  const exact = LOVE_LANG_CANONICAL.find(l => l.toLowerCase() === s.toLowerCase());
+  if (exact) return exact;
+  const sl = s.toLowerCase();
+  if (/affirm|onay|söz|szavak|parole|afirmación|palavras|aff/.test(sl)) return "Words of Affirmation";
+  if (/service|servis|hizmet|actes|handlung|servicio|atos|acts/.test(sl)) return "Acts of Service";
+  if (/gift|hediye|cadeau|geschenk|regalo|doni/.test(sl)) return "Receiving Gifts";
+  if (/quality|nitelik|temps|zeit|tiempo|tempo/.test(sl) && /time|zaman/.test(sl)) return "Quality Time";
+  if (/physical|fizik|fisique|körper|físic|fisic|touch|dokunuş/.test(sl)) return "Physical Touch";
+  return s; // keep as-is if unrecognized (still renders, just without canonical label)
+}
+function normalizeDepthChange(v) {
+  const s = String(v || "").toLowerCase().trim();
+  if (["deeper", "shallower", "about the same"].includes(s)) return s;
+  if (/deep|derin|profond|tief|profund|más profund/.test(s)) return "deeper";
+  if (/shallow|yüzey|superfic|flach|poco profund/.test(s)) return "shallower";
+  if (/same|aynı|même|gleich|igual|stessa/.test(s)) return "about the same";
+  return v;
+}
+function normalizeTrajectory(v) {
+  const s = String(v || "").toLowerCase().trim();
+  if (["closer", "drifting", "stable"].includes(s)) return s;
+  if (/clos|yakın|proche|näher|cerca|vicin/.test(s)) return "closer";
+  if (/drift|uzaklaş|éloign|entfern|alej|allontan/.test(s)) return "drifting";
+  if (/stable|stabil|estable|stabil/.test(s)) return "stable";
+  return v;
+}
+function normalizeEnergyType(v) {
+  const s = String(v || "").toLowerCase().trim();
+  if (["net positive", "mixed", "net draining"].includes(s)) return s;
+  if (/positive|pozitif|positif|positivo|positiv/.test(s)) return "net positive";
+  if (/drain|yoran|épuisant|erschöpf|agotador|sfiancant/.test(s)) return "net draining";
+  if (/mixed|karma|mixte|gemischt|mixto|misto/.test(s)) return "mixed";
+  return v;
+}
+
 function normalizeCorePersonA(person, fallbackName = "") {
   const safe = person && typeof person === "object" ? person : {};
   const care = safe.careStyle && typeof safe.careStyle === "object" ? safe.careStyle : {};
@@ -1269,14 +3191,14 @@ function normalizeCorePersonA(person, fallbackName = "") {
     name: strOr(safe.name, fallbackName || "Unknown"),
     summaryRole: strOr(safe.summaryRole),
     careStyle: {
-      language: strOr(care.language, "Mixed"),
+      language: normalizeLoveLanguage(strOr(care.language, "Mixed")),
       languageEmoji: strOr(care.languageEmoji, "💝"),
       examples: strOr(care.examples),
       score: clampScore(care.score, 5),
     },
     energy: {
       netScore: clampScore(energy.netScore, 5),
-      type: strOr(energy.type, "mixed"),
+      type: normalizeEnergyType(strOr(energy.type, "mixed")),
       goodNews: strOr(energy.goodNews),
       venting: strOr(energy.venting, "minimal venting"),
       hypeQuote: strOr(energy.hypeQuote),
@@ -1365,12 +3287,12 @@ function normalizeCoreAnalysisA(raw, math, relationshipType) {
       growth: {
         thenDepth: strOr(growth.thenDepth),
         nowDepth: strOr(growth.nowDepth),
-        depthChange: strOr(growth.depthChange),
+        depthChange: normalizeDepthChange(strOr(growth.depthChange)),
         whoChangedMore: strOr(growth.whoChangedMore),
         whoChangedHow: strOr(growth.whoChangedHow),
         topicsAppeared: strOr(growth.topicsAppeared),
         topicsDisappeared: strOr(growth.topicsDisappeared),
-        trajectory: strOr(growth.trajectory),
+        trajectory: normalizeTrajectory(strOr(growth.trajectory)),
         trajectoryDetail: strOr(growth.trajectoryDetail),
         arcSummary: strOr(growth.arcSummary),
       },
@@ -2354,6 +4276,7 @@ function Shell({ sec, prog, total, children, feedback=null }) {
   const share = useContext(ShareResultsContext);
   const feedbackApi = useContext(FeedbackContext);
   const { dir, id } = useContext(SlideContext);
+  const t = useT();
 
   // Content-only slide animation — chrome (bg, bar, pill, X) stays perfectly still.
   const prevContentRef = useRef(null);
@@ -2413,7 +4336,7 @@ function Shell({ sec, prog, total, children, feedback=null }) {
           <button
             onClick={share.onShare}
             className="wc-btn"
-            aria-label="Share result card"
+            aria-label={t("Share")}
             disabled={share.busy}
             style={{
               position:"absolute",
@@ -2434,11 +4357,11 @@ function Shell({ sec, prog, total, children, feedback=null }) {
               opacity:share.busy ? 0.7 : 1,
             }}
           >
-            {share.busy ? "Saving…" : "Share"}
+            {share.busy ? "Saving…" : t("Share")}
           </button>
         )}
         {feedback?.resultId && feedbackApi?.openFeedback && (
-          <div style={{ position:"absolute", top:14, right:onClose ? 52 : 14, zIndex:10 }}>
+          <div style={{ position:"absolute", top:14, right:onClose ? 54 : 14, zIndex:11 }}>
             <FeedbackButton onClick={() => feedbackApi.openFeedback(feedback)} />
           </div>
         )}
@@ -2468,7 +4391,7 @@ function Shell({ sec, prog, total, children, feedback=null }) {
         {PILL_LABEL[sec] && (
           <div style={{ paddingTop:18, display:"flex", justifyContent:"center", position:"relative", zIndex:4 }}>
             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", background:"rgba(255,255,255,0.12)", padding:"5px 14px", borderRadius:20 }}>
-              {PILL_LABEL[sec]}
+              {t(PILL_LABEL[sec])}
             </div>
           </div>
         )}
@@ -2566,75 +4489,79 @@ function AICard({ label, value, loading }) {
 }
 
 function FeedbackButton({ onClick }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={onClick}
       className="wc-btn"
-      aria-label="Report this card"
+      aria-label={t("What's off about this?")}
       style={{
-        width:28,
-        height:28,
-        borderRadius:"50%",
-        border:"1px solid rgba(255,255,255,0.12)",
-        background:"rgba(255,255,255,0.08)",
-        color:"rgba(255,255,255,0.24)",
-        cursor:"pointer",
-        display:"flex",
-        alignItems:"center",
-        justifyContent:"center",
-        padding:0,
-        transition:"all 0.15s",
+        width: 30,
+        height: 30,
+        borderRadius: "50%",
+        border: "1px solid rgba(255,255,255,0.18)",
+        background: "rgba(255,255,255,0.08)",
+        color: "rgba(255,255,255,0.5)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 0,
+        transition: "all 0.15s",
       }}
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display:"block" }}>
-        <path
-          d="M14 3h4a2 2 0 0 1 2 2v6.2a2 2 0 0 1-2 2h-4.8l.6 4.5a2.1 2.1 0 0 1-4 1.1L7.9 13.2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+      {/* flag icon */}
+      <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" style={{ display:"block" }}>
+        <path d="M4 21V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M4 4h11l-3 5 3 5H4" fill="rgba(255,255,255,0.15)" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
       </svg>
     </button>
   );
 }
 
 function FeedbackSheet({ open, target, selected, note, submitting, onSelect, onNoteChange, onSubmit, onClose }) {
+  const t = useT();
   if (!open || !target) return null;
 
   return (
     <div
       style={{
-        position:"fixed",
-        inset:0,
-        background:"rgba(10,10,18,0.5)",
-        zIndex:200,
-        display:"flex",
-        alignItems:"flex-end",
-        justifyContent:"center",
-        padding:"20px 12px",
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        zIndex: 200,
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
       }}
       onClick={onClose}
     >
       <div
         style={{
-          width:"min(420px, 100%)",
-          background:PAL.upload.bg,
-          border:"1px solid rgba(255,255,255,0.12)",
-          borderRadius:"28px 28px 20px 20px",
-          padding:"18px 18px 20px",
-          boxShadow:"0 -12px 40px rgba(0,0,0,0.35)",
-          color:"#fff",
+          width: "min(420px, 100%)",
+          background: "#111118",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: "28px 28px 0 0",
+          padding: "10px 20px 32px",
+          boxShadow: "0 -20px 60px rgba(0,0,0,0.5)",
+          color: "#fff",
         }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ width:40, height:4, borderRadius:999, background:"rgba(255,255,255,0.16)", margin:"0 auto 14px" }} />
-        <div style={{ fontSize:20, fontWeight:800, letterSpacing:-0.4, marginBottom:6 }}>What's off about this?</div>
-        <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", marginBottom:14 }}>{target.cardTitle}</div>
+        {/* drag handle */}
+        <div style={{ width: 36, height: 4, borderRadius: 999, background: "rgba(255,255,255,0.14)", margin: "0 auto 20px" }} />
 
-        <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:14 }}>
+        {/* header */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, marginBottom: 4 }}>{t("What's off about this?")}</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", fontWeight: 600, letterSpacing: "0.02em" }}>{target.cardTitle}</div>
+        </div>
+
+        {/* options */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
           {FEEDBACK_OPTIONS.map(option => {
             const active = selected === option;
             return (
@@ -2644,58 +4571,63 @@ function FeedbackSheet({ open, target, selected, note, submitting, onSelect, onN
                 onClick={() => onSelect(option)}
                 className="wc-btn"
                 style={{
-                  border:"1px solid rgba(255,255,255,0.14)",
-                  borderRadius:999,
-                  padding:"8px 12px",
-                  fontSize:13,
-                  fontWeight:700,
-                  cursor:"pointer",
-                  transition:"all 0.15s",
-                  background:active ? PAL.upload.inner : "rgba(255,255,255,0.08)",
-                  color:"#fff",
+                  border: `1px solid ${active ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.12)"}`,
+                  borderRadius: 999,
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.06)",
+                  color: active ? "#fff" : "rgba(255,255,255,0.65)",
                 }}
               >
-                {option}
+                {t(option)}
               </button>
             );
           })}
         </div>
 
+        {/* optional note */}
         <input
           type="text"
           value={note}
           onChange={e => onNoteChange(e.target.value)}
-          placeholder="Optional note"
+          placeholder={t("Optional note")}
           style={{
-            width:"100%",
-            background:"rgba(0,0,0,0.22)",
-            border:"1px solid rgba(255,255,255,0.12)",
-            borderRadius:16,
-            padding:"13px 14px",
-            fontSize:14,
-            color:"#fff",
-            outline:"none",
-            fontFamily:"inherit",
-            marginBottom:16,
+            width: "100%",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            borderRadius: 14,
+            padding: "12px 14px",
+            fontSize: 14,
+            color: "#fff",
+            outline: "none",
+            fontFamily: "inherit",
+            marginBottom: 16,
           }}
         />
 
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+        {/* actions */}
+        <div style={{ display: "flex", gap: 10 }}>
           <button
             type="button"
             onClick={onClose}
             className="wc-btn"
             style={{
-              border:"none",
-              background:"transparent",
-              color:"rgba(255,255,255,0.55)",
-              fontSize:14,
-              fontWeight:600,
-              cursor:"pointer",
-              padding:0,
+              flex: 1,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.06)",
+              color: "rgba(255,255,255,0.6)",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+              padding: "12px 0",
+              borderRadius: 50,
+              transition: "all 0.15s",
             }}
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             type="button"
@@ -2703,19 +4635,21 @@ function FeedbackSheet({ open, target, selected, note, submitting, onSelect, onN
             className="wc-btn"
             disabled={!selected || submitting}
             style={{
-              padding:"11px 22px",
-              borderRadius:999,
-              border:"none",
-              background:!selected || submitting ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.18)",
-              color:"#fff",
-              fontSize:14,
-              fontWeight:800,
-              cursor:!selected || submitting ? "default" : "pointer",
-              opacity:!selected || submitting ? 0.55 : 1,
-              transition:"all 0.15s",
+              flex: 2,
+              padding: "12px 0",
+              borderRadius: 50,
+              border: "none",
+              background: !selected || submitting ? "rgba(255,255,255,0.08)" : PAL.upload.inner,
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: 800,
+              cursor: !selected || submitting ? "default" : "pointer",
+              opacity: !selected || submitting ? 0.45 : 1,
+              transition: "all 0.15s",
+              letterSpacing: 0.1,
             }}
           >
-            {submitting ? "Sending…" : "Submit"}
+            {submitting ? t("Sending…") : t("Submit")}
           </button>
         </div>
       </div>
@@ -2727,10 +4661,11 @@ function Btn({ onClick, children }) {
   return <button onClick={onClick} className="wc-btn" style={{ padding:"12px 28px", borderRadius:50, border:"none", background:"rgba(255,255,255,0.15)", color:"#fff", fontSize:15, cursor:"pointer", fontWeight:700, transition:"all 0.15s", flexShrink:0, letterSpacing:0.2 }}>{children}</button>;
 }
 function Nav({ back, next, showBack=true, nextLabel="Next" }) {
+  const t = useT();
   return (
     <div style={{ display:"flex", gap:10, marginTop:8, width:"100%", justifyContent:"center" }}>
-      {showBack && <Btn onClick={back}>← Back</Btn>}
-      <Btn onClick={next}>{nextLabel} →</Btn>
+      {showBack && <Btn onClick={back}>{t("Back")}</Btn>}
+      <Btn onClick={next}>{t(nextLabel)}</Btn>
     </div>
   );
 }
@@ -2748,11 +4683,12 @@ function Bar({ value, max, color, label, delay=0 }) {
   );
 }
 function MonthBadge({ month, count, medal }) {
+  const t = useT();
   return (
     <div style={{ background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"16px 12px", textAlign:"center", flex:1, minWidth:80 }}>
       <div style={{ fontSize:26 }}>{medal}</div>
       <div className="" style={{ fontSize:15, fontWeight:800, color:"#fff", marginTop:8, letterSpacing:-0.3 }}>{month}</div>
-      <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:4, fontWeight:500 }}>{count.toLocaleString()} msgs</div>
+      <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:4, fontWeight:500 }}>{count.toLocaleString()} {t("msgs")}</div>
     </div>
   );
 }
@@ -2779,6 +4715,7 @@ function Cell({ label, value }) {
   );
 }
 function FlagList({ flags, loading }) {
+  const t = useT();
   const items = normalizeRedFlags(flags);
   if (loading && !items.length) {
     return (
@@ -2793,17 +4730,17 @@ function FlagList({ flags, loading }) {
       {items.map((flag, index) => (
         <div key={`${flag.title}-${index}`} style={{ background:"rgba(0,0,0,0.2)", borderRadius:18, padding:"14px 16px", textAlign:"left" }}>
           <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.45)", marginBottom:7 }}>
-            Red flag {index + 1}
+            {t("Red flag {index}", { index: index + 1 })}
           </div>
           <div style={{ fontSize:16, fontWeight:800, color:"#fff", letterSpacing:-0.3, marginBottom:6 }}>
             {flag.title}
           </div>
           <div style={{ fontSize:14, color:"rgba(255,255,255,0.78)", lineHeight:1.6 }}>
-            {flag.detail || "This pattern showed up enough to feel worth watching."}
+            {flag.detail || t("This pattern showed up enough to feel worth watching.")}
           </div>
           {flag.evidence && (
             <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", lineHeight:1.5, marginTop:8 }}>
-              Evidence: {flag.evidence}
+              {t("Evidence")}: {flag.evidence}
             </div>
           )}
         </div>
@@ -2860,6 +4797,7 @@ function TextList({ items }) {
 // DUO SCREENS
 // ─────────────────────────────────────────────────────────────────
 function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType, resultId }) {
+  const t = useT();
   const total  = s.msgCounts[0]+s.msgCounts[1];
   const pct0   = Math.round((s.msgCounts[0]/total)*100);
   const mMax   = Math.max(...s.msgCounts);
@@ -2882,22 +4820,15 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
   const toxicityBreakdown = s.toxicityBreakdown;
   const casualScreens = [
     <Shell sec="roast" prog={1} total={TOTAL}>
-      <T>Who's more obsessed?</T>
+      <T>{t("Who's more obsessed?")}</T>
       <div style={{width:"100%",marginTop:16}}>
         <Bar value={s.msgCounts[0]} max={mMax} color="#E06030" label={s.names[0]} />
         <Bar value={s.msgCounts[1]} max={mMax} color="#4A90D4" label={s.names[1]} delay={160} />
       </div>
-      <Sub mt={14}>{pct0}% of all messages came from {s.names[0]}.</Sub>
+      <Sub mt={14}>{t("{pct}% of all messages came from {name}.", { pct: pct0, name: s.names[0] })}</Sub>
       {(() => {
       const name = s.names[pct0>=50?0:1];
-      const q = pick([
-        `"${name}, you might want to check your screen time."`,
-        `"${name} really said 'I'll just send one more'... 60,000 times."`,
-        `"Therapists call this attachment. ${name} calls it texting."`,
-        `"${name} carries this conversation like a backpack they can't take off."`,
-        `"${name}'s thumbs deserve a raise."`,
-        `"Not obsessed, just... very enthusiastic. Sure, ${name}."`,
-      ]);
+      const q = pick(t("quips.duo.obsessed", { name }));
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} showBack={false} />
@@ -2906,131 +4837,87 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
     <Shell sec="roast" prog={2} total={TOTAL} feedback={feedback("The Ghost Award", 2, !s.ghostEqual)}>
       {s.ghostEqual ? (
         <>
-          <T>Response times</T>
-          <Big>Balanced</Big>
-          <Sub>{s.names[0]} avg reply: <strong style={{color:"#fff"}}>{s.ghostAvg[0]}</strong>&nbsp;&nbsp;{s.names[1]} avg reply: <strong style={{color:"#fff"}}>{s.ghostAvg[1]}</strong></Sub>
-          {(() => { const q = pick([
-            `"Both of you are equally responsive. No ghosts here."`,
-            `"Neither of you keeps the other waiting. Refreshing."`,
-            `"Reply times are basically the same. Communication unlocked."`,
-            `"Both responsive, both showing up. This is what balance looks like."`,
-            `"No ghost award today — you're both equally good at this."`,
-          ]); return <Quip>{q}</Quip>; })()}
+          <T>{t("Response times")}</T>
+          <Big>{t("Balanced")}</Big>
+          <Sub>{t("{name} avg reply:", { name: s.names[0] })} <strong style={{color:"#fff"}}>{s.ghostAvg[0]}</strong>&nbsp;&nbsp;{t("{name} avg reply:", { name: s.names[1] })} <strong style={{color:"#fff"}}>{s.ghostAvg[1]}</strong></Sub>
+          {(() => { const q = pick(t("quips.duo.responseBalanced")); return <Quip>{q}</Quip>; })()}
         </>
       ) : (
         <>
-          <T>The Ghost Award</T>
+          <T>{t("The Ghost Award")}</T>
           <Big>{s.ghostName}</Big>
-          <Sub>{s.names[0]} avg reply: <strong style={{color:"#fff"}}>{s.ghostAvg[0]}</strong>&nbsp;&nbsp;{s.names[1]} avg reply: <strong style={{color:"#fff"}}>{s.ghostAvg[1]}</strong></Sub>
-          <AICard label="What's really going on" value={ai?.ghostContext} loading={aiLoading} />
-          {(() => { const q = pick([
-            `"${s.ghostName} was 'busy'. Sure."`,
-            `"${s.ghostName} saw the message. ${s.ghostName} chose peace."`,
-            `"Somewhere, ${s.ghostName} is staring at the message deciding if they feel like it."`,
-            `"${s.ghostName}: read at 14:32. Replied at... eventually."`,
-            `"${s.ghostName} treats replies like a limited resource."`,
-            `"The audacity of ${s.ghostName} taking that long. Iconic, honestly."`,
-          ]); return <Quip>{q}</Quip>; })()}
+          <Sub>{t("{name} avg reply:", { name: s.names[0] })} <strong style={{color:"#fff"}}>{s.ghostAvg[0]}</strong>&nbsp;&nbsp;{t("{name} avg reply:", { name: s.names[1] })} <strong style={{color:"#fff"}}>{s.ghostAvg[1]}</strong></Sub>
+          <AICard label={t("What's really going on")} value={ai?.ghostContext} loading={aiLoading} />
+          {(() => { const q = pick(t("quips.duo.ghost", { name: s.ghostName })); return <Quip>{q}</Quip>; })()}
         </>
       )}
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="roast" prog={3} total={TOTAL}>
-      <T>The Last Word</T>
+      <T>{t("The Last Word")}</T>
       <Big>{s.convKiller}</Big>
-      <Sub>Sends the last message that nobody replies to — {s.convKillerCount} times.</Sub>
+      <Sub>{t("Sends the last message that nobody replies to — {count} times.", { count: s.convKillerCount })}</Sub>
       {(() => {
-      const q = pick([
-        `"${s.convKiller} sends a message. The chat decides not to continue. Every time."`,
-        `"Last seen: ${s.convKiller}'s message, unanswered."`,
-        `"${s.convKiller} has a gift for sending the final word."`,
-        `"After ${s.convKiller}'s message — nothing. A recurring pattern."`,
-        `"${s.convKiller} says something. The conversation ends. Repeatedly."`,
-        `"${s.convKiller}'s messages have a habit of going unanswered."`,
-      ]);
+      const q = pick(t("quips.duo.lastWord", { name: s.convKiller }));
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovely" prog={4} total={TOTAL}>
-      <T>Your longest streak</T>
-      <Big>{s.streak} days</Big>
-      <Sub>Texted every single day for {s.streak} days straight.</Sub>
+      <T>{t("Your longest streak")}</T>
+      <Big>{t("{count} days", { count: s.streak })}</Big>
+      <Sub>{t("Texted every single day for {count} days straight.", { count: s.streak })}</Sub>
       {(() => {
-        const q = s.streak >= 100 ? pick([
-          `"${s.streak} days. That's not a streak, that's a lifestyle."`,
-          `"Over ${s.streak} consecutive days. Whatever this is, it's real."`,
-          `"Most relationships don't have a ${s.streak}-day streak. This one does."`,
-          `"${s.streak} days straight. That's dedication most people only have for Netflix."`,
-          `"Not one day missed in ${s.streak} days. Someone was always there first."`,
-        ]) : s.streak >= 30 ? pick([
-          `"${s.streak} days without a gap. That kind of consistency is rare."`,
-          `"Whatever was going on during those ${s.streak} days, it was good."`,
-          `"A whole month-plus of showing up. That means something."`,
-          `"No gaps. No excuses. Just ${s.streak} days straight."`,
-          `"Consistent. Reliable. Wholesome. Almost suspicious."`,
-        ]) : s.streak >= 10 ? pick([
-          `"${s.streak} days in a row. Not bad at all."`,
-          `"Okay, that's actually kind of cute."`,
-          `"${s.streak} days without missing a single one. That counts."`,
-          `"Some people do yoga streaks. These two do this."`,
-          `"A solid run. Something was clearly working during those ${s.streak} days."`,
-        ]) : pick([
-          `"${s.streak} days. Short but real."`,
-          `"Even a ${s.streak}-day streak is something."`,
-          `"Quality over quantity. These ${s.streak} days counted."`,
-          `"${s.streak} days of not missing each other. That's the important part."`,
-        ]);
+        const q = s.streak >= 100
+          ? pick(t("quips.duo.streak100", { streak: s.streak }))
+          : s.streak >= 30
+            ? pick(t("quips.duo.streak30", { streak: s.streak }))
+            : s.streak >= 10
+              ? pick(t("quips.duo.streak10", { streak: s.streak }))
+              : pick(t("quips.duo.streakShort", { streak: s.streak }));
         return <Quip>{q}</Quip>;
       })()}
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovely" prog={5} total={TOTAL} feedback={feedback("The Kindest One", 5)}>
-      <T>The Kindest One</T>
+      <T>{t("The Kindest One")}</T>
       <Big>{aiLoading ? "..." : (ai?.kindestPerson || "—")}</Big>
-      <AICard label="The sweetest moment" value={ai?.sweetMoment} loading={aiLoading} />
+      <AICard label={t("The sweetest moment")} value={ai?.sweetMoment} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovely" prog={7} total={TOTAL}>
-      <T>Top 3 most active months</T>
+      <T>{t("Top 3 most active months")}</T>
       <div style={{display:"flex",gap:10,marginTop:16,width:"100%",justifyContent:"center"}}>
         {s.topMonths.map((m,i)=><MonthBadge key={i} month={m[0]} count={m[1]} medal={["🥇","🥈","🥉"][i]} />)}
       </div>
-      <Sub mt={14}>{s.topMonths[0][0]} was your month. Something was going on.</Sub>
+      <Sub mt={14}>{t("{month} was your month. Something was going on.", { month: s.topMonths[0][0] })}</Sub>
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovely" prog={6} total={TOTAL}>
-      <T>Who always reaches out first?</T>
+      <T>{t("Who always reaches out first?")}</T>
       <Big>{s.convStarter}</Big>
-      <Sub>Started {s.convStarterPct} of all conversations.</Sub>
+      <Sub>{t("Started {pct} of all conversations.", { pct: s.convStarterPct })}</Sub>
       {(() => {
-      const q = pick([
-        `"Someone's always thinking of the other one first."`,
-        `"${s.convStarter} woke up and chose communication."`,
-        `"${s.convStarter} carries the emotional labour of starting every chat. Respect."`,
-        `"${s.convStarter} is always the one who breaks the silence first."`,
-        `"${s.convStarter} out here keeping this friendship alive single-handedly."`,
-        `"The first text is always from ${s.convStarter}. That says everything."`,
-      ]);
+      const q = pick(t("quips.duo.convStarter", { name: s.convStarter }));
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="funny" prog={8} total={TOTAL} feedback={feedback("The Funny One", 8)}>
-      <T>The Funny One</T>
+      <T>{t("The Funny One")}</T>
       <Big>{aiLoading?"...":(ai?.funniestPerson||s.names[0])}</Big>
-      <AICard label="Drops lines like" value={ai?.funniestReason} loading={aiLoading} />
+      <AICard label={t("Drops lines like")} value={ai?.funniestReason} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="funny" prog={9} total={TOTAL}>
-      <T>Spirit emojis</T>
+      <T>{t("Spirit emojis")}</T>
       <div style={{display:"flex",gap:0,marginTop:16,width:"100%",justifyContent:"space-around"}}>
         {[0,1].map(i=>(
           <div key={i} style={{textAlign:"center"}}>
@@ -3039,18 +4926,18 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
           </div>
         ))}
       </div>
-      <Sub>These two emojis basically ARE this chat.</Sub>
+      <Sub>{t("These two emojis basically ARE this chat.")}</Sub>
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="funny" prog={10} total={TOTAL}>
-      <T>Top 10 most used words</T>
+      <T>{t("Top 10 most used words")}</T>
       <Words words={s.topWords} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="funny" prog={11} total={TOTAL}>
-      <T>Signature phrases</T>
+      <T>{t("Signature phrases")}</T>
       <div style={{display:"flex",gap:"1rem",marginTop:16,width:"100%",justifyContent:"center"}}>
         {[0,1].map(i=>(
           <div key={i} style={{background:"rgba(255,255,255,0.08)",padding:"14px 18px",borderRadius:12,textAlign:"center",flex:1}}>
@@ -3059,7 +4946,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
           </div>
         ))}
       </div>
-      <Sub>The phrases that define each of you.</Sub>
+      <Sub>{t("The phrases that define each of you.")}</Sub>
       <Nav back={back} next={next} />
     </Shell>,
 
@@ -3071,30 +4958,21 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
         const novelist = s.names[nov];
         const texter   = s.names[nov===0?1:0];
         return <>
-          <T>{isSimilar ? "Message length" : "The Novelist vs The Texter"}</T>
+          <T>{t(isSimilar ? "Message length" : "The Novelist vs The Texter")}</T>
           <div style={{display:"flex",gap:0,marginTop:16,width:"100%",justifyContent:"space-around",alignItems:"center"}}>
             {[0,1].map(i=>(
               <div key={i} style={{textAlign:"center"}}>
                 <div style={{fontSize:36,fontWeight:800,color:"#fff"}}>{s.avgMsgLen[i]}</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",marginTop:2}}>avg chars</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",marginTop:2}}>{t("avg chars")}</div>
                 <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:1}}>max {(s.maxMsgLen?.[i] ?? 0).toLocaleString()}</div>
                 <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginTop:4}}>{s.names[i]}</div>
               </div>
             ))}
           </div>
           {(() => {
-            const q = isSimilar ? pick([
-              `"Both of you say exactly as much as you need to. Efficient."`,
-              `"Almost identical message lengths. Either you're perfectly matched or both just bad at texting."`,
-              `"No novelist here, no texter either. Just two people who type about the same amount."`,
-              `"Balanced. No essays, no one-word replies. Suspiciously normal."`,
-            ]) : pick([
-              `"${novelist} treats every text like a letter to posterity."`,
-              `"${novelist} could've said it in five words. They used forty. Beautifully."`,
-              `"Somewhere ${novelist} is still typing."`,
-              `"${texter} replies. ${novelist} responds. There's a difference."`,
-              `"${novelist} sends paragraphs. ${texter} sends sentences. Both somehow work."`,
-            ]);
+            const q = isSimilar
+              ? pick(t("quips.duo.messageLengthSimilar"))
+              : pick(t("quips.duo.messageLengthDifferent", { novelist, texter }));
             return <Quip>{q}</Quip>;
           })()}
         </>;
@@ -3103,15 +4981,15 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
     </Shell>,
 
     <Shell sec="stats" prog={13} total={TOTAL}>
-      <T>Media and links</T>
+      <T>{t("Media and links")}</T>
       <div style={{width:"100%",marginTop:16}}>
-        <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.07em"}}>Photos & videos</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.07em"}}>{t("Photos & videos")}</div>
         <Bar value={s.mediaCounts[0]} max={Math.max(...s.mediaCounts,1)} color="#3ABDA0" label={s.names[0]} />
         <Bar value={s.mediaCounts[1]} max={Math.max(...s.mediaCounts,1)} color="#4A90D4" label={s.names[1]} delay={160} />
-        <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",margin:"16px 0 8px",textTransform:"uppercase",letterSpacing:"0.07em"}}>Voice memos</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",margin:"16px 0 8px",textTransform:"uppercase",letterSpacing:"0.07em"}}>{t("Voice memos")}</div>
         <Bar value={s.voiceCounts[0]} max={Math.max(...s.voiceCounts,1)} color="#C880F0" label={s.names[0]} />
         <Bar value={s.voiceCounts[1]} max={Math.max(...s.voiceCounts,1)} color="#9050D0" label={s.names[1]} delay={160} />
-        <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",margin:"16px 0 8px",textTransform:"uppercase",letterSpacing:"0.07em"}}>Links shared</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",margin:"16px 0 8px",textTransform:"uppercase",letterSpacing:"0.07em"}}>{t("Links shared")}</div>
         <Bar value={s.linkCounts[0]} max={Math.max(...s.linkCounts,1)} color="#3ABDA0" label={s.names[0]} />
         <Bar value={s.linkCounts[1]} max={Math.max(...s.linkCounts,1)} color="#4A90D4" label={s.names[1]} delay={160} />
       </div>
@@ -3119,86 +4997,86 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
     </Shell>,
 
     <Shell sec="ai" prog={14} total={TOTAL} feedback={feedback("What you actually talk about", 14)}>
-      <T>What you actually talk about</T>
-      <AICard label="Biggest topic" value={ai?.biggestTopic} loading={aiLoading} />
-      <AICard label="Most tense moment" value={ai?.tensionMoment} loading={aiLoading} />
+      <T>{t("What you actually talk about")}</T>
+      <AICard label={t("Biggest topic")} value={ai?.biggestTopic} loading={aiLoading} />
+      <AICard label={t("Most tense moment")} value={ai?.tensionMoment} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={15} total={TOTAL} feedback={feedback("The Drama Report", 15)}>
-      <T>The Drama Report</T>
+      <T>{t("The Drama Report")}</T>
       <Big>{aiLoading?"...":(ai?.dramaStarter||s.names[0])}</Big>
-      <AICard label="How they do it" value={ai?.dramaContext} loading={aiLoading} />
+      <AICard label={t("How they do it")} value={ai?.dramaContext} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={16} total={TOTAL} feedback={feedback("What's really going on", 16)}>
-      <T>What's really going on</T>
-      <AICard label={relReadLabel(relationshipType)} value={ai?.relationshipSummary} loading={aiLoading} />
+      <T>{t("What's really going on")}</T>
+      <AICard label={t(relReadLabel(relationshipType))} value={ai?.relationshipSummary} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={17} total={TOTAL} feedback={feedback("Chat vibe", 17)}>
-      <T>Chat vibe</T>
+      <T>{t("Chat vibe")}</T>
       <div style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"1.4rem 1.5rem",width:"100%",textAlign:"center",marginTop:16,fontSize:16,lineHeight:1.7,fontStyle:"italic",color:"#fff",minHeight:80,display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
-        {aiLoading?<Dots />:(ai?.vibeOneLiner||"A chaotic, wholesome connection.")}
+        {aiLoading?<Dots />:(ai?.vibeOneLiner||t("A chaotic, wholesome connection."))}
       </div>
-      <Sub mt={14}>Powered by AI — your messages never left your device.</Sub>
+      <Sub mt={14}>{t("Powered by AI — your messages never left your device.")}</Sub>
       <Nav back={back} next={next} nextLabel="See summary" />
     </Shell>,
   ];
   const redFlagScreens = [
     <Shell sec="ai" prog={1} total={TOTAL} feedback={feedback("Relationship reading", 1)}>
-      <T>Relationship reading</T>
+      <T>{t("Relationship reading")}</T>
       <Big>{relationshipStatus}</Big>
-      <AICard label="Observed pattern" value={relationshipStatusWhy} loading={aiLoading && !relationshipStatusWhy} />
-      <AICard label="Concrete example" value={statusEvidence} loading={aiLoading && !statusEvidence} />
+      <AICard label={t("Observed pattern")} value={relationshipStatusWhy} loading={aiLoading && !relationshipStatusWhy} />
+      <AICard label={t("Concrete example")} value={statusEvidence} loading={aiLoading && !statusEvidence} />
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
     <Shell sec="ai" prog={2} total={TOTAL}>
-      <T>Evidence log</T>
+      <T>{t("Evidence log")}</T>
       <EvidenceList items={evidenceTimeline} loading={aiLoading && !evidenceTimeline?.length} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="roast" prog={3} total={TOTAL} feedback={feedback("What the chat shows", 3)}>
-      <T>What the chat shows</T>
+      <T>{t("What the chat shows")}</T>
       <FlagList flags={duoFlags} loading={aiLoading && !duoFlags?.length} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="stats" prog={4} total={TOTAL} feedback={feedback("Toxicity scorecard", 4)}>
-      <T>Toxicity scorecard</T>
+      <T>{t("Toxicity scorecard")}</T>
       <Big>{toxicName}</Big>
       <div style={{width:"100%",marginTop:10}}>
         <Bar value={s.toxicityScores[0]} max={toxicMax} color="#E06030" label={s.names[0]} />
         <Bar value={s.toxicityScores[1]} max={toxicMax} color="#4A90D4" label={s.names[1]} delay={160} />
       </div>
-      <AICard label="Why this person scores highest" value={toxicReason} loading={aiLoading && !toxicReason} />
+      <AICard label={t("Why this person scores highest")} value={toxicReason} loading={aiLoading && !toxicReason} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={5} total={TOTAL} feedback={feedback("Tension snapshot", 5)}>
-      <T>Tension snapshot</T>
-      <AICard label="Most tense moment" value={ai?.tensionMoment} loading={aiLoading} />
-      <AICard label={relReadLabel(relationshipType)} value={ai?.relationshipSummary} loading={aiLoading} />
+      <T>{t("Tension snapshot")}</T>
+      <AICard label={t("Most tense moment")} value={ai?.tensionMoment} loading={aiLoading} />
+      <AICard label={t(relReadLabel(relationshipType))} value={ai?.relationshipSummary} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={6} total={TOTAL} feedback={feedback("What keeps repeating", 6)}>
-      <T>What keeps repeating</T>
-      <AICard label="Main topic" value={ai?.biggestTopic} loading={aiLoading} />
-      <AICard label="Pattern note" value={duoFlags[0]?.detail || "The strongest pattern is shown above."} loading={aiLoading && !duoFlags[0]?.detail} />
+      <T>{t("What keeps repeating")}</T>
+      <AICard label={t("Main topic")} value={ai?.biggestTopic} loading={aiLoading} />
+      <AICard label={t("Pattern note")} value={duoFlags[0]?.detail || t("The strongest pattern is shown above.")} loading={aiLoading && !duoFlags[0]?.detail} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="roast" prog={7} total={TOTAL} feedback={feedback("Toxicity report", 7)}>
-      <T>Toxicity report</T>
+      <T>{t("Toxicity report")}</T>
       <Big>{toxicityLevel}</Big>
-      <AICard label="Overall read" value={toxicityReport} loading={aiLoading && !toxicityReport} />
-      <AICard label="Score breakdown" value={toxicityBreakdown?.join(" • ")} loading={false} />
-      <Sub mt={14}>This mode is meant to surface patterns and examples, not make the decision for you.</Sub>
+      <AICard label={t("Overall read")} value={toxicityReport} loading={aiLoading && !toxicityReport} />
+      <AICard label={t("Score breakdown")} value={toxicityBreakdown?.join(" • ")} loading={false} />
+      <Sub mt={14}>{t("This mode is meant to surface patterns and examples, not make the decision for you.")}</Sub>
       <Nav back={back} next={next} nextLabel="See summary" />
     </Shell>,
   ];
@@ -3210,6 +5088,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
 // GROUP SCREENS
 // ─────────────────────────────────────────────────────────────────
 function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
+  const t = useT();
   const mMax   = Math.max(...s.msgCounts,1);
   const COLORS = ["#E06030","#4A90D4","#3ABDA0","#C4809A","#8A70D4","#D4A840"];
   const TOTAL  = mode === "redflags" ? GROUP_REDFLAG_SCREENS : GROUP_CASUAL_SCREENS;
@@ -3227,150 +5106,117 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
   const toxicityBreakdown = s.toxicityBreakdown;
   const casualScreens = [
     <Shell sec="roast" prog={1} total={TOTAL}>
-      <T>The Main Character</T>
+      <T>{t("The Main Character")}</T>
       <Big>{s.mainChar}</Big>
       <div style={{width:"100%",marginTop:10}}>
         {s.names.slice(0,6).map((n,i)=><Bar key={n} value={s.msgCounts[i]} max={mMax} color={COLORS[i%COLORS.length]} label={n} delay={i*80} />)}
       </div>
       {(() => {
-      const q = pick([
-        `"${s.mainChar}, this is basically your personal blog."`,
-        `"${s.mainChar} came here to talk and is absolutely doing that."`,
-        `"The group chat exists because ${s.mainChar} needed an audience."`,
-        `"${s.mainChar} didn't start the group but they certainly run it."`,
-        `"Without ${s.mainChar} this chat would be a graveyard."`,
-        `"${s.mainChar}: present, vocal, and apparently never sleeping."`,
-      ]);
+      const q = pick(t("quips.group.mainCharacter", { name: s.mainChar }));
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
     <Shell sec="roast" prog={2} total={TOTAL} feedback={feedback("The Ghost", 2)}>
-      <T>The Ghost</T>
+      <T>{t("The Ghost")}</T>
       <Big>{s.ghost}</Big>
-      <Sub>{s.msgCounts[s.msgCounts.length-1].toLocaleString()} messages total. Why are they even here?</Sub>
+      <Sub>{t("{count} messages total. Why are they even here?", { count: s.msgCounts[s.msgCounts.length-1].toLocaleString() })}</Sub>
       {(() => {
-      const q = pick([
-        `"Read receipts but never replies. A legend."`,
-        `"${s.ghost} is here in spirit. Only in spirit."`,
-        `"${s.ghost} joined the group and immediately went into witness protection."`,
-        `"The group carries ${s.ghost}. ${s.ghost} does not carry the group."`,
-        `"${s.ghost} has seen everything. Said nothing. Knows everything."`,
-        `"A silent observer. A lurker. A mystery. ${s.ghost}."`,
-      ]);
+      const q = pick(t("quips.group.ghost", { name: s.ghost }));
       return <Quip>{q}</Quip>;
     })()}
-      <AICard label="What's really going on" value={ai?.ghostContext} loading={aiLoading} />
+      <AICard label={t("What's really going on")} value={ai?.ghostContext} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="roast" prog={3} total={TOTAL}>
-      <T>The Last Word</T>
+      <T>{t("The Last Word")}</T>
       <Big>{s.convKiller}</Big>
-      <Sub>Sends the last message that nobody replies to.</Sub>
+      <Sub>{t("Sends the last message that nobody replies to.")}</Sub>
       {(() => {
-      const q = pick([
-        `"${s.convKiller} sends a message. The group doesn't respond. Classic."`,
-        `"The last word, unanswered — that's ${s.convKiller}'s signature move."`,
-        `"After ${s.convKiller}'s message, the group goes quiet every time."`,
-        `"${s.convKiller} has a habit of sending messages into the void."`,
-        `"A message was sent. The group moved on. A pattern was born."`,
-        `"${s.convKiller}'s messages have a way of ending the conversation."`,
-      ]);
+      const q = pick(t("quips.group.lastWord", { name: s.convKiller }));
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovely" prog={4} total={TOTAL}>
-      <T>Top 3 most active months</T>
+      <T>{t("Top 3 most active months")}</T>
       <div style={{display:"flex",gap:10,marginTop:16,width:"100%",justifyContent:"center"}}>
         {s.topMonths.map((m,i)=><MonthBadge key={i} month={m[0]} count={m[1]} medal={["🥇","🥈","🥉"][i]} />)}
       </div>
-      <Sub mt={14}>The group was most alive in {s.topMonths[0][0]}.</Sub>
+      <Sub mt={14}>{t("The group was most alive in {month}.", { month: s.topMonths[0][0] })}</Sub>
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovely" prog={5} total={TOTAL}>
-      <T>Longest active streak</T>
-      <Big>{s.streak} days</Big>
-      <Sub>The group kept the chat alive for {s.streak} days straight.</Sub>
+      <T>{t("Longest active streak")}</T>
+      <Big>{t("{count} days", { count: s.streak })}</Big>
+      <Sub>{t("The group kept the chat alive for {count} days straight.", { count: s.streak })}</Sub>
       {(() => {
-        const q = s.streak >= 100 ? pick([
-          `"${s.streak} days without a single gap. This group is built different."`,
-          `"Over ${s.streak} consecutive days. That's not a group chat, that's a commitment."`,
-          `"${s.streak} days straight. Most group chats are lucky to last ${s.streak} weeks."`,
-          `"Whatever keeps this group going, bottle it."`,
-        ]) : s.streak >= 30 ? pick([
-          `"${s.streak} days of showing up. That's a real group."`,
-          `"Not a single day off. This group has commitment issues in reverse."`,
-          `"A streak like that doesn't happen by accident."`,
-          `"Most group chats go quiet after 2 weeks. This one didn't."`,
-        ]) : s.streak >= 10 ? pick([
-          `"${s.streak} days in a row. The group was alive."`,
-          `"You all actually like each other. Surprising."`,
-          `"${s.streak} consecutive days. That's more than most groups manage."`,
-        ]) : pick([
-          `"${s.streak} days. Small but it counts."`,
-          `"A ${s.streak}-day run. Something was going on in the group."`,
-          `"Even ${s.streak} days in a row takes effort."`,
-        ]);
+        const q = s.streak >= 100
+          ? pick(t("quips.group.streak100", { streak: s.streak }))
+          : s.streak >= 30
+            ? pick(t("quips.group.streak30", { streak: s.streak }))
+            : s.streak >= 10
+              ? pick(t("quips.group.streak10", { streak: s.streak }))
+              : pick(t("quips.group.streakShort", { streak: s.streak }));
         return <Quip>{q}</Quip>;
       })()}
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovely" prog={6} total={TOTAL} feedback={feedback("The Hype Person", 6)}>
-      <T>The Hype Person</T>
+      <T>{t("The Hype Person")}</T>
       <Big>{s.hype}</Big>
-      <Sub>Started {s.convStarterPct} of all conversations. The engine of this group.</Sub>
-      <AICard label={`Why ${s.hype} is the hype`} value={ai?.hypePersonReason} loading={aiLoading} />
+      <Sub>{t("Started {pct} of all conversations. The engine of this group.", { pct: s.convStarterPct })}</Sub>
+      <AICard label={t("Why {name} is the hype", { name: s.hype })} value={ai?.hypePersonReason} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovely" prog={7} total={TOTAL} feedback={feedback("The Kindest One", 7)}>
-      <T>The Kindest One</T>
+      <T>{t("The Kindest One")}</T>
       <Big>{aiLoading ? "..." : (ai?.kindestPerson || "—")}</Big>
-      <AICard label="The sweetest moment" value={ai?.sweetMoment} loading={aiLoading} />
+      <AICard label={t("The sweetest moment")} value={ai?.sweetMoment} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="funny" prog={8} total={TOTAL} feedback={feedback("The Funny One", 8)}>
-      <T>The Funny One</T>
+      <T>{t("The Funny One")}</T>
       <Big>{aiLoading?"...":(ai?.funniestPerson||s.names[0])}</Big>
-      <AICard label="Drops lines like" value={ai?.funniestReason} loading={aiLoading} />
+      <AICard label={t("Drops lines like")} value={ai?.funniestReason} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="funny" prog={9} total={TOTAL}>
-      <T>Group spirit emoji</T>
+      <T>{t("Group spirit emoji")}</T>
       <div style={{fontSize:90,textAlign:"center",marginTop:16,lineHeight:1,width:"100%"}}>{s.spiritEmoji[0]}</div>
-      <Sub>This one emoji basically summarises the entire group energy.</Sub>
+      <Sub>{t("This one emoji basically summarises the entire group energy.")}</Sub>
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="funny" prog={10} total={TOTAL}>
-      <T>Top 10 most used words</T>
+      <T>{t("Top 10 most used words")}</T>
       <Words words={s.topWords} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="stats" prog={11} total={TOTAL}>
-      <T>The Novelist</T>
+      <T>{t("The Novelist")}</T>
       <Big>{s.novelist}</Big>
       <div style={{display:"flex",gap:0,marginTop:12,width:"100%",justifyContent:"space-around"}}>
         <div style={{textAlign:"center"}}>
           <div style={{fontSize:28,fontWeight:800,color:"#fff"}}>{s.avgMsgLen[[...s.names].sort((a,b)=>s.msgCounts[s.names.indexOf(b)]-s.msgCounts[s.names.indexOf(a)]).indexOf(s.novelist)]||s.avgMsgLen[0]}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",marginTop:3}}>avg chars</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",marginTop:3}}>{t("avg chars")}</div>
         </div>
         <div style={{textAlign:"center"}}>
           <div style={{fontSize:28,fontWeight:800,color:"#fff"}}>{s.novelistMaxLen.toLocaleString()}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",marginTop:3}}>longest message</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",marginTop:3}}>{t("longest message")}</div>
         </div>
       </div>
-      {s.novelistLongestTopic && <Sub mt={8}>Their longest message was mostly about <strong style={{color:"#fff"}}>"{s.novelistLongestTopic}"</strong>.</Sub>}
-      <Quip>"{s.novelist} types like the word limit doesn't exist."</Quip>
+      {s.novelistLongestTopic && <Sub mt={8}>{t("Their longest message was mostly about \"{topic}\".", { topic: s.novelistLongestTopic })}</Sub>}
+      <Quip>{pick(t("quips.group.novelist", { name: s.novelist }))}</Quip>
       <Nav back={back} next={next} />
     </Shell>,
 
@@ -3387,85 +5233,85 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
     </Shell>,
 
     <Shell sec="ai" prog={13} total={TOTAL} feedback={feedback("What you actually talk about", 13)}>
-      <T>What you actually talk about</T>
-      <AICard label="Biggest topic" value={ai?.biggestTopic} loading={aiLoading} />
-      <AICard label="The inside joke" value={ai?.insideJoke} loading={aiLoading} />
+      <T>{t("What you actually talk about")}</T>
+      <AICard label={t("Biggest topic")} value={ai?.biggestTopic} loading={aiLoading} />
+      <AICard label={t("The inside joke")} value={ai?.insideJoke} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={14} total={TOTAL} feedback={feedback("The Drama Report", 14)}>
-      <T>The Drama Report</T>
+      <T>{t("The Drama Report")}</T>
       <Big>{aiLoading?"...":(ai?.dramaStarter||s.names[0])}</Big>
-      <AICard label="How they do it" value={ai?.dramaContext} loading={aiLoading} />
+      <AICard label={t("How they do it")} value={ai?.dramaContext} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={15} total={TOTAL} feedback={feedback("Most missed member", 15)}>
-      <T>Most missed member</T>
+      <T>{t("Most missed member")}</T>
       <Big>{aiLoading?"...":(ai?.mostMissed||s.names[0])}</Big>
-      <Sub>When they go quiet, the group feels it.</Sub>
+      <Sub>{t("When they go quiet, the group feels it.")}</Sub>
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={16} total={TOTAL} feedback={feedback("The group read", 16)}>
-      <T>The group read</T>
-      <AICard label="Group dynamic" value={ai?.groupDynamic} loading={aiLoading} />
-      <AICard label="Most tense moment" value={ai?.tensionMoment} loading={aiLoading} />
+      <T>{t("The group read")}</T>
+      <AICard label={t("Group dynamic")} value={ai?.groupDynamic} loading={aiLoading} />
+      <AICard label={t("Most tense moment")} value={ai?.tensionMoment} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={17} total={TOTAL} feedback={feedback("Group vibe", 17)}>
-      <T>Group vibe</T>
+      <T>{t("Group vibe")}</T>
       <div style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"1.4rem 1.5rem",width:"100%",textAlign:"center",marginTop:16,fontSize:16,lineHeight:1.7,fontStyle:"italic",color:"#fff",minHeight:80,display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
-        {aiLoading?<Dots />:(ai?.vibeOneLiner||"Chaotic. Wholesome. Somehow still going.")}
+        {aiLoading?<Dots />:(ai?.vibeOneLiner||t("Chaotic. Wholesome. Somehow still going."))}
       </div>
-      <Sub mt={14}>Powered by AI — your messages never left your device.</Sub>
+      <Sub mt={14}>{t("Powered by AI — your messages never left your device.")}</Sub>
       <Nav back={back} next={next} nextLabel="See summary" />
     </Shell>,
   ];
   const redFlagScreens = [
     <Shell sec="ai" prog={1} total={TOTAL} feedback={feedback("Group pattern read", 1)}>
-      <T>Group pattern read</T>
-      <AICard label="Group dynamic" value={ai?.groupDynamic} loading={aiLoading} />
-      <AICard label="Most tense moment" value={ai?.tensionMoment} loading={aiLoading} />
+      <T>{t("Group pattern read")}</T>
+      <AICard label={t("Group dynamic")} value={ai?.groupDynamic} loading={aiLoading} />
+      <AICard label={t("Most tense moment")} value={ai?.tensionMoment} loading={aiLoading} />
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
     <Shell sec="ai" prog={2} total={TOTAL}>
-      <T>Evidence log</T>
+      <T>{t("Evidence log")}</T>
       <EvidenceList items={evidenceTimeline} loading={aiLoading && !evidenceTimeline?.length} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="roast" prog={3} total={TOTAL} feedback={feedback("What the chat shows", 3)}>
-      <T>What the chat shows</T>
+      <T>{t("What the chat shows")}</T>
       <FlagList flags={groupFlags} loading={aiLoading && !groupFlags?.length} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="stats" prog={4} total={TOTAL} feedback={feedback("Toxicity scorecard", 4)}>
-      <T>Toxicity scorecard</T>
+      <T>{t("Toxicity scorecard")}</T>
       <Big>{aiLoading && !toxicName ? "..." : toxicName}</Big>
       <div style={{width:"100%",marginTop:10}}>
         {s.names.slice(0,4).map((n,i)=><Bar key={n} value={s.toxicityScores[i]} max={toxicMax} color={COLORS[i%COLORS.length]} label={n} delay={i*80} />)}
       </div>
-      <AICard label="Why this person scores highest" value={toxicReason} loading={aiLoading && !toxicReason} />
+      <AICard label={t("Why this person scores highest")} value={toxicReason} loading={aiLoading && !toxicReason} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="ai" prog={5} total={TOTAL}>
-      <T>Support and strain</T>
-      <AICard label="Who keeps it going" value={s.hype ? `${s.hype} started ${s.convStarterPct} of conversations.` : "The group shares the conversation starts."} loading={false} />
-      <AICard label="Who goes quiet" value={s.ghost ? `${s.ghost} is the least active member in the sampled history.` : "No clear ghost in this sample."} loading={false} />
+      <T>{t("Support and strain")}</T>
+      <AICard label={t("Who keeps it going")} value={s.hype ? t("{name} started {pct} of conversations.", { name: s.hype, pct: s.convStarterPct }) : t("The group shares the conversation starts.")} loading={false} />
+      <AICard label={t("Who goes quiet")} value={s.ghost ? t("{name} is the least active member in the sampled history.", { name: s.ghost }) : t("No clear ghost in this sample.")} loading={false} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="roast" prog={6} total={TOTAL} feedback={feedback("Toxicity report", 6)}>
-      <T>Toxicity report</T>
+      <T>{t("Toxicity report")}</T>
       <Big>{toxicityLevel}</Big>
-      <AICard label="Overall read" value={toxicityReport} loading={aiLoading && !toxicityReport} />
-      <AICard label="Score breakdown" value={toxicityBreakdown?.join(" • ")} loading={false} />
-      <Sub mt={14}>This mode is meant to surface patterns and examples, not make the decision for you.</Sub>
+      <AICard label={t("Overall read")} value={toxicityReport} loading={aiLoading && !toxicityReport} />
+      <AICard label={t("Score breakdown")} value={toxicityBreakdown?.join(" • ")} loading={false} />
+      <Sub mt={14}>{t("This mode is meant to surface patterns and examples, not make the decision for you.")}</Sub>
       <Nav back={back} next={next} nextLabel="See summary" />
     </Shell>,
   ];
@@ -3502,23 +5348,24 @@ function ScoreRing({ score, max=10, size=110, color="#fff" }) {
 // ─────────────────────────────────────────────────────────────────
 const TOXICITY_SCREENS = 7;
 function ToxicityReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
+  const t = useT();
   const loading = aiLoading && !ai;
   const feedback = (cardTitle, cardIndex, enabled = true) => (
     enabled && resultId ? { resultId, reportType: "toxicity", cardIndex, cardTitle } : null
   );
   const screens = [
     <Shell sec="toxicity" prog={1} total={TOXICITY_SCREENS} feedback={feedback("Chat Health Score", 1)}>
-      <T>Chat Health Score</T>
+      <T>{t("Chat Health Score")}</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.chatHealthScore || 5)} max={10} size={130} color="#E04040" />
       </div>
-      <Sub mt={12}>Out of 10 — based on conflict patterns, communication style, and overall dynamic.</Sub>
-      <AICard label="Verdict" value={ai?.verdict} loading={loading} />
+      <Sub mt={12}>{t("Out of 10 — based on conflict patterns, communication style, and overall dynamic.")}</Sub>
+      <AICard label={t("Verdict")} value={ai?.verdict} loading={loading} />
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
     <Shell sec="toxicity" prog={2} total={TOXICITY_SCREENS} feedback={feedback("Individual health scores", 2)}>
-      <T>Individual health scores</T>
+      <T>{t("Individual health scores")}</T>
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:12, marginTop:16 }}>
         {(loading ? s.names.slice(0,2).map(n=>({name:n,score:5,detail:"Analysing…"})) : (ai?.healthScores||[])).map((p, i) => (
           <div key={i} style={{ background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"16px 18px", display:"flex", alignItems:"center", gap:14 }}>
@@ -3534,7 +5381,7 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
     </Shell>,
 
     <Shell sec="toxicity" prog={3} total={TOXICITY_SCREENS} feedback={feedback("Who apologises more", 3)}>
-      <T>Who apologises more</T>
+      <T>{t("Who apologises more")}</T>
       <Big>{loading ? "…" : (ai?.apologiesLeader?.name || s.names[0])}</Big>
       <AICard label={`${(loading?"…":ai?.apologiesLeader?.name) || s.names[0]} — context`} value={ai?.apologiesLeader?.context} loading={loading} />
       <AICard label={`${(loading?"…":ai?.apologiesOther?.name) || s.names[1]||s.names[0]} — context`} value={ai?.apologiesOther?.context} loading={loading} />
@@ -3542,7 +5389,7 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
     </Shell>,
 
     <Shell sec="toxicity" prog={4} total={TOXICITY_SCREENS} feedback={feedback("Red flag moments", 4)}>
-      <T>Red flag moments</T>
+      <T>{t("Red flag moments")}</T>
       {loading
         ? <div style={{ display:"flex", justifyContent:"center", padding:"20px 0" }}><Dots /></div>
         : <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, marginTop:8 }}>
@@ -3559,26 +5406,26 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
     </Shell>,
 
     <Shell sec="toxicity" prog={5} total={TOXICITY_SCREENS} feedback={feedback("Conflict pattern", 5)}>
-      <T>Conflict pattern</T>
-      <AICard label="How arguments unfold" value={ai?.conflictPattern} loading={loading} />
+      <T>{t("Conflict pattern")}</T>
+      <AICard label={t("How arguments unfold")} value={ai?.conflictPattern} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="toxicity" prog={6} total={TOXICITY_SCREENS} feedback={feedback("Power balance", 6)}>
-      <T>Power balance</T>
-      <Big>{loading ? "…" : (ai?.powerHolder || "Balanced")}</Big>
-      <AICard label="Power dynamic" value={ai?.powerBalance} loading={loading} />
+      <T>{t("Power balance")}</T>
+      <Big>{loading ? "…" : (ai?.powerHolder || t("Balanced"))}</Big>
+      <AICard label={t("Power dynamic")} value={ai?.powerBalance} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="toxicity" prog={7} total={TOXICITY_SCREENS} feedback={feedback("The verdict", 7)}>
-      <T>The verdict</T>
+      <T>{t("The verdict")}</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.chatHealthScore||5)} max={10} size={130} color="#E04040" />
       </div>
-      <Sub mt={8}>Overall chat health score.</Sub>
-      <AICard label="Final read" value={ai?.verdict} loading={loading} />
-      <Sub mt={8}>Reflects patterns in this sample — not a final judgment.</Sub>
+      <Sub mt={8}>{t("Overall chat health score.")}</Sub>
+      <AICard label={t("Final read")} value={ai?.verdict} loading={loading} />
+      <Sub mt={8}>{t("Reflects patterns in this sample — not a final judgment.")}</Sub>
       <Nav back={back} next={next} nextLabel="Done" />
     </Shell>,
   ];
@@ -3590,6 +5437,7 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
 // ─────────────────────────────────────────────────────────────────
 const LOVELANG_SCREENS = 5;
 function LoveLangReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
+  const t = useT();
   const loading = aiLoading && !ai;
   const personATitle = `${ai?.personA?.name || s.names[0]}'s love language`;
   const personBTitle = `${ai?.personB?.name || s.names[1] || s.names[0]}'s love language`;
@@ -3598,44 +5446,44 @@ function LoveLangReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
   );
   const screens = [
     <Shell sec="lovelang" prog={1} total={LOVELANG_SCREENS} feedback={feedback(personATitle, 1)}>
-      <T>{loading ? "…" : (ai?.personA?.name || s.names[0])}'s love language</T>
+      <T>{loading ? "…" : t("{name}'s love language", { name: ai?.personA?.name || s.names[0] })}</T>
       <div style={{ marginTop:12, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
         <div style={{ fontSize:60, lineHeight:1 }}>{loading ? "💝" : (ai?.personA?.languageEmoji || "💝")}</div>
         <Big>{loading ? "…" : (ai?.personA?.language || "—")}</Big>
       </div>
-      <AICard label="How they show it" value={ai?.personA?.examples} loading={loading} />
+      <AICard label={t("How they show it")} value={ai?.personA?.examples} loading={loading} />
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
     <Shell sec="lovelang" prog={2} total={LOVELANG_SCREENS} feedback={feedback(personBTitle, 2)}>
-      <T>{loading ? "…" : (ai?.personB?.name || s.names[1]||s.names[0])}'s love language</T>
+      <T>{loading ? "…" : t("{name}'s love language", { name: ai?.personB?.name || s.names[1]||s.names[0] })}</T>
       <div style={{ marginTop:12, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
         <div style={{ fontSize:60, lineHeight:1 }}>{loading ? "💝" : (ai?.personB?.languageEmoji || "💝")}</div>
         <Big>{loading ? "…" : (ai?.personB?.language || "—")}</Big>
       </div>
-      <AICard label="How they show it" value={ai?.personB?.examples} loading={loading} />
+      <AICard label={t("How they show it")} value={ai?.personB?.examples} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovelang" prog={3} total={LOVELANG_SCREENS} feedback={feedback("The language gap", 3)}>
-      <T>The language gap</T>
-      <AICard label="Do they speak the same language?" value={ai?.mismatch} loading={loading} />
+      <T>{t("The language gap")}</T>
+      <AICard label={t("Do they speak the same language?")} value={ai?.mismatch} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovelang" prog={4} total={LOVELANG_SCREENS} feedback={feedback("Most loving moment", 4)}>
-      <T>Most loving moment</T>
+      <T>{t("Most loving moment")}</T>
       <div style={{ fontSize:40, textAlign:"center", marginTop:16 }}>💕</div>
-      <AICard label="The moment" value={ai?.mostLovingMoment} loading={loading} />
+      <AICard label={t("The moment")} value={ai?.mostLovingMoment} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="lovelang" prog={5} total={LOVELANG_SCREENS} feedback={feedback("Love language compatibility", 5)}>
-      <T>Love language compatibility</T>
+      <T>{t("Love language compatibility")}</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.compatibilityScore||5)} max={10} size={130} color="#F08EBF" />
       </div>
-      <AICard label="Compatibility read" value={ai?.compatibilityRead} loading={loading} />
+      <AICard label={t("Compatibility read")} value={ai?.compatibilityRead} loading={loading} />
       <Nav back={back} next={next} nextLabel="Done" />
     </Shell>,
   ];
@@ -3647,6 +5495,7 @@ function LoveLangReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
 // ─────────────────────────────────────────────────────────────────
 const GROWTH_SCREENS = 5;
 function GrowthReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
+  const t = useT();
   const loading = aiLoading && !ai;
   const arrowMap = { deeper:"↑", shallower:"↓", "about the same":"→" };
   const trajMap  = { closer:"Getting closer", drifting:"Drifting apart", stable:"Holding steady" };
@@ -3655,14 +5504,14 @@ function GrowthReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   );
   const screens = [
     <Shell sec="growth" prog={1} total={GROWTH_SCREENS} feedback={feedback("Then vs Now", 1)}>
-      <T>Then vs Now</T>
+      <T>{t("Then vs Now")}</T>
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, marginTop:16 }}>
         <div style={{ background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"16px 18px", borderLeft:"3px solid rgba(255,255,255,0.2)" }}>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", marginBottom:6 }}>Early messages</div>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", marginBottom:6 }}>{t("Early messages")}</div>
           <div style={{ fontSize:14, color:"#fff", lineHeight:1.6 }}>{loading ? <Dots /> : (ai?.thenDepth||"—")}</div>
         </div>
         <div style={{ background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"16px 18px", borderLeft:"3px solid #3AF0C0" }}>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", marginBottom:6 }}>Recent messages</div>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", marginBottom:6 }}>{t("Recent messages")}</div>
           <div style={{ fontSize:14, color:"#fff", lineHeight:1.6 }}>{loading ? <Dots /> : (ai?.nowDepth||"—")}</div>
         </div>
       </div>
@@ -3673,28 +5522,28 @@ function GrowthReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
     </Shell>,
 
     <Shell sec="growth" prog={2} total={GROWTH_SCREENS} feedback={feedback("Who changed more", 2)}>
-      <T>Who changed more</T>
+      <T>{t("Who changed more")}</T>
       <Big>{loading ? "…" : (ai?.whoChangedMore||"—")}</Big>
-      <AICard label="How they changed" value={ai?.whoChangedHow} loading={loading} />
+      <AICard label={t("How they changed")} value={ai?.whoChangedHow} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="growth" prog={3} total={GROWTH_SCREENS} feedback={feedback("What changed in the chat", 3)}>
-      <T>What changed in the chat</T>
-      <AICard label="Topics that appeared" value={ai?.topicsAppeared} loading={loading} />
-      <AICard label="Topics that faded" value={ai?.topicsDisappeared} loading={loading} />
+      <T>{t("What changed in the chat")}</T>
+      <AICard label={t("Topics that appeared")} value={ai?.topicsAppeared} loading={loading} />
+      <AICard label={t("Topics that faded")} value={ai?.topicsDisappeared} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="growth" prog={4} total={GROWTH_SCREENS} feedback={feedback("Relationship trajectory", 4)}>
-      <T>Relationship trajectory</T>
+      <T>{t("Relationship trajectory")}</T>
       <Big>{loading ? "…" : (trajMap[ai?.trajectory]||ai?.trajectory||"—")}</Big>
-      <AICard label="What the data shows" value={ai?.trajectoryDetail} loading={loading} />
+      <AICard label={t("What the data shows")} value={ai?.trajectoryDetail} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="growth" prog={5} total={GROWTH_SCREENS} feedback={feedback("The arc", 5)}>
-      <T>The arc</T>
+      <T>{t("The arc")}</T>
       <div style={{ background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:14, padding:"1.4rem 1.5rem", width:"100%", textAlign:"center", marginTop:16, fontSize:16, lineHeight:1.7, fontStyle:"italic", color:"#fff", minHeight:80, display:"flex", alignItems:"center", justifyContent:"center" }}>
         {loading ? <Dots /> : (ai?.arcSummary||"—")}
       </div>
@@ -3709,6 +5558,7 @@ function GrowthReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
 // ─────────────────────────────────────────────────────────────────
 const ACCOUNTA_SCREENS = 5;
 function AccountaReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
+  const t = useT();
   const loading = aiLoading && !ai;
   const personATitle = `${ai?.personA?.name || s.names[0]}'s accountability`;
   const personBTitle = `${ai?.personB?.name || s.names[1] || s.names[0]}'s accountability`;
@@ -3717,60 +5567,60 @@ function AccountaReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
   );
   const screens = [
     <Shell sec="accounta" prog={1} total={ACCOUNTA_SCREENS} feedback={feedback("Promises made", 1)}>
-      <T>Promises made</T>
+      <T>{t("Promises made")}</T>
       <div style={{ width:"100%", display:"flex", gap:12, marginTop:16, justifyContent:"center" }}>
         {[ai?.personA, ai?.personB].filter(Boolean).map((p, i) => (
           <div key={i} style={{ flex:1, background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"16px 12px", textAlign:"center" }}>
             <div style={{ fontSize:34, fontWeight:800, color:"#fff" }}>{loading ? "—" : (p.total||0)}</div>
-            <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:4 }}>promises</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:4 }}>{t("promises")}</div>
             <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.7)", marginTop:6 }}>{p.name}</div>
           </div>
         ))}
       </div>
-      <AICard label="Overall verdict" value={ai?.overallVerdict} loading={loading} />
+      <AICard label={t("Overall verdict")} value={ai?.overallVerdict} loading={loading} />
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
     <Shell sec="accounta" prog={2} total={ACCOUNTA_SCREENS} feedback={feedback(personATitle, 2)}>
-      <T>{loading ? "…" : (ai?.personA?.name || s.names[0])}'s accountability</T>
+      <T>{loading ? "…" : t("{name}'s accountability", { name: ai?.personA?.name || s.names[0] })}</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.personA?.score||5)} max={10} size={120} color="#6AB4F0" />
       </div>
       <div style={{ width:"100%", display:"flex", gap:12, marginTop:12 }}>
         <div style={{ flex:1, background:"rgba(0,0,0,0.2)", borderRadius:16, padding:"12px 14px", textAlign:"center" }}>
           <div style={{ fontSize:22, fontWeight:800, color:"#5AF080" }}>{loading ? "—" : (ai?.personA?.kept||0)}</div>
-          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:2 }}>kept</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:2 }}>{t("kept")}</div>
         </div>
         <div style={{ flex:1, background:"rgba(0,0,0,0.2)", borderRadius:16, padding:"12px 14px", textAlign:"center" }}>
           <div style={{ fontSize:22, fontWeight:800, color:"#E06060" }}>{loading ? "—" : (ai?.personA?.broken||0)}</div>
-          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:2 }}>broken</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:2 }}>{t("broken")}</div>
         </div>
       </div>
-      <AICard label="Pattern" value={ai?.personA?.detail} loading={loading} />
+      <AICard label={t("Pattern")} value={ai?.personA?.detail} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="accounta" prog={3} total={ACCOUNTA_SCREENS} feedback={feedback(personBTitle, 3)}>
-      <T>{loading ? "…" : (ai?.personB?.name || s.names[1]||s.names[0])}'s accountability</T>
+      <T>{loading ? "…" : t("{name}'s accountability", { name: ai?.personB?.name || s.names[1]||s.names[0] })}</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.personB?.score||5)} max={10} size={120} color="#6AB4F0" />
       </div>
       <div style={{ width:"100%", display:"flex", gap:12, marginTop:12 }}>
         <div style={{ flex:1, background:"rgba(0,0,0,0.2)", borderRadius:16, padding:"12px 14px", textAlign:"center" }}>
           <div style={{ fontSize:22, fontWeight:800, color:"#5AF080" }}>{loading ? "—" : (ai?.personB?.kept||0)}</div>
-          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:2 }}>kept</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:2 }}>{t("kept")}</div>
         </div>
         <div style={{ flex:1, background:"rgba(0,0,0,0.2)", borderRadius:16, padding:"12px 14px", textAlign:"center" }}>
           <div style={{ fontSize:22, fontWeight:800, color:"#E06060" }}>{loading ? "—" : (ai?.personB?.broken||0)}</div>
-          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:2 }}>broken</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:2 }}>{t("broken")}</div>
         </div>
       </div>
-      <AICard label="Pattern" value={ai?.personB?.detail} loading={loading} />
+      <AICard label={t("Pattern")} value={ai?.personB?.detail} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="accounta" prog={4} total={ACCOUNTA_SCREENS} feedback={feedback("Most notable broken promise", 4)}>
-      <T>Most notable broken promise</T>
+      <T>{t("Most notable broken promise")}</T>
       {loading
         ? <div style={{ display:"flex", justifyContent:"center", padding:"20px 0" }}><Dots /></div>
         : <div style={{ width:"100%", marginTop:16 }}>
@@ -3785,7 +5635,7 @@ function AccountaReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
     </Shell>,
 
     <Shell sec="accounta" prog={5} total={ACCOUNTA_SCREENS} feedback={feedback("Most notable kept promise", 5)}>
-      <T>Most notable kept promise</T>
+      <T>{t("Most notable kept promise")}</T>
       {loading
         ? <div style={{ display:"flex", justifyContent:"center", padding:"20px 0" }}><Dots /></div>
         : <div style={{ width:"100%", marginTop:16 }}>
@@ -3807,6 +5657,7 @@ function AccountaReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
 // ─────────────────────────────────────────────────────────────────
 const ENERGY_SCREENS = 6;
 function EnergyReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
+  const t = useT();
   const loading = aiLoading && !ai;
   const personATitle = `${ai?.personA?.name || s.names[0]}'s energy`;
   const personBTitle = `${ai?.personB?.name || s.names[1] || s.names[0]}'s energy`;
@@ -3815,7 +5666,7 @@ function EnergyReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   );
   const screens = [
     <Shell sec="energy" prog={1} total={ENERGY_SCREENS} feedback={feedback("Net energy scores", 1)}>
-      <T>Net energy scores</T>
+      <T>{t("Net energy scores")}</T>
       <div style={{ width:"100%", display:"flex", gap:16, marginTop:16, justifyContent:"center" }}>
         {(loading ? s.names.slice(0,2).map(n=>({name:n,netScore:5,type:""})) : [ai?.personA,ai?.personB].filter(Boolean)).map((p, i) => (
           <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
@@ -3825,42 +5676,42 @@ function EnergyReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
           </div>
         ))}
       </div>
-      <AICard label="Energy compatibility" value={ai?.compatibility} loading={loading} />
+      <AICard label={t("Energy compatibility")} value={ai?.compatibility} loading={loading} />
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
     <Shell sec="energy" prog={2} total={ENERGY_SCREENS} feedback={feedback(personATitle, 2)}>
-      <T>{loading ? "…" : (ai?.personA?.name || s.names[0])}'s energy</T>
-      <AICard label="Positive energy" value={ai?.personA?.goodNews} loading={loading} />
-      <AICard label="Draining patterns" value={ai?.personA?.venting} loading={loading} />
+      <T>{loading ? "…" : t("{name}'s energy", { name: ai?.personA?.name || s.names[0] })}</T>
+      <AICard label={t("Positive energy")} value={ai?.personA?.goodNews} loading={loading} />
+      <AICard label={t("Draining patterns")} value={ai?.personA?.venting} loading={loading} />
       {!loading && ai?.personA?.hypeQuote && <Quip>"{ai.personA.hypeQuote}"</Quip>}
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="energy" prog={3} total={ENERGY_SCREENS} feedback={feedback(personBTitle, 3)}>
-      <T>{loading ? "…" : (ai?.personB?.name || s.names[1]||s.names[0])}'s energy</T>
-      <AICard label="Positive energy" value={ai?.personB?.goodNews} loading={loading} />
-      <AICard label="Draining patterns" value={ai?.personB?.venting} loading={loading} />
+      <T>{loading ? "…" : t("{name}'s energy", { name: ai?.personB?.name || s.names[1]||s.names[0] })}</T>
+      <AICard label={t("Positive energy")} value={ai?.personB?.goodNews} loading={loading} />
+      <AICard label={t("Draining patterns")} value={ai?.personB?.venting} loading={loading} />
       {!loading && ai?.personB?.hypeQuote && <Quip>"{ai.personB.hypeQuote}"</Quip>}
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="energy" prog={4} total={ENERGY_SCREENS} feedback={feedback("Most energising moment", 4)}>
-      <T>Most energising moment</T>
+      <T>{t("Most energising moment")}</T>
       <div style={{ fontSize:40, textAlign:"center", marginTop:16 }}>⚡</div>
-      <AICard label="The moment" value={ai?.mostEnergising} loading={loading} />
+      <AICard label={t("The moment")} value={ai?.mostEnergising} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="energy" prog={5} total={ENERGY_SCREENS} feedback={feedback("Most draining moment", 5)}>
-      <T>Most draining moment</T>
+      <T>{t("Most draining moment")}</T>
       <div style={{ fontSize:40, textAlign:"center", marginTop:16 }}>🪫</div>
-      <AICard label="The moment" value={ai?.mostDraining} loading={loading} />
+      <AICard label={t("The moment")} value={ai?.mostDraining} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
     <Shell sec="energy" prog={6} total={ENERGY_SCREENS} feedback={feedback("Energy compatibility", 6)}>
-      <T>Energy compatibility</T>
+      <T>{t("Energy compatibility")}</T>
       <div style={{ width:"100%", display:"flex", gap:12, marginTop:16, justifyContent:"center" }}>
         {(loading ? s.names.slice(0,2).map(n=>({name:n,netScore:5})) : [ai?.personA,ai?.personB].filter(Boolean)).map((p, i) => (
           <div key={i} style={{ flex:1, background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"14px 12px", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
@@ -3869,7 +5720,7 @@ function EnergyReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
           </div>
         ))}
       </div>
-      <AICard label="Overall read" value={ai?.compatibility} loading={loading} />
+      <AICard label={t("Overall read")} value={ai?.compatibility} loading={loading} />
       <Nav back={back} next={next} nextLabel="Done" />
     </Shell>,
   ];
@@ -3880,15 +5731,16 @@ function EnergyReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
 // PREMIUM FINALE — wrap-up for non-general reports
 // ─────────────────────────────────────────────────────────────────
 function PremiumFinale({ s, restart, back, reportType }) {
+  const t = useT();
   const rtype = REPORT_TYPES.find(r => r.id === reportType);
   const sec = rtype?.palette || "upload";
   return (
     <Shell sec={sec} prog={1} total={1}>
-      <T s={22}>{rtype?.label || "Report complete"}</T>
-      <Sub mt={4}>{s.names?.join(" & ") || ""} · {s.totalMessages?.toLocaleString()} messages</Sub>
+      <T s={22}>{t(rtype?.label || "Report complete")}</T>
+      <Sub mt={4}>{s.names?.join(" & ") || ""} · {s.totalMessages?.toLocaleString()} {t("messages")}</Sub>
       <div style={{ display:"flex", gap:10, marginTop:24, justifyContent:"center", width:"100%" }}>
-        <Btn onClick={back}>← Back</Btn>
-        <Btn onClick={restart}>Start over</Btn>
+        <Btn onClick={back}>{t("Back")}</Btn>
+        <Btn onClick={restart}>{t("Start over")}</Btn>
       </div>
     </Shell>
   );
@@ -3898,6 +5750,7 @@ function PremiumFinale({ s, restart, back, reportType }) {
 // FINALE
 // ─────────────────────────────────────────────────────────────────
 function Finale({ s, ai, aiLoading, restart, back, prog, total, mode, resultId }) {
+  const t = useT();
   const feedback = resultId && (mode === "redflags" || ai?.vibeOneLiner)
     ? { resultId, reportType: mode === "redflags" ? "toxicity" : "general", cardIndex: prog, cardTitle: mode === "redflags" ? "Red flags, unwrapped." : (s.isGroup ? "Your group, unwrapped." : "Your chat, unwrapped.") }
     : null;
@@ -3934,20 +5787,20 @@ function Finale({ s, ai, aiLoading, restart, back, prog, total, mode, resultId }
           {label:"Funniest",value:aiLoading?"...":(ai?.funniestPerson||"—")},
           {label:"Top word",value:`"${s.topWords[0]?.[0]}"`},
           {label:"Spirit emojis",value:s.spiritEmoji.join(" ")},
-          {label:"Best streak",value:`${s.streak} days`},
+          {label:"Best streak",value:t("{count} days", { count: s.streak })},
         ]);
   return (
     <Shell sec="finale" prog={prog} total={total} feedback={feedback}>
-      <T s={24}>{mode === "redflags" ? "Red flags, unwrapped." : (s.isGroup?"Your group, unwrapped.":"Your chat, unwrapped.")}</T>
+      <T s={24}>{t(mode === "redflags" ? "Red flags, unwrapped." : (s.isGroup?"Your group, unwrapped.":"Your chat, unwrapped."))}</T>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:16,width:"100%"}}>
-        {cells.map((c,i)=><Cell key={i} label={c.label} value={c.value} />)}
+        {cells.map((c,i)=><Cell key={i} label={t(c.label)} value={c.value} />)}
       </div>
       {!aiLoading&&ai?.vibeOneLiner&&(
         <div style={{background:"rgba(0,0,0,0.2)",borderRadius:20,padding:"14px 18px",width:"100%",fontSize:14,fontStyle:"italic",color:"rgba(255,255,255,0.75)",textAlign:"center",lineHeight:1.6,fontWeight:500}}>"{ai.vibeOneLiner}"</div>
       )}
       <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"center",width:"100%"}}>
-        <Btn onClick={back}>Back</Btn>
-        <Btn onClick={restart}>Start over</Btn>
+        <Btn onClick={back}>{t("Back")}</Btn>
+        <Btn onClick={restart}>{t("Start over")}</Btn>
       </div>
     </Shell>
   );
@@ -3994,10 +5847,11 @@ function postAuthPhaseForUser(user) {
 // RELATIONSHIP SELECT SCREEN
 // ─────────────────────────────────────────────────────────────────
 function RelationshipSelect({ onSelect, onBack }) {
+  const t = useT();
   const romanticOptions = [
-    { id:"partner", label:"Partner", icon:partnerIcon, desc:"Committed" },
-    { id:"dating",  label:"Dating",  icon:datingIcon, desc:"Early stages" },
-    { id:"ex",      label:"Ex",      icon:exIcon, desc:"Former" },
+    { id:"partner", label:"Partner", icon:partnerIcon, desc:"Romantic partner or spouse" },
+    { id:"dating",  label:"Dating",  icon:datingIcon, desc:"Seeing each other or early stages" },
+    { id:"ex",      label:"Ex",      icon:exIcon, desc:"Former romantic partner" },
   ];
   const options = [
     { id:"family",    label:"Related",   icon:familyIcon, desc:"Parent, sibling or relative" },
@@ -4024,7 +5878,8 @@ function RelationshipSelect({ onSelect, onBack }) {
   };
   return (
     <Shell sec="upload" prog={0} total={1}>
-      <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.15, textAlign:"center", width:"100%" }}>Who is this chat with?</div>
+      <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.15, textAlign:"center", width:"100%" }}>{t("Who is this chat with?")}</div>
+      <div style={{ fontSize:13, color:"rgba(255,255,255,0.52)", textAlign:"center", lineHeight:1.6, width:"100%" }}>{t("This helps the AI frame the analysis correctly.")}</div>
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, marginTop:6 }}>
         <div style={{ display:"flex", gap:10, width:"100%" }}>
           {romanticOptions.map(opt => (
@@ -4036,8 +5891,8 @@ function RelationshipSelect({ onSelect, onBack }) {
             style={{ ...optionButtonStyle, flex:1, padding:"12px 10px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center" }}
           >
               <img src={opt.icon} alt="" aria-hidden="true" style={{ ...iconStyle, marginBottom:8 }} />
-              <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>{opt.label}</div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:4 }}>{opt.desc}</div>
+              <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>{t(opt.label)}</div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:4 }}>{t(opt.desc)}</div>
             </button>
           ))}
         </div>
@@ -4051,13 +5906,13 @@ function RelationshipSelect({ onSelect, onBack }) {
           >
             <img src={opt.icon} alt="" aria-hidden="true" style={{ ...iconStyle, flexShrink:0 }} />
             <div>
-              <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>{opt.label}</div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:2 }}>{opt.desc}</div>
+              <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>{t(opt.label)}</div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:2 }}>{t(opt.desc)}</div>
             </div>
           </button>
         ))}
       </div>
-      <Btn onClick={onBack}>← Back</Btn>
+      <Btn onClick={onBack}>{t("Back")}</Btn>
     </Shell>
   );
 }
@@ -4178,42 +6033,49 @@ const EXPORT_STEPS = [
 ];
 
 function OnboardingFlow({ step, next, onOnboarded, onLogout }) {
+  const { uiLangPref } = useUILanguage();
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [err]           = useState("");
+  const [selectedUiLang, setSelectedUiLang] = useState(uiLangPref);
 
-  const markOnboarded = async (thenCb) => {
+  useEffect(() => {
+    setSelectedUiLang(uiLangPref);
+  }, [uiLangPref]);
+
+  const markOnboarded = async (pref, thenCb) => {
     if (busy) return;
     setBusy(true);
     try {
-      await supabase.auth.updateUser({ data: { has_onboarded: true } });
+      await supabase.auth.updateUser({ data: { has_onboarded: true, ui_language: normalizeUiLangPref(pref) } });
     } catch { /* silent — non-critical */ }
     thenCb?.();
   };
 
-  const handleSkip    = () => markOnboarded(onOnboarded);
-  const handleLetsGo  = () => markOnboarded(onOnboarded);
+  const handleSkip   = () => markOnboarded("english", () => onOnboarded?.("english"));
+  const handleFinish = () => markOnboarded(selectedUiLang, () => onOnboarded?.(selectedUiLang));
 
   const linkBtn = { background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 };
 
   return (
-    <Shell sec="upload" prog={step + 1} total={3}>
+    <Shell sec="upload" prog={step + 1} total={4}>
 
       {/* ── Screen 1: hook ── */}
       {step === 0 && (<>
         <div style={{ fontSize:34, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>
-          Your relationship, in data.
+          {t("Your relationship, in data.")}
         </div>
         <div style={{ fontSize:14, color:"rgba(255,255,255,0.6)", textAlign:"center", lineHeight:1.75, width:"100%" }}>
-          Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.
+          {t("Reads your WhatsApp chat and shows you what's actually going on. Who shows up. Who ghosts. Who carries the conversation.")}
         </div>
-        <Btn onClick={next}>Next →</Btn>
-        <button onClick={handleSkip} style={linkBtn}>Skip</button>
+        <Btn onClick={next}>{t("Next")}</Btn>
+        <button onClick={handleSkip} style={linkBtn}>{t("Skip")}</button>
       </>)}
 
       {/* ── Screen 2: export instructions ── */}
       {step === 1 && (<>
         <div style={{ fontSize:34, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>
-          Start with your chat.
+          {t("Start with your chat.")}
         </div>
         <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:9 }}>
           {EXPORT_STEPS.map((label, i) => (
@@ -4221,45 +6083,85 @@ function OnboardingFlow({ step, next, onOnboarded, onLogout }) {
               <div style={{ width:28, height:28, borderRadius:"50%", background:PAL.upload.inner, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:"#fff", flexShrink:0 }}>
                 {i + 1}
               </div>
-              <div style={{ fontSize:14, fontWeight:600, color:"#fff", lineHeight:1.4 }}>{label}</div>
+              <div style={{ fontSize:14, fontWeight:600, color:"#fff", lineHeight:1.4 }}>{t(label)}</div>
             </div>
           ))}
         </div>
-        <Btn onClick={next}>Next →</Btn>
+        <Btn onClick={next}>{t("Next")}</Btn>
       </>)}
 
       {/* ── Screen 3: launch ── */}
       {step === 2 && (<>
         <div style={{ fontSize:34, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>
-          Upload. Analyse. See it clearly.
+          {t("Upload. Analyse. See it clearly.")}
         </div>
         <div style={{ fontSize:14, color:"rgba(255,255,255,0.6)", textAlign:"center", lineHeight:1.75, width:"100%" }}>
-          Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.
+          {t("Six reports. Toxicity, love languages, accountability, energy, growth, and your full chat wrapped. Results in under a minute.")}
         </div>
         <div style={{ display:"flex", flexWrap:"wrap", gap:8, justifyContent:"center", width:"100%" }}>
           {ONBOARD_PILLS.map(pill => {
             const p = PAL[pill.palette] || PAL.upload;
             return (
               <div key={pill.label} style={{ background:p.inner, color:"#fff", borderRadius:50, padding:"7px 16px", fontSize:13, fontWeight:700, letterSpacing:0.1 }}>
-                {pill.label}
+                {t(pill.label)}
               </div>
             );
           })}
         </div>
         {err && <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center" }}>{err}</div>}
+        <Btn onClick={next}>{t("Continue")}</Btn>
+      </>)}
+
+      {step === 3 && (<>
+        <div style={{ fontSize:34, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>
+          {t("Choose your language")}
+        </div>
+        <div style={{ width:"100%", display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          {[
+            { id:"english", title:"English", desc:"Use English for the interface." },
+            { id:"auto", title:"Auto-detect", desc:"UI follows the detected chat language." },
+          ].map(option => {
+            const active = selectedUiLang === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setSelectedUiLang(option.id)}
+                className="wc-btn"
+                style={{
+                  background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)",
+                  border:`1px solid ${active ? "rgba(255,255,255,0.32)" : "rgba(255,255,255,0.12)"}`,
+                  borderRadius:22,
+                  color:"#fff",
+                  textAlign:"left",
+                  padding:"18px 16px",
+                  display:"flex",
+                  flexDirection:"column",
+                  gap:6,
+                  minHeight:116,
+                  cursor:"pointer",
+                  transition:"all 0.15s",
+                }}
+              >
+                <div style={{ fontSize:16, fontWeight:800, letterSpacing:-0.3 }}>{t(option.title)}</div>
+                <div style={{ fontSize:12.5, color:"rgba(255,255,255,0.58)", lineHeight:1.55 }}>{t(option.desc)}</div>
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
-          onClick={handleLetsGo}
+          onClick={handleFinish}
           disabled={busy}
           className="wc-btn"
           style={{ width:"100%", padding:"14px 0", borderRadius:50, border:"none", background:PAL.upload.inner, color:"#fff", fontSize:16, cursor:busy?"default":"pointer", fontWeight:700, transition:"all 0.15s", letterSpacing:0.2, opacity:busy?0.65:1 }}
         >
-          {busy ? "…" : "Let's go"}
+          {busy ? "…" : t("Continue")}
         </button>
       </>)}
 
       <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
-        {onLogout && <button onClick={onLogout} className="wc-btn" style={linkBtn}>Log out</button>}
+        {onLogout && <button onClick={onLogout} className="wc-btn" style={linkBtn}>{t("Log out")}</button>}
       </div>
     </Shell>
   );
@@ -4441,6 +6343,8 @@ function AdminLocked({ onBack }) {
 }
 
 function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
+  const { uiLangPref, updateUiLangPref } = useUILanguage();
+  const t = useT();
   const fileRef = useRef();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -4466,7 +6370,34 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
   return (
     <Shell sec="upload" prog={0} total={1}>
       <div style={{ fontSize:44, fontWeight:800, color:"#fff", letterSpacing:-3, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
-      <div style={{ fontSize:15, color:"rgba(255,255,255,0.5)", marginBottom:8, textAlign:"center", fontWeight:500 }}>Your chats, unwrapped.</div>
+      <div style={{ fontSize:15, color:"rgba(255,255,255,0.5)", marginBottom:8, textAlign:"center", fontWeight:500 }}>{t("Your chats, unwrapped.")}</div>
+      <div style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.34)", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>{t("UI language")}</div>
+        {["english", "auto"].map(option => {
+          const active = uiLangPref === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => updateUiLangPref(option)}
+              className="wc-btn"
+              style={{
+                border:"1px solid rgba(255,255,255,0.12)",
+                borderRadius:999,
+                padding:"6px 12px",
+                fontSize:12,
+                fontWeight:700,
+                color:"#fff",
+                background:active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)",
+                cursor:"pointer",
+                transition:"all 0.15s",
+              }}
+            >
+              {t(option === "english" ? "English" : "Auto-detect")}
+            </button>
+          );
+        })}
+      </div>
       <div
         onClick={() => fileRef.current?.click()}
         onDrop={e => { e.preventDefault(); handle(e.dataTransfer.files[0]); }}
@@ -4475,25 +6406,25 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
         onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.35)"}
         onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0.25)"}
       >
-        <div style={{ fontSize:17, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>{busy ? "Reading your chat…" : "Upload your chat"}</div>
+        <div style={{ fontSize:17, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>{busy ? t("Reading your chat…") : t("Upload your chat")}</div>
         <input ref={fileRef} type="file" accept=".txt" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
       </div>
       {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
-      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.</div>
+      <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>{t("Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.")}</div>
       <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
         {onHistory && (
           <button onClick={onHistory} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
-            My Results
+            {t("My Results")}
           </button>
         )}
         {canAdmin && onAdmin && (
           <button onClick={onAdmin} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
-            Feedback Inbox
+            {t("Feedback Inbox")}
           </button>
         )}
         {onLogout && (
           <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
-            Log out
+            {t("Log out")}
           </button>
         )}
       </div>
@@ -4505,6 +6436,7 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
 // LOADING
 // ─────────────────────────────────────────────────────────────────
 function Loading({ math, reportType }) {
+  const t = useT();
   const [tick, setTick] = useState(0);
   useEffect(() => { const t = setInterval(() => setTick(x => Math.min(x+1, LOADING_STEPS.length-1)), 1800); return () => clearInterval(t); }, []);
   const label = REPORT_TYPES.find(r => r.id === reportType)?.label || "Analysis";
@@ -4512,10 +6444,10 @@ function Loading({ math, reportType }) {
     <Shell sec="upload" prog={tick+1} total={LOADING_STEPS.length}>
       <div style={{ fontSize:44, fontWeight:800, color:"#fff", letterSpacing:-3, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
       <div style={{ fontSize:14, color:"rgba(255,255,255,0.45)", textAlign:"center", fontWeight:500 }}>
-        {label} · {math.totalMessages.toLocaleString()} messages
+        {t(label)} · {math.totalMessages.toLocaleString()} {t("messages")}
       </div>
       <div style={{ background:"rgba(0,0,0,0.25)", borderRadius:24, padding:"24px 20px", width:"100%", textAlign:"center" }}>
-        <div style={{ fontSize:18, fontWeight:800, color:"#fff", minHeight:52, letterSpacing:-0.3 }}>{LOADING_STEPS[tick]}</div>
+        <div style={{ fontSize:18, fontWeight:800, color:"#fff", minHeight:52, letterSpacing:-0.3 }}>{t(LOADING_STEPS[tick])}</div>
         <div style={{ display:"flex", gap:8, justifyContent:"center", marginTop:16 }}>
           {[0,1,2].map(i => <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:"rgba(255,255,255,0.4)", animation:`blink 1.2s ${i*0.2}s infinite` }} />)}
         </div>
@@ -4542,6 +6474,7 @@ const LANG_OPTIONS = [
 ];
 
 function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangChange }) {
+  const t = useT();
   const [langOpen, setLangOpen] = useState(false);
 
   const isOverridden = detectedLang && chatLang !== detectedLang.code;
@@ -4549,11 +6482,11 @@ function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangCh
 
   return (
     <Shell sec="upload" prog={0} total={1}>
-      <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>Choose your report</div>
-      <Sub mt={4}>{math?.totalMessages?.toLocaleString()} messages · {math?.names?.slice(0,3).join(", ") || ""}{(math?.names?.length||0)>3?` +${math.names.length-3}`:""}</Sub>
+      <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>{t("Choose your report")}</div>
+      <Sub mt={4}>{math?.totalMessages?.toLocaleString()} {t("messages")} · {math?.names?.slice(0,3).join(", ") || ""}{(math?.names?.length||0)>3?` +${math.names.length-3}`:""}</Sub>
       {math?.cappedGroup && (
         <div style={{ fontSize:12, color:"rgba(255,255,255,0.55)", background:"rgba(255,255,255,0.08)", borderRadius:14, padding:"8px 14px", width:"100%", textAlign:"center", lineHeight:1.6 }}>
-          Large group detected — analysing the top {GROUP_PARTICIPANT_CAP} members out of {math.originalParticipantCount}.
+          {t("Large group detected — analysing the top {cap} members out of {count}.", { cap: GROUP_PARTICIPANT_CAP, count: math.originalParticipantCount })}
         </div>
       )}
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, marginTop:6 }}>
@@ -4577,8 +6510,8 @@ function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangCh
                 transition: "all 0.15s",
               }}
             >
-              <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3, marginBottom:4 }}>{r.label}</div>
-              <div style={{ fontSize:12, lineHeight:1.5, color:"rgba(255,255,255,0.58)" }}>{r.desc}</div>
+              <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3, marginBottom:4 }}>{t(r.label)}</div>
+              <div style={{ fontSize:12, lineHeight:1.5, color:"rgba(255,255,255,0.58)" }}>{t(r.desc)}</div>
             </button>
           );
         })}
@@ -4599,13 +6532,13 @@ function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangCh
           }}
         >
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)", fontWeight:600 }}>Report language</span>
-            <span style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{currentLabel}</span>
+            <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)", fontWeight:600 }}>{t("Report language")}</span>
+            <span style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{t(currentLabel)}</span>
             {!isOverridden && detectedLang && (
-              <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>auto</span>
+              <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>{t("auto")}</span>
             )}
             {isOverridden && (
-              <span style={{ fontSize:10, color:PAL.upload.accent, fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>changed</span>
+              <span style={{ fontSize:10, color:PAL.upload.accent, fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>{t("changed")}</span>
             )}
           </div>
           <span style={{ fontSize:11, color:"rgba(255,255,255,0.35)", transform: langOpen ? "rotate(180deg)" : "none", transition:"transform 0.2s" }}>▾</span>
@@ -4633,7 +6566,7 @@ function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangCh
                     color: "#fff",
                   }}
                 >
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               );
             })}
@@ -4641,7 +6574,7 @@ function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangCh
         )}
       </div>
 
-      <Btn onClick={onBack}>← Upload different file</Btn>
+      <Btn onClick={onBack}>{t("Upload different file")}</Btn>
     </Shell>
   );
 }
@@ -4930,104 +6863,130 @@ function AdminFeedbackInbox({ onBack, onLogout }) {
     return () => { alive = false; };
   }, []);
 
+  const errorTypeColor = (type) => {
+    switch (type) {
+      case "Events are mixing":  return { bg:"rgba(240,160,40,0.15)",  border:"rgba(240,160,40,0.3)",  text:"#F0A040" };
+      case "Wrong person":       return { bg:"rgba(220,80,60,0.15)",   border:"rgba(220,80,60,0.3)",   text:"#E06060" };
+      case "Didn't happen":      return { bg:"rgba(180,60,200,0.15)",  border:"rgba(180,60,200,0.3)",  text:"#C070E0" };
+      case "Tone misread":       return { bg:"rgba(60,140,240,0.15)",  border:"rgba(60,140,240,0.3)",  text:"#60A0F0" };
+      case "Overclaiming":       return { bg:"rgba(220,80,60,0.15)",   border:"rgba(220,80,60,0.3)",   text:"#E06060" };
+      case "Missing context":    return { bg:"rgba(80,160,100,0.15)",  border:"rgba(80,160,100,0.3)",  text:"#60C080" };
+      default:                   return { bg:"rgba(255,255,255,0.07)", border:"rgba(255,255,255,0.14)",text:"rgba(255,255,255,0.7)" };
+    }
+  };
+
   return (
     <Shell sec="upload" prog={0} total={0}>
-      <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1, width:"100%", textAlign:"center" }}>Feedback Inbox</div>
-      <Sub mt={2}>Review reported cards and why they were flagged.</Sub>
+      {/* Header */}
+      <div style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div>
+          <div style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1 }}>Feedback Inbox</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.4)", marginTop:3 }}>
+            {rows === null ? "Loading…" : `${rows.length} report${rows.length !== 1 ? "s" : ""}`}
+          </div>
+        </div>
+        {onLogout && (
+          <button onClick={onLogout} className="wc-btn"
+            style={{ background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:50, color:"rgba(255,255,255,0.5)", fontSize:12, cursor:"pointer", padding:"7px 14px", fontWeight:600, letterSpacing:0.1 }}>
+            Log out
+          </button>
+        )}
+      </div>
+
       {!ADMIN_EMAILS.length && (
-        <div style={{ fontSize:12, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 14px", borderRadius:16, width:"100%", textAlign:"center", lineHeight:1.6 }}>
-          Set `VITE_ADMIN_EMAIL` or `VITE_ADMIN_EMAILS` in `.env` to unlock admin access for your account.
+        <div style={{ fontSize:12, color:"#FFB090", background:"rgba(200,60,20,0.15)", border:"1px solid rgba(200,60,20,0.3)", padding:"10px 14px", borderRadius:14, width:"100%", lineHeight:1.6 }}>
+          Set <code>VITE_ADMIN_EMAIL</code> in <code>.env</code> to unlock admin access.
         </div>
       )}
+
       {rows === null && !err && (
-        <div style={{ width:"100%", display:"flex", justifyContent:"center", padding:"28px 0" }}><Dots /></div>
+        <div style={{ width:"100%", display:"flex", justifyContent:"center", padding:"32px 0" }}><Dots /></div>
       )}
       {err && (
-        <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center" }}>{err}</div>
+        <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.15)", border:"1px solid rgba(200,60,20,0.3)", padding:"10px 14px", borderRadius:14, width:"100%", textAlign:"center" }}>{err}</div>
       )}
       {rows?.length === 0 && !err && (
-        <div style={{ fontSize:14, color:"rgba(255,255,255,0.38)", textAlign:"center", padding:"20px 0", lineHeight:1.6 }}>No feedback yet.</div>
+        <div style={{ width:"100%", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20, padding:"32px 20px", textAlign:"center" }}>
+          <div style={{ fontSize:28, marginBottom:10 }}>📭</div>
+          <div style={{ fontSize:14, color:"rgba(255,255,255,0.45)", lineHeight:1.6 }}>No feedback yet.</div>
+        </div>
       )}
-      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:14, maxHeight:"62vh", overflowY:"auto", paddingRight:2 }}>
+
+      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:12, maxHeight:"62vh", overflowY:"auto", paddingRight:2 }}>
         {rows?.map(row => {
-          const resultRow = resultsById[row.result_id];
+          const resultRow  = resultsById[row.result_id];
           const summaryRows = buildFeedbackSummary(row, resultRow);
           const namesLabel = Array.isArray(resultRow?.names) && resultRow.names.length
             ? `${resultRow.names.slice(0, 3).join(", ")}${resultRow.names.length > 3 ? ` +${resultRow.names.length - 3}` : ""}`
             : "";
           const messageLabel = resultRow?.math_data?.totalMessages != null
-            ? `${resultRow.math_data.totalMessages.toLocaleString()} messages`
+            ? `${resultRow.math_data.totalMessages.toLocaleString()} msgs`
             : "";
           const submittedAt = row.created_at
-            ? new Date(row.created_at).toLocaleString("en-US", { month:"short", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })
-            : "Unknown time";
+            ? new Date(row.created_at).toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" })
+            : "Unknown";
+          const tagStyle = errorTypeColor(row.error_type);
+
           return (
-            <div key={row.id} style={{ background:"rgba(0,0,0,0.22)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:22, padding:"16px 16px 18px", display:"flex", flexDirection:"column", gap:14 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
-                <div style={{ minWidth:0 }}>
-                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.42)", marginBottom:6 }}>
-                    {row.report_type} · card {row.card_index} · {submittedAt}
-                  </div>
-                  <div style={{ fontSize:18, fontWeight:800, color:"#fff", letterSpacing:-0.4, marginBottom:6 }}>
-                    {row.card_title || "Untitled card"}
-                  </div>
-                  {(namesLabel || messageLabel) && (
-                    <div style={{ fontSize:12, color:"rgba(255,255,255,0.52)", lineHeight:1.5 }}>
-                      {[namesLabel, messageLabel].filter(Boolean).join(" · ")}
+            <div key={row.id} style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:22, overflow:"hidden" }}>
+              {/* top strip */}
+              <div style={{ padding:"14px 16px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.35)", marginBottom:5 }}>
+                      {row.report_type} · card {row.card_index} · {submittedAt}
                     </div>
-                  )}
-                </div>
-                <div style={{ display:"inline-flex", alignItems:"center", borderRadius:999, padding:"7px 12px", background:"rgba(255,255,255,0.08)", color:"#fff", fontSize:13, fontWeight:700, flexShrink:0 }}>
-                  {row.error_type || "Unspecified"}
+                    <div style={{ fontSize:16, fontWeight:800, color:"#fff", letterSpacing:-0.3, lineHeight:1.2, marginBottom: namesLabel || messageLabel ? 5 : 0 }}>
+                      {row.card_title || "Untitled card"}
+                    </div>
+                    {(namesLabel || messageLabel) && (
+                      <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", fontWeight:600 }}>
+                        {[namesLabel, messageLabel].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
+                  </div>
+                  {/* error type badge */}
+                  <div style={{ flexShrink:0, background:tagStyle.bg, border:`1px solid ${tagStyle.border}`, borderRadius:999, padding:"5px 11px", fontSize:12, fontWeight:700, color:tagStyle.text, whiteSpace:"nowrap" }}>
+                    {row.error_type || "Other"}
+                  </div>
                 </div>
               </div>
 
-              <div style={{ display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1.35fr)", gap:12 }}>
-                <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"12px 14px" }}>
-                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.42)", marginBottom:8 }}>
-                    Feedback
+              {/* body */}
+              <div style={{ padding:"12px 16px 14px", display:"flex", flexDirection:"column", gap:10 }}>
+                {/* user's note */}
+                {row.error_note && (
+                  <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:14, padding:"10px 14px" }}>
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.09em", textTransform:"uppercase", color:"rgba(255,255,255,0.35)", marginBottom:5 }}>Note</div>
+                    <div style={{ fontSize:13, color:"rgba(255,255,255,0.82)", lineHeight:1.6 }}>{row.error_note}</div>
                   </div>
-                  <div style={{ fontSize:14, color:"rgba(255,255,255,0.8)", lineHeight:1.65 }}>
-                    {row.error_note || "No extra note added."}
-                  </div>
-                </div>
+                )}
 
-                <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"12px 14px" }}>
-                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.42)", marginBottom:10 }}>
-                    Model output
+                {/* model output */}
+                {summaryRows.length > 0 && (
+                  <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:14, padding:"10px 14px" }}>
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.09em", textTransform:"uppercase", color:"rgba(255,255,255,0.35)", marginBottom:8 }}>What was shown</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                      {summaryRows.map((item, index) => (
+                        <div key={`${item.label}-${index}`}>
+                          <div style={{ fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.38)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:2 }}>{item.label}</div>
+                          <div style={{ fontSize:13, color:"#fff", lineHeight:1.55, fontWeight:500 }}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"88px 1fr", gap:"8px 12px", alignItems:"start" }}>
-                    {summaryRows.map((item, index) => (
-                      <div key={`${item.label}-${index}`} style={{ display:"contents" }}>
-                        <div style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.45)", textTransform:"uppercase", letterSpacing:"0.05em" }}>
-                          {item.label}
-                        </div>
-                        <div style={{ fontSize:13, color:"#fff", lineHeight:1.55, fontWeight:500 }}>
-                          {item.value}
-                        </div>
-                      </div>
-                    ))}
-                    {!summaryRows.length && (
-                      <>
-                        <div style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.45)", textTransform:"uppercase", letterSpacing:"0.05em" }}>
-                          Note
-                        </div>
-                        <div style={{ fontSize:13, color:"#fff", lineHeight:1.55, fontWeight:500 }}>
-                          No saved text summary for this card.
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                )}
+
+                {!row.error_note && !summaryRows.length && (
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.28)", fontStyle:"italic" }}>No note or saved output for this card.</div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
-      <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
-        <Btn onClick={onBack}>← Back</Btn>
-        {onLogout && <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.32)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>Log out</button>}
-      </div>
+
+      <Btn onClick={onBack}>← Back</Btn>
     </Shell>
   );
 }
@@ -5247,6 +7206,7 @@ export default function App() {
   const [relationshipType, setRelationshipType] = useState(null);
   const [chatLang,         setChatLang]         = useState("en");  // detected or user-selected
   const [detectedLang,     setDetectedLang]     = useState(null);  // { code, label, confidence }
+  const [uiLangPref,       setUiLangPref]       = useState("english");
   const [step,             setStep]             = useState(0);
   const [dir,              setDir]              = useState("fwd");
   const [sid,              setSid]              = useState(0);
@@ -5260,6 +7220,27 @@ export default function App() {
   const [feedbackBusy,     setFeedbackBusy]     = useState(false);
   const [feedbackThanks,   setFeedbackThanks]   = useState(false);
   const shareCardRef = useRef(null);
+  const resolvedUiLang = resolveUiLang(uiLangPref, detectedLang?.code);
+
+  useEffect(() => {
+    setUiLangPref(normalizeUiLangPref(authedUser?.user_metadata?.ui_language));
+  }, [authedUser]);
+
+  const updateUiLangPref = async (pref) => {
+    const nextPref = normalizeUiLangPref(pref);
+    setUiLangPref(nextPref);
+    setAuthedUser(prev => (
+      prev
+        ? { ...prev, user_metadata: { ...(prev.user_metadata || {}), ui_language: nextPref } }
+        : prev
+    ));
+    try {
+      const { data } = await supabase.auth.updateUser({ data: { ui_language: nextPref } });
+      if (data?.user) setAuthedUser(data.user);
+    } catch {
+      // Silent: preference changes should never interrupt the user flow.
+    }
+  };
 
   // Keep a ref so the visibilitychange handler always sees the current phase
   // without being re-registered on every render.
@@ -5364,7 +7345,14 @@ export default function App() {
   };
 
   // Called when onboarding completes → proceed to terms acceptance
-  const onOnboarded = () => {
+  const onOnboarded = (pref = "english") => {
+    const nextPref = normalizeUiLangPref(pref);
+    setUiLangPref(nextPref);
+    setAuthedUser(prev => (
+      prev
+        ? { ...prev, user_metadata: { ...(prev.user_metadata || {}), has_onboarded: true, ui_language: nextPref } }
+        : prev
+    ));
     setStep(0);
     setDir("fwd");
     setPhase("terms");
@@ -5424,6 +7412,32 @@ export default function App() {
     setSid(s => s+1);
   };
 
+  const generatePipelineResult = async (type, relType, lang) => {
+    const pipeline = REPORT_PIPELINES[type];
+    if (pipeline?.strategy !== "core") return {};
+
+    const cacheKey = getCoreAnalysisCacheKey(math, relType, lang);
+    const useCoreA = pipeline.cache === "a";
+    let core = useCoreA
+      ? (coreAnalysisAKey === cacheKey ? coreAnalysisA : null)
+      : (coreAnalysisBKey === cacheKey ? coreAnalysisB : null);
+
+    if (!core) {
+      core = useCoreA
+        ? await generateCoreAnalysisA(messages, math, relType, lang)
+        : await generateCoreAnalysisB(messages, math, relType, lang);
+      if (useCoreA) {
+        setCoreAnalysisA(core);
+        setCoreAnalysisAKey(cacheKey);
+      } else {
+        setCoreAnalysisB(core);
+        setCoreAnalysisBKey(cacheKey);
+      }
+    }
+
+    return pipeline.derive(core, math, relType);
+  };
+
   // Run AI analysis with the selected report type and relationship type
   const runAnalysis = async (type, relType) => {
     setStep(0);
@@ -5432,37 +7446,17 @@ export default function App() {
     setAiLoading(true);
     setAi(null);
     setCurrentResultId(null);
+    let result = null;
     try {
-      const pipeline = REPORT_PIPELINES[type];
-      let result;
-
-      if (pipeline?.strategy === "core") {
-        const cacheKey = getCoreAnalysisCacheKey(math, relType, chatLang);
-        const useCoreA = pipeline.cache === "a";
-        let core = useCoreA
-          ? (coreAnalysisAKey === cacheKey ? coreAnalysisA : null)
-          : (coreAnalysisBKey === cacheKey ? coreAnalysisB : null);
-        if (!core) {
-          core = useCoreA
-            ? await generateCoreAnalysisA(messages, math, relType, chatLang)
-            : await generateCoreAnalysisB(messages, math, relType, chatLang);
-          if (useCoreA) {
-            setCoreAnalysisA(core);
-            setCoreAnalysisAKey(cacheKey);
-          } else {
-            setCoreAnalysisB(core);
-            setCoreAnalysisBKey(cacheKey);
-          }
-        }
-        result = pipeline.derive(core, math, relType);
-      }
-
-      setAi(result || {});
-      if (result) {
-        const saved = await saveResult(type, result, math);
-        setCurrentResultId(saved?.id || null);
-      }
-    } catch { setAi({}); }
+      result = await generatePipelineResult(type, relType, chatLang);
+    } catch (error) {
+      console.error(`Analysis failed for report "${type}" [lang=${chatLang}]`, error);
+    }
+    setAi(result || {});
+    // Always attempt to save so resultId exists and feedback buttons render.
+    // An empty result is still a valid DB row — it lets users flag a failed card.
+    const saved = await saveResult(type, result || {}, math);
+    setCurrentResultId(saved?.id || null);
     setAiLoading(false);
     setResultsOrigin("upload");
     setPhase("results");
@@ -5563,36 +7557,44 @@ export default function App() {
   };
 
   const wrap = child => (
-    <ShareResultsContext.Provider value={shareCardData ? { onShare: handleShareResult, busy: shareBusy } : null}>
-      <FeedbackContext.Provider value={{ openFeedback }}>
-        <>
-          <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}>
-            <Slide dir={dir} id={sid}>
-              <CloseResultsContext.Provider value={closeResults}>
-                {child}
-              </CloseResultsContext.Provider>
-            </Slide>
-          </div>
-          <ShareCardRenderer captureRef={shareCardRef} cardData={shareCardData} cardSize={shareCardSize} />
-          <FeedbackSheet
-            open={!!feedbackTarget}
-            target={feedbackTarget}
-            selected={feedbackChoice}
-            note={feedbackNote}
-            submitting={feedbackBusy}
-            onSelect={setFeedbackChoice}
-            onNoteChange={setFeedbackNote}
-            onSubmit={handleSubmitFeedback}
-            onClose={closeFeedback}
-          />
-          {feedbackThanks && (
-            <div style={{ position:"fixed", left:"50%", bottom:24, transform:"translateX(-50%)", zIndex:210, background:"rgba(12,12,18,0.92)", border:"1px solid rgba(255,255,255,0.12)", color:"#fff", padding:"12px 16px", borderRadius:999, fontSize:14, fontWeight:700, boxShadow:"0 10px 30px rgba(0,0,0,0.28)", transition:"opacity 0.25s" }}>
-              Got it, thank you.
+    <UILanguageContext.Provider value={{ uiLang: resolvedUiLang, uiLangPref, updateUiLangPref }}>
+      <ShareResultsContext.Provider value={shareCardData ? { onShare: handleShareResult, busy: shareBusy } : null}>
+        <FeedbackContext.Provider value={{ openFeedback }}>
+          <>
+            <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}>
+              <Slide dir={dir} id={sid}>
+                <CloseResultsContext.Provider value={closeResults}>
+                  {child}
+                </CloseResultsContext.Provider>
+              </Slide>
             </div>
-          )}
-        </>
-      </FeedbackContext.Provider>
-    </ShareResultsContext.Provider>
+            <ShareCardRenderer captureRef={shareCardRef} cardData={shareCardData} cardSize={shareCardSize} />
+            <FeedbackSheet
+              open={!!feedbackTarget}
+              target={feedbackTarget}
+              selected={feedbackChoice}
+              note={feedbackNote}
+              submitting={feedbackBusy}
+              onSelect={setFeedbackChoice}
+              onNoteChange={setFeedbackNote}
+              onSubmit={handleSubmitFeedback}
+              onClose={closeFeedback}
+            />
+            {feedbackThanks && (
+              <div style={{ position:"fixed", left:"50%", bottom:32, transform:"translateX(-50%)", zIndex:210, background:"rgba(20,20,28,0.96)", border:"1px solid rgba(255,255,255,0.14)", color:"#fff", padding:"11px 20px", borderRadius:999, fontSize:13, fontWeight:700, letterSpacing:"0.02em", boxShadow:"0 8px 32px rgba(0,0,0,0.4)", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:15 }}>✓</span> {translateUI(resolvedUiLang, "Got it, thank you.")}
+              </div>
+            )}
+          </>
+        </FeedbackContext.Provider>
+      </ShareResultsContext.Provider>
+    </UILanguageContext.Provider>
+  );
+
+  const withUiLanguage = (node) => (
+    <UILanguageContext.Provider value={{ uiLang: resolvedUiLang, uiLangPref, updateUiLangPref }}>
+      {node}
+    </UILanguageContext.Provider>
   );
 
   const onRestoreResult = (row) => {
@@ -5616,29 +7618,29 @@ export default function App() {
     setSid(s => s + 1);
   };
 
-  if (phase === "auth")     return <Slide dir="fwd" id={sid}><Auth /></Slide>;
+  if (phase === "auth")     return withUiLanguage(<Slide dir="fwd" id={sid}><Auth /></Slide>);
   if (phase === "onboarding") return (
-    <Slide dir={dir} id={sid}>
+    withUiLanguage(<Slide dir={dir} id={sid}>
       <OnboardingFlow step={step} next={next} onOnboarded={onOnboarded} onLogout={logout} />
-    </Slide>
+    </Slide>)
   );
   if (phase === "terms") return (
-    <Slide dir="fwd" id={sid}>
+    withUiLanguage(<Slide dir="fwd" id={sid}>
       <TermsFlow onAccepted={onAcceptedTerms} onLogout={logout} />
-    </Slide>
+    </Slide>)
   );
   if (phase === "admin") return (
-    <Slide dir="fwd" id={sid}>
+    withUiLanguage(<Slide dir="fwd" id={sid}>
       {isAdminUser(authedUser)
         ? <AdminFeedbackInbox onBack={() => { setPhase("upload"); setSid(s => s+1); }} onLogout={logout} />
         : <AdminLocked onBack={() => { setPhase("upload"); setSid(s => s+1); }} />}
-    </Slide>
+    </Slide>)
   );
-  if (phase === "history")  return <Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>;
-  if (phase === "upload")   return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={isAdminUser(authedUser)} /></Slide>;
-  if (phase === "tooshort") return <Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>;
+  if (phase === "history")  return withUiLanguage(<Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>);
+  if (phase === "upload")   return withUiLanguage(<Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={isAdminUser(authedUser)} /></Slide>);
+  if (phase === "tooshort") return withUiLanguage(<Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>);
   if (phase === "select") return (
-    <Slide dir="fwd" id={sid}>
+    withUiLanguage(<Slide dir="fwd" id={sid}>
       <ReportSelect
         math={math}
         onSelect={onSelectReport}
@@ -5647,14 +7649,14 @@ export default function App() {
         detectedLang={detectedLang}
         onLangChange={code => { setChatLang(code); setCoreAnalysisA(null); setCoreAnalysisAKey(""); setCoreAnalysisB(null); setCoreAnalysisBKey(""); }}
       />
-    </Slide>
+    </Slide>)
   );
   if (phase === "relationship") return (
-    <Slide dir="fwd" id={sid}>
+    withUiLanguage(<Slide dir="fwd" id={sid}>
       <RelationshipSelect onSelect={onSelectRelationship} onBack={() => { setPhase("select"); setSid(s => s+1); }} />
-    </Slide>
+    </Slide>)
   );
-  if (phase === "loading") return <Loading math={math} reportType={reportType} />;
+  if (phase === "loading") return withUiLanguage(<Loading math={math} reportType={reportType} />);
 
   // ── Premium report routing ──
   if (reportType === "toxicity") {
