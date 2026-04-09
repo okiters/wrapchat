@@ -6817,16 +6817,13 @@ function AdminLocked({ onBack }) {
   );
 }
 
-function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin, chatLang, detectedLang, onLangChange }) {
+function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
   const { uiLangPref, updateUiLangPref } = useUILanguage();
   const t = useT();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
   const showAdminEntry = Boolean(onAdmin) && ADMIN_EMAILS.length > 0;
   const uploadInputId = "wrapchat-upload-input";
-  const isOverridden = detectedLang && chatLang !== detectedLang.code;
-  const currentLabel = LANG_OPTIONS.find(l => l.code === chatLang)?.label ?? "English";
   const handle = file => {
     if (!file) return;
     if (file.size > 50 * 1024 * 1024) {
@@ -6881,107 +6878,11 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin, chatLang, de
         htmlFor={uploadInputId}
         onDrop={e => { e.preventDefault(); handle(e.dataTransfer.files[0]); }}
         onDragOver={e => e.preventDefault()}
-        style={{ background:"rgba(0,0,0,0.25)", borderRadius:24, padding:"20px 20px 24px", textAlign:"center", cursor:"pointer", width:"100%", transition:"background 0.2s", position:"relative" }}
+        style={{ background:"rgba(0,0,0,0.25)", borderRadius:24, padding:"28px 24px", textAlign:"center", cursor:"pointer", width:"100%", transition:"background 0.2s" }}
         onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.35)"}
         onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0.25)"}
       >
-        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, width:"100%", marginBottom:16 }}>
-          <div style={{ minWidth:0, textAlign:"left" }}>
-            <div style={{ fontSize:17, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>{busy ? t("Reading your chat…") : t("Upload your chat")}</div>
-          </div>
-          <div
-            onClick={e => e.preventDefault()}
-            onMouseDown={e => e.preventDefault()}
-            style={{ position:"relative", flexShrink:0 }}
-          >
-            <button
-              type="button"
-              onClick={e => { e.preventDefault(); e.stopPropagation(); setLangOpen(v => !v); }}
-              className="wc-btn"
-              style={{
-                minWidth:128,
-                background:"rgba(255,255,255,0.08)",
-                border:"1px solid rgba(255,255,255,0.12)",
-                borderRadius:14,
-                padding:"8px 11px",
-                color:"#fff",
-                cursor:"pointer",
-                display:"flex",
-                alignItems:"center",
-                justifyContent:"space-between",
-                gap:8,
-                transition:"all 0.15s",
-              }}
-            >
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:1, minWidth:0 }}>
-                <span style={{ fontSize:10, color:"rgba(255,255,255,0.38)", fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase" }}>{t("Report language")}</span>
-                <span style={{ fontSize:12, fontWeight:800, color:"#fff", lineHeight:1.2, whiteSpace:"nowrap" }}>{t(currentLabel)}</span>
-              </div>
-              <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)", transform: langOpen ? "rotate(180deg)" : "none", transition:"transform 0.2s" }}>▾</span>
-            </button>
-
-            {langOpen && (
-              <div
-                style={{
-                  position:"absolute",
-                  top:"calc(100% + 8px)",
-                  right:0,
-                  width:180,
-                  background:"rgba(16,18,24,0.98)",
-                  border:"1px solid rgba(255,255,255,0.12)",
-                  borderRadius:16,
-                  padding:6,
-                  display:"flex",
-                  flexDirection:"column",
-                  gap:4,
-                  zIndex:3,
-                  boxShadow:"0 16px 36px rgba(0,0,0,0.34)",
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                {LANG_OPTIONS.map(opt => {
-                  const active = chatLang === opt.code;
-                  return (
-                    <button
-                      key={opt.code}
-                      type="button"
-                      onClick={e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onLangChange?.(opt.code);
-                        setLangOpen(false);
-                      }}
-                      className="wc-btn"
-                      style={{
-                        width:"100%",
-                        border:"none",
-                        borderRadius:12,
-                        padding:"10px 12px",
-                        textAlign:"left",
-                        background: active ? "rgba(255,255,255,0.14)" : "transparent",
-                        color:"#fff",
-                        cursor:"pointer",
-                        transition:"all 0.15s",
-                        display:"flex",
-                        alignItems:"center",
-                        justifyContent:"space-between",
-                        gap:10,
-                      }}
-                    >
-                      <span style={{ fontSize:13, fontWeight:active ? 800 : 650 }}>{t(opt.label)}</span>
-                      {active && <span style={{ fontSize:11, color:PAL.upload.accent, fontWeight:800 }}>✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-        <div style={{ fontSize:12, color:"rgba(255,255,255,0.42)", textAlign:"left", lineHeight:1.5 }}>
-          {!isOverridden && detectedLang
-            ? `${t("Report language")}: ${t(currentLabel)} · ${t("auto")}`
-            : `${t("Report language")}: ${t(currentLabel)}${isOverridden ? ` · ${t("changed")}` : ""}`}
-        </div>
+        <div style={{ fontSize:17, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>{busy ? t("Reading your chat…") : t("Upload your chat")}</div>
       </label>
       <input id={uploadInputId} type="file" accept=".txt" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
       {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
@@ -7064,6 +6965,10 @@ const LANG_OPTIONS = [
 
 function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangChange }) {
   const t = useT();
+  const [langOpen, setLangOpen] = useState(false);
+
+  const isOverridden = detectedLang && chatLang !== detectedLang.code;
+  const currentLabel = LANG_OPTIONS.find(l => l.code === chatLang)?.label ?? "English";
 
   return (
     <Shell sec="upload" prog={0} total={1}>
@@ -7100,6 +7005,63 @@ function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangCh
             </button>
           );
         })}
+      </div>
+
+      {/* ── Language selector ── */}
+      <div style={{ width:"100%", marginTop:4 }}>
+        <button
+          type="button"
+          onClick={() => setLangOpen(v => !v)}
+          className="wc-btn"
+          style={{
+            width:"100%", background:"rgba(255,255,255,0.06)",
+            border:"1px solid rgba(255,255,255,0.10)", borderRadius:14,
+            padding:"10px 16px", color:"#fff", cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            transition:"all 0.15s",
+          }}
+        >
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)", fontWeight:600 }}>{t("Report language")}</span>
+            <span style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{t(currentLabel)}</span>
+            {!isOverridden && detectedLang && (
+              <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>{t("auto")}</span>
+            )}
+            {isOverridden && (
+              <span style={{ fontSize:10, color:PAL.upload.accent, fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>{t("changed")}</span>
+            )}
+          </div>
+          <span style={{ fontSize:11, color:"rgba(255,255,255,0.35)", transform: langOpen ? "rotate(180deg)" : "none", transition:"transform 0.2s" }}>▾</span>
+        </button>
+
+        {langOpen && (
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:8, padding:"4px 0" }}>
+            {LANG_OPTIONS.map(opt => {
+              const active = chatLang === opt.code;
+              return (
+                <button
+                  key={opt.code}
+                  type="button"
+                  onClick={() => { onLangChange(opt.code); setLangOpen(false); }}
+                  className="wc-btn"
+                  style={{
+                    border: `1px solid ${active ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.12)"}`,
+                    borderRadius: 50,
+                    padding: "7px 14px",
+                    fontSize: 13,
+                    fontWeight: active ? 800 : 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    background: active ? PAL.upload.inner : "rgba(255,255,255,0.07)",
+                    color: "#fff",
+                  }}
+                >
+                  {t(opt.label)}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <Btn onClick={onBack}>{t("Upload different file")}</Btn>
@@ -8275,7 +8237,7 @@ export default function App() {
     </Slide>)
   );
   if (phase === "history")  return withUiLanguage(<Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>);
-  if (phase === "upload")   return withUiLanguage(<Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={isAdminUser(authedUser)} chatLang={chatLang} detectedLang={detectedLang} onLangChange={code => { setChatLang(code); setCoreAnalysisA(null); setCoreAnalysisAKey(""); setCoreAnalysisB(null); setCoreAnalysisBKey(""); }} /></Slide>);
+  if (phase === "upload")   return withUiLanguage(<Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={isAdminUser(authedUser)} /></Slide>);
   if (phase === "tooshort") return withUiLanguage(<Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>);
   if (phase === "select") return (
     withUiLanguage(<Slide dir="fwd" id={sid}>
