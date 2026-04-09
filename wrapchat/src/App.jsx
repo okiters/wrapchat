@@ -6392,10 +6392,10 @@ function AdminLocked({ onBack }) {
 function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
   const { uiLangPref, updateUiLangPref } = useUILanguage();
   const t = useT();
-  const fileRef = useRef();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const showAdminEntry = Boolean(onAdmin) && ADMIN_EMAILS.length > 0;
+  const uploadInputId = "wrapchat-upload-input";
   const handle = file => {
     if (!file) return;
     if (file.size > 50 * 1024 * 1024) {
@@ -6446,8 +6446,8 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
           );
         })}
       </div>
-      <div
-        onClick={() => fileRef.current?.click()}
+      <label
+        htmlFor={uploadInputId}
         onDrop={e => { e.preventDefault(); handle(e.dataTransfer.files[0]); }}
         onDragOver={e => e.preventDefault()}
         style={{ background:"rgba(0,0,0,0.25)", borderRadius:24, padding:"28px 24px", textAlign:"center", cursor:"pointer", width:"100%", transition:"background 0.2s" }}
@@ -6455,8 +6455,8 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
         onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0.25)"}
       >
         <div style={{ fontSize:17, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>{busy ? t("Reading your chat…") : t("Upload your chat")}</div>
-        <input ref={fileRef} type="file" accept=".txt" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
-      </div>
+      </label>
+      <input id={uploadInputId} type="file" accept=".txt" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
       {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
       <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>{t("Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.")}</div>
       <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap", width:"100%", marginTop:4 }}>
@@ -6941,18 +6941,24 @@ function AdminFeedbackInbox({ onBack, onLogout }) {
     <Shell sec="upload" prog={0} total={0}>
       {/* Header */}
       <div style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div>
-          <div style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1 }}>Feedback Inbox</div>
-          <div style={{ fontSize:13, color:"rgba(255,255,255,0.4)", marginTop:3 }}>
-            {rows === null ? "Loading…" : `${rows.length} report${rows.length !== 1 ? "s" : ""}`}
-          </div>
+        <div style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1 }}>
+          Feedback Inbox
         </div>
-        {onLogout && (
-          <button onClick={onLogout} className="wc-btn"
-            style={{ background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:50, color:"rgba(255,255,255,0.5)", fontSize:12, cursor:"pointer", padding:"7px 14px", fontWeight:600, letterSpacing:0.1 }}>
-            Log out
-          </button>
-        )}
+        <div
+          style={{
+            background:"rgba(255,255,255,0.07)",
+            border:"1px solid rgba(255,255,255,0.12)",
+            borderRadius:999,
+            color:"rgba(255,255,255,0.68)",
+            fontSize:12,
+            padding:"7px 12px",
+            fontWeight:700,
+            letterSpacing:0.08,
+            whiteSpace:"nowrap",
+          }}
+        >
+          {rows === null ? "Loading…" : `${rows.length} report${rows.length !== 1 ? "s" : ""}`}
+        </div>
       </div>
 
       {!ADMIN_EMAILS.length && (
