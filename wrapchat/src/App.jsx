@@ -2041,6 +2041,175 @@ function translateUI(lang, key, vars = {}) {
   return formatUITranslation(raw, vars);
 }
 
+const CONTROL_TRANSLATIONS = {
+  tr: {
+    "Words of Affirmation": "Onay sözleri",
+    "Acts of Service": "Hizmet davranışları",
+    "Receiving Gifts": "Hediye alma",
+    "Quality Time": "Kaliteli zaman",
+    "Physical Touch": "Fiziksel temas",
+    "Mixed": "Karışık",
+    "net positive": "net pozitif",
+    "mixed": "karışık",
+    "net draining": "net yorucu",
+    "deeper": "daha derin",
+    "shallower": "daha yüzeysel",
+    "about the same": "hemen hemen aynı",
+    "closer": "yakınlaşan",
+    "drifting": "uzaklaşan",
+    "stable": "stabil",
+    "Balanced": "Dengeli",
+    "Shared": "Paylaşılan",
+    "Tie": "Berabere",
+    "None clearly identified": "Belirgin biri yok",
+    "Both equally": "İkisi de eşit",
+  },
+  es: {
+    "Words of Affirmation": "Palabras de afirmacion",
+    "Acts of Service": "Actos de servicio",
+    "Receiving Gifts": "Recibir regalos",
+    "Quality Time": "Tiempo de calidad",
+    "Physical Touch": "Contacto fisico",
+    "Mixed": "Mixto",
+    "net positive": "neto positivo",
+    "mixed": "mixto",
+    "net draining": "neto agotador",
+    "deeper": "mas profundo",
+    "shallower": "mas superficial",
+    "about the same": "casi igual",
+    "closer": "mas cerca",
+    "drifting": "alejandose",
+    "stable": "estable",
+    "Balanced": "Equilibrado",
+    "Shared": "Compartido",
+    "Tie": "Empate",
+    "None clearly identified": "No se identifica claramente",
+    "Both equally": "Ambos por igual",
+  },
+  pt: {
+    "Words of Affirmation": "Palavras de afirmacao",
+    "Acts of Service": "Atos de servico",
+    "Receiving Gifts": "Receber presentes",
+    "Quality Time": "Tempo de qualidade",
+    "Physical Touch": "Toque fisico",
+    "Mixed": "Misto",
+    "net positive": "net positivo",
+    "mixed": "misto",
+    "net draining": "net desgastante",
+    "deeper": "mais profundo",
+    "shallower": "mais superficial",
+    "about the same": "quase igual",
+    "closer": "mais proximos",
+    "drifting": "se afastando",
+    "stable": "estavel",
+    "Balanced": "Equilibrado",
+    "Shared": "Compartilhado",
+    "Tie": "Empate",
+    "None clearly identified": "Ninguem claramente identificado",
+    "Both equally": "Ambos igualmente",
+  },
+  ar: {
+    "Words of Affirmation": "كلمات التقدير",
+    "Acts of Service": "افعال الخدمة",
+    "Receiving Gifts": "تلقي الهدايا",
+    "Quality Time": "وقت نوعي",
+    "Physical Touch": "اللمس الجسدي",
+    "Mixed": "مختلط",
+    "net positive": "ايجابي صافي",
+    "mixed": "مختلط",
+    "net draining": "مستنزف صافي",
+    "deeper": "اعمق",
+    "shallower": "اكثر سطحية",
+    "about the same": "تقريبا نفسه",
+    "closer": "اكثر قربا",
+    "drifting": "يبتعد",
+    "stable": "مستقر",
+    "Balanced": "متوازن",
+    "Shared": "مشترك",
+    "Tie": "تعادل",
+    "None clearly identified": "لا يوجد شخص محدد بوضوح",
+    "Both equally": "كلاهما بالتساوي",
+  },
+  fr: {
+    "Words of Affirmation": "Paroles valorisantes",
+    "Acts of Service": "Actes de service",
+    "Receiving Gifts": "Recevoir des cadeaux",
+    "Quality Time": "Temps de qualite",
+    "Physical Touch": "Contact physique",
+    "Mixed": "Mixte",
+    "net positive": "net positif",
+    "mixed": "mixte",
+    "net draining": "net epuisant",
+    "deeper": "plus profond",
+    "shallower": "plus superficiel",
+    "about the same": "a peu pres pareil",
+    "closer": "plus proches",
+    "drifting": "s'eloignent",
+    "stable": "stable",
+    "Balanced": "Equilibre",
+    "Shared": "Partage",
+    "Tie": "Egalite",
+    "None clearly identified": "Aucune personne clairement identifiee",
+    "Both equally": "Les deux egalement",
+  },
+  de: {
+    "Words of Affirmation": "Worte der Bestatigung",
+    "Acts of Service": "Hilfsbereite Taten",
+    "Receiving Gifts": "Geschenke bekommen",
+    "Quality Time": "Gemeinsame Zeit",
+    "Physical Touch": "Korperliche Beruhrung",
+    "Mixed": "Gemischt",
+    "net positive": "klar positiv",
+    "mixed": "gemischt",
+    "net draining": "klar belastend",
+    "deeper": "tiefer",
+    "shallower": "oberflachlicher",
+    "about the same": "ungefahr gleich",
+    "closer": "naher",
+    "drifting": "driften auseinander",
+    "stable": "stabil",
+    "Balanced": "Ausgeglichen",
+    "Shared": "Geteilt",
+    "Tie": "Unentschieden",
+    "None clearly identified": "Niemand klar erkennbar",
+    "Both equally": "Beide gleichermassen",
+  },
+  it: {
+    "Words of Affirmation": "Parole di conferma",
+    "Acts of Service": "Atti di servizio",
+    "Receiving Gifts": "Ricevere regali",
+    "Quality Time": "Tempo di qualita",
+    "Physical Touch": "Contatto fisico",
+    "Mixed": "Misto",
+    "net positive": "netto positivo",
+    "mixed": "misto",
+    "net draining": "netto drenante",
+    "deeper": "piu profondo",
+    "shallower": "piu superficiale",
+    "about the same": "piu o meno uguale",
+    "closer": "piu vicini",
+    "drifting": "si stanno allontanando",
+    "stable": "stabile",
+    "Balanced": "Equilibrato",
+    "Shared": "Condiviso",
+    "Tie": "Parita",
+    "None clearly identified": "Nessuno chiaramente identificato",
+    "Both equally": "Entrambi allo stesso modo",
+  },
+};
+
+function translateControlValue(lang, value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const code = normalizeUiLangCode(lang);
+  return CONTROL_TRANSLATIONS[code]?.[text] || text;
+}
+
+function useControlT() {
+  const { uiLang } = useUILanguage();
+  return (value) => translateControlValue(uiLang, value);
+}
+
 // High-frequency stopwords that are strongly characteristic of each language.
 // Overlap with other languages is intentional — scoring across all languages
 // simultaneously lets the distribution decide rather than strict rules.
@@ -3037,7 +3206,7 @@ function buildSampleText(messages) {
   return formatChunksForAI(messages, buildChunks(messages));
 }
 
-async function callClaude(systemPrompt, userContent, maxTokens = 1500) {
+async function callClaude(systemPrompt, userContent, maxTokens = 1500, schemaMode = "analysis") {
   const { data: { session } } = await supabase.auth.getSession();
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-chat`,
@@ -3047,7 +3216,7 @@ async function callClaude(systemPrompt, userContent, maxTokens = 1500) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${session?.access_token}`,
       },
-      body: JSON.stringify({ system: systemPrompt, userContent, max_tokens: maxTokens }),
+      body: JSON.stringify({ system: systemPrompt, userContent, max_tokens: maxTokens, schema_mode: schemaMode }),
     }
   );
   if (!res.ok) throw new Error(`Edge function error ${res.status}`);
@@ -3808,6 +3977,256 @@ const REPORT_PIPELINES = {
   energy:   { strategy: "core", cache: "a", derive: deriveEnergyReportFromCore },
 };
 
+const STORED_RESULT_META_KEYS = new Set(["translations", "displayLanguage", "sourceLanguage"]);
+
+const REPORT_TRANSLATION_FIELDS = {
+  general: [
+    "vibeOneLiner",
+    "biggestTopic",
+    "ghostContext",
+    "funniestReason",
+    "dramaContext",
+    "relationshipStatus",
+    "relationshipStatusWhy",
+    "statusEvidence",
+    "toxicReason",
+    "toxicityReport",
+    "relationshipSummary",
+    "groupDynamic",
+    "tensionMoment",
+    "sweetMoment",
+    "mostMissed",
+    "insideJoke",
+    "hypePersonReason",
+  ],
+  toxicity: [
+    "apologiesLeader.context",
+    "apologiesOther.context",
+    "conflictPattern",
+    "powerBalance",
+    "verdict",
+  ],
+  lovelang: [
+    "personA.examples",
+    "personB.examples",
+    "mismatch",
+    "mostLovingMoment",
+    "compatibilityRead",
+  ],
+  growth: [
+    "thenDepth",
+    "nowDepth",
+    "whoChangedHow",
+    "topicsAppeared",
+    "topicsDisappeared",
+    "trajectoryDetail",
+    "arcSummary",
+  ],
+  accounta: [
+    "personA.detail",
+    "personB.detail",
+    "notableBroken.promise",
+    "notableBroken.outcome",
+    "notableKept.promise",
+    "notableKept.outcome",
+    "overallVerdict",
+  ],
+  energy: [
+    "personA.goodNews",
+    "personA.venting",
+    "personB.goodNews",
+    "personB.venting",
+    "mostEnergising",
+    "mostDraining",
+    "compatibility",
+  ],
+};
+
+const REPORT_TRANSLATION_ARRAY_FIELDS = {
+  general: [
+    { path: "redFlags", fields: ["title", "detail", "evidence"] },
+    { path: "evidenceTimeline", fields: ["title", "detail"] },
+  ],
+  toxicity: [
+    { path: "healthScores", fields: ["detail"] },
+    { path: "redFlagMoments", fields: ["description"] },
+  ],
+};
+
+function isPlainObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function stripStoredResultMeta(result) {
+  if (!isPlainObject(result)) return {};
+  const next = {};
+  Object.entries(result).forEach(([key, value]) => {
+    if (!STORED_RESULT_META_KEYS.has(key)) next[key] = value;
+  });
+  return next;
+}
+
+function getStoredResultTranslations(result) {
+  return isPlainObject(result?.translations) ? result.translations : {};
+}
+
+function getStoredResultDisplayLanguage(result) {
+  const code = normalizeUiLangCode(result?.displayLanguage || result?.sourceLanguage || "en");
+  return LANG_META[code] ? code : "en";
+}
+
+function getByPath(source, path) {
+  return path.split(".").reduce((acc, part) => {
+    if (acc == null) return undefined;
+    if (Array.isArray(acc) && /^\d+$/.test(part)) return acc[Number(part)];
+    return acc[part];
+  }, source);
+}
+
+function setByPath(target, path, value) {
+  const parts = path.split(".");
+  let cursor = target;
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i];
+    const nextPart = parts[i + 1];
+    const isLeaf = i === parts.length - 1;
+    const key = /^\d+$/.test(part) ? Number(part) : part;
+
+    if (isLeaf) {
+      cursor[key] = value;
+      return target;
+    }
+
+    const nextIsIndex = /^\d+$/.test(nextPart || "");
+    if (cursor[key] == null) {
+      cursor[key] = nextIsIndex ? [] : {};
+    }
+    cursor = cursor[key];
+  }
+  return target;
+}
+
+function mergeTranslatedResult(base, overlay) {
+  if (overlay == null) return base;
+  if (typeof overlay !== "object") return overlay;
+
+  if (Array.isArray(overlay)) {
+    const source = Array.isArray(base) ? [...base] : [];
+    overlay.forEach((item, index) => {
+      source[index] = mergeTranslatedResult(source[index], item);
+    });
+    return source;
+  }
+
+  const source = isPlainObject(base) ? { ...base } : {};
+  Object.entries(overlay).forEach(([key, value]) => {
+    source[key] = mergeTranslatedResult(source[key], value);
+  });
+  return source;
+}
+
+function buildStoredResultData(baseResult, displayLanguage = "en", translationOverlay = null) {
+  const canonical = stripStoredResultMeta(baseResult);
+  const lang = normalizeUiLangCode(displayLanguage);
+  const translations = {};
+  if (lang !== "en" && isPlainObject(translationOverlay) && Object.keys(translationOverlay).length) {
+    translations[lang] = translationOverlay;
+  }
+  return {
+    ...canonical,
+    sourceLanguage: "en",
+    displayLanguage: lang,
+    translations,
+  };
+}
+
+function getDisplayResultData(result, preferredLanguage = null) {
+  const canonical = stripStoredResultMeta(result);
+  const translations = getStoredResultTranslations(result);
+  const lang = normalizeUiLangCode(preferredLanguage || getStoredResultDisplayLanguage(result));
+  const overlay = isPlainObject(translations[lang]) ? translations[lang] : null;
+  return {
+    ...mergeTranslatedResult(canonical, overlay),
+    sourceLanguage: "en",
+    displayLanguage: overlay ? lang : "en",
+    translations,
+  };
+}
+
+function pushTranslationEntry(entries, path, value) {
+  const text = strOr(value);
+  if (!text) return;
+  entries.push({ path, text });
+}
+
+function collectResultTranslationEntries(reportType, result) {
+  const canonical = stripStoredResultMeta(result);
+  const entries = [];
+
+  (REPORT_TRANSLATION_FIELDS[reportType] || []).forEach(path => {
+    pushTranslationEntry(entries, path, getByPath(canonical, path));
+  });
+
+  (REPORT_TRANSLATION_ARRAY_FIELDS[reportType] || []).forEach(({ path, fields }) => {
+    const list = getByPath(canonical, path);
+    if (!Array.isArray(list)) return;
+    list.forEach((item, index) => {
+      fields.forEach(field => pushTranslationEntry(entries, `${path}.${index}.${field}`, item?.[field]));
+    });
+  });
+
+  return entries;
+}
+
+function normalizeTranslatedEntries(raw, sourceEntries) {
+  const items = Array.isArray(raw?.items) ? raw.items : [];
+  const fallbackByPath = Object.fromEntries(sourceEntries.map(item => [item.path, item.text]));
+  return items.map(item => {
+    const path = strOr(item?.path);
+    if (!path || !(path in fallbackByPath)) return null;
+    const text = strOr(item?.text, fallbackByPath[path]);
+    return { path, text };
+  }).filter(Boolean);
+}
+
+function buildTranslationOverlay(entries) {
+  return entries.reduce((overlay, item) => setByPath(overlay, item.path, item.text), {});
+}
+
+async function translateResultOverlay(reportType, result, targetLang = "en") {
+  const lang = normalizeUiLangCode(targetLang);
+  if (!LANG_META[lang] || lang === "en") return null;
+
+  const sourceEntries = collectResultTranslationEntries(reportType, result);
+  if (!sourceEntries.length) return null;
+
+  const system = [
+    "You translate saved WrapChat report text into the target language.",
+    "Return only valid JSON in the exact schema requested.",
+    "Keep every path value mapped to the same path.",
+    "Translate natural-language explanations into the target language.",
+    "Preserve names exactly as written.",
+    "If a value contains a direct quote from the chat, keep the quote itself as-is and only translate the surrounding explanation if needed.",
+  ].join(" ");
+
+  const userContent = `Target language: ${LANG_META[lang]} (${lang})
+
+Translate the following WrapChat report text fields into ${LANG_META[lang]}. Keep every "path" exactly the same. Return exactly this JSON shape:
+{
+  "items": [
+    { "path": "field.path", "text": "translated text" }
+  ]
+}
+
+Source items:
+${JSON.stringify(sourceEntries, null, 2)}`;
+
+  const raw = await callClaude(system, userContent, 1800, "json");
+  const translatedEntries = normalizeTranslatedEntries(raw, sourceEntries);
+  if (!translatedEntries.length) return null;
+  return buildTranslationOverlay(translatedEntries);
+}
+
 // ─────────────────────────────────────────────────────────────────
 // UI PRIMITIVES  — bold rounded-card aesthetic
 // ─────────────────────────────────────────────────────────────────
@@ -3880,7 +4299,7 @@ function getReportLabel(reportType) {
   return REPORT_TYPES.find(r => r.id === reportType)?.label || "General Wrapped";
 }
 
-function buildShareCardData({ math, ai, reportType }) {
+function buildShareCardData({ math, ai, reportType, displayLang = "en" }) {
   if (!math) return null;
 
   const names = Array.isArray(math.names) ? math.names.map(shortName).filter(Boolean) : [];
@@ -3890,6 +4309,7 @@ function buildShareCardData({ math, ai, reportType }) {
     : duoLabel;
   const topFlag = normalizeRedFlags(ai?.redFlags)[0]?.title || math.redFlags?.[0]?.title || "Patterns worth a second look";
   const report = reportType || "general";
+  const control = (value) => translateControlValue(displayLang, value);
 
   const card = {
     palette: report === "general" ? "finale" : (REPORT_TYPES.find(r => r.id === report)?.palette || "upload"),
@@ -3916,7 +4336,7 @@ function buildShareCardData({ math, ai, reportType }) {
       subtitle: math.isGroup ? "A teaser from the group toxicity report" : "A teaser from the toxicity report",
       stats: [
         { label: "Top flag", value: topFlag },
-        { label: "Power", value: clampCopy(ai?.powerHolder || "Mixed", 24) },
+        { label: "Power", value: clampCopy(control(ai?.powerHolder || "Balanced"), 24) },
         { label: "Apologizes more", value: shortName(ai?.apologiesLeader?.name || names[0]) },
       ],
       insight: clampCopy(ai?.verdict || ai?.conflictPattern || "The card only shows the surface. The report shows the pattern."),
@@ -3931,8 +4351,8 @@ function buildShareCardData({ math, ai, reportType }) {
       title: `Compatibility: ${formatShareScore(ai?.compatibilityScore)}`,
       subtitle: "A teaser from the love language report",
       stats: [
-        { label: names[0] || "Person A", value: clampCopy(ai?.personA?.language || "Hidden", 22) },
-        { label: names[1] || "Person B", value: clampCopy(ai?.personB?.language || "Hidden", 22) },
+        { label: names[0] || "Person A", value: clampCopy(control(ai?.personA?.language || "Hidden"), 22) },
+        { label: names[1] || "Person B", value: clampCopy(control(ai?.personB?.language || "Hidden"), 22) },
         { label: "Gap", value: clampCopy(ai?.mismatch || "You should see the full report", 26) },
       ],
       insight: clampCopy(ai?.compatibilityRead || ai?.mostLovingMoment || "The full report breaks down how each person shows up."),
@@ -3945,7 +4365,7 @@ function buildShareCardData({ math, ai, reportType }) {
     return {
       ...card,
       palette: "growth",
-      title: trajectoryMap[ai?.trajectory] || "The arc changed.",
+      title: displayLang === "en" ? (trajectoryMap[ai?.trajectory] || "The arc changed.") : (control(ai?.trajectory) || "The arc changed."),
       subtitle: "A teaser from the growth report",
       stats: [
         { label: "Then", value: clampCopy(ai?.thenDepth || "Different energy", 24) },
@@ -5397,6 +5817,8 @@ const TOXICITY_SCREENS = 7;
 function ToxicityReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const t = useT();
   const loading = aiLoading && !ai;
+  const resultLang = normalizeUiLangCode(ai?.displayLanguage || "en");
+  const reportControl = (value) => translateControlValue(resultLang, value);
   const feedback = (cardTitle, cardIndex, enabled = true) => (
     enabled && resultId ? { resultId, reportType: "toxicity", cardIndex, cardTitle } : null
   );
@@ -5460,7 +5882,7 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
 
     <Shell sec="toxicity" prog={6} total={TOXICITY_SCREENS} feedback={feedback("Power balance", 6)}>
       <T>{t("Power balance")}</T>
-      <Big>{loading ? "…" : (ai?.powerHolder || t("Balanced"))}</Big>
+      <Big>{loading ? "…" : reportControl(ai?.powerHolder || t("Balanced"))}</Big>
       <AICard label={t("Power dynamic")} value={ai?.powerBalance} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
@@ -5486,6 +5908,8 @@ const LOVELANG_SCREENS = 5;
 function LoveLangReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const t = useT();
   const loading = aiLoading && !ai;
+  const resultLang = normalizeUiLangCode(ai?.displayLanguage || "en");
+  const reportControl = (value) => translateControlValue(resultLang, value);
   const personATitle = `${ai?.personA?.name || s.names[0]}'s love language`;
   const personBTitle = `${ai?.personB?.name || s.names[1] || s.names[0]}'s love language`;
   const feedback = (cardTitle, cardIndex, enabled = true) => (
@@ -5496,7 +5920,7 @@ function LoveLangReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
       <T>{loading ? "…" : t("{name}'s love language", { name: ai?.personA?.name || s.names[0] })}</T>
       <div style={{ marginTop:12, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
         <div style={{ fontSize:60, lineHeight:1 }}>{loading ? "💝" : (ai?.personA?.languageEmoji || "💝")}</div>
-        <Big>{loading ? "…" : (ai?.personA?.language || "—")}</Big>
+        <Big>{loading ? "…" : reportControl(ai?.personA?.language || "—")}</Big>
       </div>
       <AICard label={t("How they show it")} value={ai?.personA?.examples} loading={loading} />
       <Nav back={back} next={next} showBack={false} />
@@ -5506,7 +5930,7 @@ function LoveLangReportScreen({ s, ai, aiLoading, step, back, next, resultId }) 
       <T>{loading ? "…" : t("{name}'s love language", { name: ai?.personB?.name || s.names[1]||s.names[0] })}</T>
       <div style={{ marginTop:12, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
         <div style={{ fontSize:60, lineHeight:1 }}>{loading ? "💝" : (ai?.personB?.languageEmoji || "💝")}</div>
-        <Big>{loading ? "…" : (ai?.personB?.language || "—")}</Big>
+        <Big>{loading ? "…" : reportControl(ai?.personB?.language || "—")}</Big>
       </div>
       <AICard label={t("How they show it")} value={ai?.personB?.examples} loading={loading} />
       <Nav back={back} next={next} />
@@ -5544,6 +5968,8 @@ const GROWTH_SCREENS = 5;
 function GrowthReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const t = useT();
   const loading = aiLoading && !ai;
+  const resultLang = normalizeUiLangCode(ai?.displayLanguage || "en");
+  const reportControl = (value) => translateControlValue(resultLang, value);
   const arrowMap = { deeper:"↑", shallower:"↓", "about the same":"→" };
   const trajMap  = { closer:"Getting closer", drifting:"Drifting apart", stable:"Holding steady" };
   const feedback = (cardTitle, cardIndex, enabled = true) => (
@@ -5563,7 +5989,7 @@ function GrowthReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
         </div>
       </div>
       {!loading && ai?.depthChange && (
-        <Sub mt={8}>Conversations got <strong style={{color:"#3AF0C0"}}>{ai.depthChange}</strong> {arrowMap[ai.depthChange]||""} over time.</Sub>
+        <Sub mt={8}>Conversations got <strong style={{color:"#3AF0C0"}}>{reportControl(ai.depthChange)}</strong> {arrowMap[ai.depthChange]||""} over time.</Sub>
       )}
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
@@ -5584,7 +6010,7 @@ function GrowthReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
 
     <Shell sec="growth" prog={4} total={GROWTH_SCREENS} feedback={feedback("Relationship trajectory", 4)}>
       <T>{t("Relationship trajectory")}</T>
-      <Big>{loading ? "…" : (trajMap[ai?.trajectory]||ai?.trajectory||"—")}</Big>
+      <Big>{loading ? "…" : (resultLang === "en" ? (trajMap[ai?.trajectory] || ai?.trajectory || "—") : reportControl(ai?.trajectory || "—"))}</Big>
       <AICard label={t("What the data shows")} value={ai?.trajectoryDetail} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
@@ -5706,6 +6132,8 @@ const ENERGY_SCREENS = 6;
 function EnergyReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const t = useT();
   const loading = aiLoading && !ai;
+  const resultLang = normalizeUiLangCode(ai?.displayLanguage || "en");
+  const reportControl = (value) => translateControlValue(resultLang, value);
   const personATitle = `${ai?.personA?.name || s.names[0]}'s energy`;
   const personBTitle = `${ai?.personB?.name || s.names[1] || s.names[0]}'s energy`;
   const feedback = (cardTitle, cardIndex, enabled = true) => (
@@ -5719,7 +6147,7 @@ function EnergyReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
           <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
             <ScoreRing score={loading ? 0 : (p.netScore||5)} max={10} size={90} color={i===0?"#F0A040":"#F0C860"} />
             <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.7)" }}>{p.name}</div>
-            <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", textAlign:"center" }}>{loading ? "…" : (p.type||"")}</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", textAlign:"center" }}>{loading ? "…" : reportControl(p.type || "")}</div>
           </div>
         ))}
       </div>
@@ -6707,13 +7135,14 @@ function pushSummaryRow(rows, label, value, max = 140) {
   rows.push({ label, value: cleanQuote(text, max) });
 }
 
-function buildFeedbackSummary(feedbackRow, resultRow) {
+function buildFeedbackSummary(feedbackRow, resultRow, viewLang = "en") {
   if (!feedbackRow || !resultRow) return [];
   const math = resultRow.math_data || {};
   const ai = resultRow.result_data || {};
   const rows = [];
   const card = Number(feedbackRow.card_index || 0);
   const isGroup = !!math.isGroup;
+  const control = (value) => translateControlValue(viewLang, value);
 
   if (feedbackRow.report_type === "general") {
     if (!isGroup) {
@@ -6793,17 +7222,17 @@ function buildFeedbackSummary(feedbackRow, resultRow) {
     } else if (card === 5) {
       pushSummaryRow(rows, "Conflict pattern", ai.conflictPattern);
     } else if (card === 6) {
-      pushSummaryRow(rows, "Power holder", ai.powerHolder);
+      pushSummaryRow(rows, "Power holder", control(ai.powerHolder));
       pushSummaryRow(rows, "Dynamic", ai.powerBalance);
     }
   } else if (feedbackRow.report_type === "lovelang") {
     if (card === 1) {
       pushSummaryRow(rows, "Person", ai.personA?.name);
-      pushSummaryRow(rows, "Language", ai.personA?.language);
+      pushSummaryRow(rows, "Language", control(ai.personA?.language));
       pushSummaryRow(rows, "Examples", ai.personA?.examples);
     } else if (card === 2) {
       pushSummaryRow(rows, "Person", ai.personB?.name);
-      pushSummaryRow(rows, "Language", ai.personB?.language);
+      pushSummaryRow(rows, "Language", control(ai.personB?.language));
       pushSummaryRow(rows, "Examples", ai.personB?.examples);
     } else if (card === 3) {
       pushSummaryRow(rows, "Mismatch", ai.mismatch);
@@ -6817,7 +7246,7 @@ function buildFeedbackSummary(feedbackRow, resultRow) {
     if (card === 1) {
       pushSummaryRow(rows, "Early", ai.thenDepth);
       pushSummaryRow(rows, "Recent", ai.nowDepth);
-      pushSummaryRow(rows, "Change", ai.depthChange);
+      pushSummaryRow(rows, "Change", control(ai.depthChange));
     } else if (card === 2) {
       pushSummaryRow(rows, "Changed more", ai.whoChangedMore);
       pushSummaryRow(rows, "How", ai.whoChangedHow);
@@ -6825,7 +7254,7 @@ function buildFeedbackSummary(feedbackRow, resultRow) {
       pushSummaryRow(rows, "Appeared", ai.topicsAppeared);
       pushSummaryRow(rows, "Faded", ai.topicsDisappeared);
     } else if (card === 4) {
-      pushSummaryRow(rows, "Trajectory", ai.trajectory);
+      pushSummaryRow(rows, "Trajectory", control(ai.trajectory));
       pushSummaryRow(rows, "Detail", ai.trajectoryDetail);
     } else if (card === 5) {
       pushSummaryRow(rows, "Arc", ai.arcSummary);
@@ -6876,10 +7305,11 @@ function buildFeedbackSummary(feedbackRow, resultRow) {
   return rows.slice(0, 6);
 }
 
-function AdminFeedbackInbox({ onBack, onLogout }) {
+function AdminFeedbackInbox({ onBack }) {
   const [rows, setRows] = useState(null);
   const [resultsById, setResultsById] = useState({});
   const [err, setErr] = useState("");
+  const [viewLangById, setViewLangById] = useState({});
 
   useEffect(() => {
     let alive = true;
@@ -6903,6 +7333,7 @@ function AdminFeedbackInbox({ onBack, onLogout }) {
       const resultIds = Array.from(new Set(list.map(item => item.result_id).filter(Boolean)));
       if (!resultIds.length) {
         setResultsById({});
+        setViewLangById({});
         return;
       }
 
@@ -6917,7 +7348,6 @@ function AdminFeedbackInbox({ onBack, onLogout }) {
         setResultsById({});
         return;
       }
-
       setResultsById(Object.fromEntries((results || []).map(row => [row.id, row])));
     };
 
@@ -6982,8 +7412,15 @@ function AdminFeedbackInbox({ onBack, onLogout }) {
 
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:12, maxHeight:"62vh", overflowY:"auto", paddingRight:2 }}>
         {rows?.map(row => {
-          const resultRow  = resultsById[row.result_id];
-          const summaryRows = buildFeedbackSummary(row, resultRow);
+          const baseResultRow = resultsById[row.result_id];
+          const resultData = baseResultRow?.result_data;
+          const translatedLang = getStoredResultDisplayLanguage(resultData);
+          const hasTranslation = translatedLang !== "en" && !!getStoredResultTranslations(resultData)?.[translatedLang];
+          const selectedLang = hasTranslation ? (viewLangById[row.id] || translatedLang) : "en";
+          const resultRow = baseResultRow
+            ? { ...baseResultRow, result_data: getDisplayResultData(baseResultRow.result_data, selectedLang) }
+            : baseResultRow;
+          const summaryRows = buildFeedbackSummary(row, resultRow, selectedLang);
           const namesLabel = Array.isArray(resultRow?.names) && resultRow.names.length
             ? `${resultRow.names.slice(0, 3).join(", ")}${resultRow.names.length > 3 ? ` +${resultRow.names.length - 3}` : ""}`
             : "";
@@ -7013,9 +7450,52 @@ function AdminFeedbackInbox({ onBack, onLogout }) {
                       </div>
                     )}
                   </div>
-                  {/* error type badge */}
-                  <div style={{ flexShrink:0, background:tagStyle.bg, border:`1px solid ${tagStyle.border}`, borderRadius:999, padding:"5px 11px", fontSize:12, fontWeight:700, color:tagStyle.text, whiteSpace:"nowrap" }}>
-                    {row.error_type || "Other"}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+                    {hasTranslation && (
+                      <div style={{ position:"relative", display:"inline-flex", alignItems:"center", padding:3, borderRadius:999, border:"1px solid rgba(255,255,255,0.12)", background:"rgba(255,255,255,0.05)" }}>
+                        <div
+                          style={{
+                            position:"absolute",
+                            top:3,
+                            bottom:3,
+                            left: selectedLang === "en" ? 3 : "calc(50% + 1.5px)",
+                            width:"calc(50% - 3px)",
+                            borderRadius:999,
+                            background:"rgba(255,255,255,0.14)",
+                            transition:"left 0.18s ease",
+                          }}
+                        />
+                        {[
+                          { code: "en", label: "English" },
+                          { code: translatedLang, label: LANG_META[translatedLang] || translatedLang.toUpperCase() },
+                        ].map(opt => (
+                          <button
+                            key={`${row.id}-${opt.code}`}
+                            type="button"
+                            onClick={() => setViewLangById(prev => ({ ...prev, [row.id]: opt.code }))}
+                            className="wc-btn"
+                            style={{
+                              position:"relative",
+                              zIndex:1,
+                              minWidth:74,
+                              border:"none",
+                              background:"transparent",
+                              color: selectedLang === opt.code ? "#fff" : "rgba(255,255,255,0.52)",
+                              fontSize:11,
+                              fontWeight:800,
+                              letterSpacing:"0.04em",
+                              padding:"7px 12px",
+                              cursor:"pointer",
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ background:tagStyle.bg, border:`1px solid ${tagStyle.border}`, borderRadius:999, padding:"5px 11px", fontSize:12, fontWeight:700, color:tagStyle.text, whiteSpace:"nowrap" }}>
+                      {row.error_type || "Other"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -7101,13 +7581,14 @@ function MyResults({ onBack, onRestoreResult }) {
   };
 
   const headline = (row) => {
-    const ai   = row.result_data || {};
+    const displayLang = getStoredResultDisplayLanguage(row.result_data);
+    const ai   = getDisplayResultData(row.result_data, displayLang);
     const math = row.math_data   || {};
     switch (row.report_type) {
       case "general":  return `${(math.totalMessages || 0).toLocaleString()} messages`;
       case "toxicity": return math.toxicityLevel || ai.toxicityLevel || "—";
       case "lovelang": return ai.compatibilityScore != null ? `${ai.compatibilityScore}/10 compatibility` : "—";
-      case "growth":   return ai.trajectory   || "—";
+      case "growth":   return translateControlValue(displayLang, ai.trajectory) || "—";
       case "accounta": return ai.overallVerdict || "—";
       case "energy":   return ai.compatibility  || "—";
       default:         return "—";
@@ -7358,18 +7839,22 @@ export default function App() {
 
       if (!data) return;
 
-      setAi(data.result_data || {});
+      const displayLang = getStoredResultDisplayLanguage(data.result_data);
+      const displayResult = getDisplayResultData(data.result_data, displayLang);
+
+      setAi(displayResult || {});
       if (data.result_data?.coreAnalysis?.part === "a") {
         setCoreAnalysisA(data.result_data.coreAnalysis);
-        setCoreAnalysisAKey(getCoreAnalysisCacheKey(data.math_data || null, data.result_data?.relationshipType ?? null));
+        setCoreAnalysisAKey(getCoreAnalysisCacheKey(data.math_data || null, data.result_data?.relationshipType ?? null, "en"));
       } else if (data.result_data?.coreAnalysis?.part === "b") {
         setCoreAnalysisB(data.result_data.coreAnalysis);
-        setCoreAnalysisBKey(getCoreAnalysisCacheKey(data.math_data || null, data.result_data?.relationshipType ?? null));
+        setCoreAnalysisBKey(getCoreAnalysisCacheKey(data.math_data || null, data.result_data?.relationshipType ?? null, "en"));
       }
       setMath(data.math_data || null);
       setReportType(data.report_type || null);
       setCurrentResultId(data.id || null);
-      setRelationshipType(data.result_data?.relationshipType ?? null);
+      setRelationshipType(displayResult?.relationshipType ?? null);
+      setChatLang(displayLang);
       setAiLoading(false);
       setStep(0);
       setDir("fwd");
@@ -7480,11 +7965,11 @@ export default function App() {
     setSid(s => s+1);
   };
 
-  const generatePipelineResult = async (type, relType, lang) => {
+  const generatePipelineResult = async (type, relType) => {
     const pipeline = REPORT_PIPELINES[type];
     if (pipeline?.strategy !== "core") return {};
 
-    const cacheKey = getCoreAnalysisCacheKey(math, relType, lang);
+    const cacheKey = getCoreAnalysisCacheKey(math, relType, "en");
     const useCoreA = pipeline.cache === "a";
     let core = useCoreA
       ? (coreAnalysisAKey === cacheKey ? coreAnalysisA : null)
@@ -7492,8 +7977,8 @@ export default function App() {
 
     if (!core) {
       core = useCoreA
-        ? await generateCoreAnalysisA(messages, math, relType, lang)
-        : await generateCoreAnalysisB(messages, math, relType, lang);
+        ? await generateCoreAnalysisA(messages, math, relType, "en")
+        : await generateCoreAnalysisB(messages, math, relType, "en");
       if (useCoreA) {
         setCoreAnalysisA(core);
         setCoreAnalysisAKey(cacheKey);
@@ -7516,11 +8001,21 @@ export default function App() {
     setCurrentResultId(null);
     let result = null;
     try {
-      result = await generatePipelineResult(type, relType, chatLang);
+      const canonicalResult = await generatePipelineResult(type, relType);
+      let translationOverlay = null;
+      if (chatLang !== "en") {
+        try {
+          translationOverlay = await translateResultOverlay(type, canonicalResult, chatLang);
+        } catch (translationError) {
+          console.error(`Translation failed for report "${type}" [lang=${chatLang}]`, translationError);
+        }
+      }
+      result = buildStoredResultData(canonicalResult, translationOverlay ? chatLang : "en", translationOverlay);
     } catch (error) {
       console.error(`Analysis failed for report "${type}" [lang=${chatLang}]`, error);
     }
-    setAi(result || {});
+    const displayLang = result ? getStoredResultDisplayLanguage(result) : "en";
+    setAi(result ? getDisplayResultData(result, displayLang) : {});
     // Always attempt to save so resultId exists and feedback buttons render.
     // An empty result is still a valid DB row — it lets users flag a failed card.
     const saved = await saveResult(type, result || {}, math);
@@ -7583,7 +8078,7 @@ export default function App() {
     closeFeedback(true);
     if (ok) setFeedbackThanks(true);
   };
-  const shareCardData = buildShareCardData({ math, ai, reportType });
+  const shareCardData = buildShareCardData({ math, ai, reportType, displayLang: ai?.displayLanguage || chatLang });
   const shareFilename = `wrapchat-${reportType || "general"}-card.png`;
 
   const handleShareResult = async () => {
@@ -7667,17 +8162,19 @@ export default function App() {
 
   const onRestoreResult = (row) => {
     setMath(row.math_data);
-    setAi(row.result_data);
+    const displayLang = getStoredResultDisplayLanguage(row.result_data);
+    setAi(getDisplayResultData(row.result_data, displayLang));
     if (row.result_data?.coreAnalysis?.part === "a") {
       setCoreAnalysisA(row.result_data.coreAnalysis);
-      setCoreAnalysisAKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null));
+      setCoreAnalysisAKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null, "en"));
     } else if (row.result_data?.coreAnalysis?.part === "b") {
       setCoreAnalysisB(row.result_data.coreAnalysis);
-      setCoreAnalysisBKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null));
+      setCoreAnalysisBKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null, "en"));
     }
     setReportType(row.report_type);
     setCurrentResultId(row.id || null);
     setRelationshipType(row.result_data?.relationshipType ?? null);
+    setChatLang(displayLang);
     setAiLoading(false);
     setStep(0);
     setDir("fwd");
