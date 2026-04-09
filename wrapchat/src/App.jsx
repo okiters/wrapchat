@@ -4475,22 +4475,21 @@ function Card({ children, accent, style={} }) {
     </div>
   );
 }
-// Seeded pick — consistent within a session, different per chat
-// Seed is set once when chat is analysed, stored in module scope
-let _seed = Date.now();
-const setSeed = (n) => { _seed = n; };
-const seededRand = (offset) => {
-  let x = Math.sin(_seed + offset) * 10000;
-  return x - Math.floor(x);
+const stableHash = (value) => {
+  const str = String(value || "");
+  let hash = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    hash = ((hash * 31) + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
 };
-// Each call site passes a unique offset so different cards get different picks
-// but the same card always shows the same quip within a session
-let _pickCount = 0;
-const pick = arr => {
-  const idx = Math.floor(seededRand(_pickCount++) * arr.length);
+
+// Deterministic pick — stable across rerenders, sharing, and reopening saved reports.
+const pick = (arr, key = "") => {
+  if (!Array.isArray(arr) || !arr.length) return "";
+  const idx = stableHash(`${key}::${arr.join("\u241E")}`) % arr.length;
   return arr[idx];
 };
-const resetPicks = () => { _pickCount = 0; };
 
 const Quip = ({children}) => <div className="wc-fadeup-3" style={{ fontSize:14, textAlign:"center", color:"rgba(255,255,255,0.8)", background:"rgba(255,255,255,0.1)", padding:"12px 18px", borderRadius:18, width:"100%", lineHeight:1.55, fontStyle:"italic", fontWeight:500 }}>{children}</div>;
 
@@ -4559,121 +4558,151 @@ function FeedbackSheet({ open, target, selected, note, submitting, onSelect, onN
         display: "flex",
         alignItems: "flex-end",
         justifyContent: "center",
+        padding: "0 0 env(safe-area-inset-bottom, 0px)",
       }}
       onClick={onClose}
     >
       <div
         style={{
-          width: "min(420px, 100%)",
-          background: "#111118",
-          border: "1px solid rgba(255,255,255,0.10)",
-          borderRadius: "28px 28px 0 0",
-          padding: "10px 20px 32px",
-          boxShadow: "0 -20px 60px rgba(0,0,0,0.5)",
-          color: "#fff",
+          width: "min(420px, 100vw)",
+          display: "flex",
+          justifyContent: "center",
+          boxSizing: "border-box",
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* drag handle */}
-        <div style={{ width: 36, height: 4, borderRadius: 999, background: "rgba(255,255,255,0.14)", margin: "0 auto 20px" }} />
+        <div
+          style={{
+            width: "calc(100% - 12px)",
+            maxHeight: "min(72svh, 560px)",
+            background: "linear-gradient(180deg, #15151d 0%, #101017 100%)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            borderRadius: "28px 28px 0 0",
+            padding: "10px 14px calc(16px + env(safe-area-inset-bottom, 0px))",
+            boxShadow: "0 -20px 60px rgba(0,0,0,0.5)",
+            color: "#fff",
+            overflowY: "auto",
+            overflowX: "hidden",
+            overscrollBehavior: "contain",
+            scrollbarWidth: "thin",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* drag handle */}
+          <div style={{ width: 36, height: 4, borderRadius: 999, background: "rgba(255,255,255,0.14)", margin: "0 auto 16px" }} />
 
-        {/* header */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, marginBottom: 4 }}>{t("What's off about this?")}</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", fontWeight: 600, letterSpacing: "0.02em" }}>{target.cardTitle}</div>
-        </div>
+          {/* header */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5, marginBottom: 5, lineHeight: 1.2 }}>{t("What's off about this?")}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.42)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+              {target.reportType} · card {target.cardIndex}
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", fontWeight: 600, lineHeight: 1.45, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "10px 12px" }}>
+              {target.cardTitle}
+            </div>
+          </div>
 
-        {/* options */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-          {FEEDBACK_OPTIONS.map(option => {
-            const active = selected === option;
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => onSelect(option)}
-                className="wc-btn"
-                style={{
-                  border: `1px solid ${active ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.12)"}`,
-                  borderRadius: 999,
-                  padding: "8px 14px",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
+          {/* options */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 14 }}>
+            {FEEDBACK_OPTIONS.map(option => {
+              const active = selected === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => onSelect(option)}
+                  className="wc-btn"
+                  style={{
+                    minHeight: 42,
+                    border: `1px solid ${active ? "rgba(255,255,255,0.38)" : "rgba(255,255,255,0.10)"}`,
+                    borderRadius: 16,
+                    padding: "10px 12px",
+                    fontSize: 13,
+                    lineHeight: 1.25,
+                    fontWeight: 700,
+                    cursor: "pointer",
                   transition: "all 0.15s",
-                  background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.06)",
-                  color: active ? "#fff" : "rgba(255,255,255,0.65)",
+                  background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.05)",
+                  color: active ? "#fff" : "rgba(255,255,255,0.72)",
+                  textAlign: "center",
+                  boxSizing: "border-box",
                 }}
               >
                 {t(option)}
               </button>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        {/* optional note */}
-        <input
-          type="text"
-          value={note}
-          onChange={e => onNoteChange(e.target.value)}
-          placeholder={t("Optional note")}
-          style={{
-            width: "100%",
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            borderRadius: 14,
-            padding: "12px 14px",
-            fontSize: 14,
-            color: "#fff",
-            outline: "none",
-            fontFamily: "inherit",
-            marginBottom: 16,
-          }}
-        />
-
-        {/* actions */}
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="wc-btn"
+          {/* optional note */}
+          <textarea
+            value={note}
+            onChange={e => onNoteChange(e.target.value)}
+            placeholder={t("Optional note")}
+            rows={3}
             style={{
-              flex: 1,
-              border: "1px solid rgba(255,255,255,0.12)",
+              width: "100%",
+              resize: "none",
               background: "rgba(255,255,255,0.06)",
-              color: "rgba(255,255,255,0.6)",
+              border: "1px solid rgba(255,255,255,0.10)",
+              borderRadius: 16,
+              padding: "12px 14px",
               fontSize: 14,
-              fontWeight: 700,
-              cursor: "pointer",
-              padding: "12px 0",
-              borderRadius: 50,
-              transition: "all 0.15s",
-            }}
-          >
-            {t("Cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            className="wc-btn"
-            disabled={!selected || submitting}
-            style={{
-              flex: 2,
-              padding: "12px 0",
-              borderRadius: 50,
-              border: "none",
-              background: !selected || submitting ? "rgba(255,255,255,0.08)" : PAL.upload.inner,
+              lineHeight: 1.45,
               color: "#fff",
-              fontSize: 14,
-              fontWeight: 800,
-              cursor: !selected || submitting ? "default" : "pointer",
-              opacity: !selected || submitting ? 0.45 : 1,
-              transition: "all 0.15s",
-              letterSpacing: 0.1,
+              outline: "none",
+              fontFamily: "inherit",
+              marginBottom: 14,
+              boxSizing: "border-box",
             }}
-          >
-            {submitting ? t("Sending…") : t("Submit")}
-          </button>
+          />
+
+          {/* actions */}
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.35fr)", gap: 10 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              className="wc-btn"
+              style={{
+                minHeight: 46,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.06)",
+                color: "rgba(255,255,255,0.68)",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                padding: "12px 10px",
+                borderRadius: 16,
+                transition: "all 0.15s",
+                boxSizing: "border-box",
+              }}
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              className="wc-btn"
+              disabled={!selected || submitting}
+              style={{
+                minHeight: 46,
+                padding: "12px 10px",
+                borderRadius: 16,
+                border: "none",
+                background: !selected || submitting ? "rgba(255,255,255,0.08)" : PAL.upload.inner,
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: !selected || submitting ? "default" : "pointer",
+                opacity: !selected || submitting ? 0.45 : 1,
+                transition: "all 0.15s",
+                letterSpacing: 0.1,
+                boxSizing: "border-box",
+              }}
+            >
+              {submitting ? t("Sending…") : t("Submit")}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -4851,7 +4880,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Sub mt={14}>{t("{pct}% of all messages came from {name}.", { pct: pct0, name: s.names[0] })}</Sub>
       {(() => {
       const name = s.names[pct0>=50?0:1];
-      const q = pick(t("quips.duo.obsessed", { name }));
+      const q = pick(t("quips.duo.obsessed", { name }), `duo-obsessed|${s.names.join("|")}|${s.totalMessages}|${name}|${pct0}`);
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} showBack={false} />
@@ -4863,7 +4892,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
           <T>{t("Response times")}</T>
           <Big>{t("Balanced")}</Big>
           <Sub>{t("{name} avg reply:", { name: s.names[0] })} <strong style={{color:"#fff"}}>{s.ghostAvg[0]}</strong>&nbsp;&nbsp;{t("{name} avg reply:", { name: s.names[1] })} <strong style={{color:"#fff"}}>{s.ghostAvg[1]}</strong></Sub>
-          {(() => { const q = pick(t("quips.duo.responseBalanced")); return <Quip>{q}</Quip>; })()}
+          {(() => { const q = pick(t("quips.duo.responseBalanced"), `duo-response-balanced|${s.names.join("|")}|${s.totalMessages}|${s.ghostAvg.join("|")}`); return <Quip>{q}</Quip>; })()}
         </>
       ) : (
         <>
@@ -4871,7 +4900,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
           <Big>{s.ghostName}</Big>
           <Sub>{t("{name} avg reply:", { name: s.names[0] })} <strong style={{color:"#fff"}}>{s.ghostAvg[0]}</strong>&nbsp;&nbsp;{t("{name} avg reply:", { name: s.names[1] })} <strong style={{color:"#fff"}}>{s.ghostAvg[1]}</strong></Sub>
           <AICard label={t("What's really going on")} value={ai?.ghostContext} loading={aiLoading} />
-          {(() => { const q = pick(t("quips.duo.ghost", { name: s.ghostName })); return <Quip>{q}</Quip>; })()}
+          {(() => { const q = pick(t("quips.duo.ghost", { name: s.ghostName }), `duo-ghost|${s.names.join("|")}|${s.totalMessages}|${s.ghostName}|${s.ghostAvg.join("|")}`); return <Quip>{q}</Quip>; })()}
         </>
       )}
       <Nav back={back} next={next} />
@@ -4882,7 +4911,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Big>{s.convKiller}</Big>
       <Sub>{t("Sends the last message that nobody replies to — {count} times.", { count: s.convKillerCount })}</Sub>
       {(() => {
-      const q = pick(t("quips.duo.lastWord", { name: s.convKiller }));
+      const q = pick(t("quips.duo.lastWord", { name: s.convKiller }), `duo-last-word|${s.names.join("|")}|${s.totalMessages}|${s.convKiller}|${s.convKillerCount}`);
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} />
@@ -4894,12 +4923,12 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Sub>{t("Texted every single day for {count} days straight.", { count: s.streak })}</Sub>
       {(() => {
         const q = s.streak >= 100
-          ? pick(t("quips.duo.streak100", { streak: s.streak }))
+          ? pick(t("quips.duo.streak100", { streak: s.streak }), `duo-streak100|${s.names.join("|")}|${s.totalMessages}|${s.streak}`)
           : s.streak >= 30
-            ? pick(t("quips.duo.streak30", { streak: s.streak }))
+            ? pick(t("quips.duo.streak30", { streak: s.streak }), `duo-streak30|${s.names.join("|")}|${s.totalMessages}|${s.streak}`)
             : s.streak >= 10
-              ? pick(t("quips.duo.streak10", { streak: s.streak }))
-              : pick(t("quips.duo.streakShort", { streak: s.streak }));
+              ? pick(t("quips.duo.streak10", { streak: s.streak }), `duo-streak10|${s.names.join("|")}|${s.totalMessages}|${s.streak}`)
+              : pick(t("quips.duo.streakShort", { streak: s.streak }), `duo-streak-short|${s.names.join("|")}|${s.totalMessages}|${s.streak}`);
         return <Quip>{q}</Quip>;
       })()}
       <Nav back={back} next={next} />
@@ -4926,7 +4955,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <Big>{s.convStarter}</Big>
       <Sub>{t("Started {pct} of all conversations.", { pct: s.convStarterPct })}</Sub>
       {(() => {
-      const q = pick(t("quips.duo.convStarter", { name: s.convStarter }));
+      const q = pick(t("quips.duo.convStarter", { name: s.convStarter }), `duo-conv-starter|${s.names.join("|")}|${s.totalMessages}|${s.convStarter}|${s.convStarterPct}`);
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} />
@@ -4994,8 +5023,8 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
           </div>
           {(() => {
             const q = isSimilar
-              ? pick(t("quips.duo.messageLengthSimilar"))
-              : pick(t("quips.duo.messageLengthDifferent", { novelist, texter }));
+              ? pick(t("quips.duo.messageLengthSimilar"), `duo-msg-length-similar|${s.names.join("|")}|${s.totalMessages}|${s.avgMsgLen.join("|")}|${s.maxMsgLen?.join("|") || ""}`)
+              : pick(t("quips.duo.messageLengthDifferent", { novelist, texter }), `duo-msg-length-different|${s.names.join("|")}|${s.totalMessages}|${novelist}|${texter}|${s.avgMsgLen.join("|")}|${s.maxMsgLen?.join("|") || ""}`);
             return <Quip>{q}</Quip>;
           })()}
         </>;
@@ -5135,7 +5164,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
         {s.names.slice(0,6).map((n,i)=><Bar key={n} value={s.msgCounts[i]} max={mMax} color={COLORS[i%COLORS.length]} label={n} delay={i*80} />)}
       </div>
       {(() => {
-      const q = pick(t("quips.group.mainCharacter", { name: s.mainChar }));
+      const q = pick(t("quips.group.mainCharacter", { name: s.mainChar }), `group-main-character|${s.names.join("|")}|${s.totalMessages}|${s.mainChar}|${s.msgCounts.join("|")}`);
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} showBack={false} />
@@ -5146,7 +5175,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Big>{s.ghost}</Big>
       <Sub>{t("{count} messages total. Why are they even here?", { count: s.msgCounts[s.msgCounts.length-1].toLocaleString() })}</Sub>
       {(() => {
-      const q = pick(t("quips.group.ghost", { name: s.ghost }));
+      const q = pick(t("quips.group.ghost", { name: s.ghost }), `group-ghost|${s.names.join("|")}|${s.totalMessages}|${s.ghost}|${s.msgCounts.join("|")}`);
       return <Quip>{q}</Quip>;
     })()}
       <AICard label={t("What's really going on")} value={ai?.ghostContext} loading={aiLoading} />
@@ -5158,7 +5187,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Big>{s.convKiller}</Big>
       <Sub>{t("Sends the last message that nobody replies to.")}</Sub>
       {(() => {
-      const q = pick(t("quips.group.lastWord", { name: s.convKiller }));
+      const q = pick(t("quips.group.lastWord", { name: s.convKiller }), `group-last-word|${s.names.join("|")}|${s.totalMessages}|${s.convKiller}|${s.convKillerCount}`);
       return <Quip>{q}</Quip>;
     })()}
       <Nav back={back} next={next} />
@@ -5179,12 +5208,12 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
       <Sub>{t("The group kept the chat alive for {count} days straight.", { count: s.streak })}</Sub>
       {(() => {
         const q = s.streak >= 100
-          ? pick(t("quips.group.streak100", { streak: s.streak }))
+          ? pick(t("quips.group.streak100", { streak: s.streak }), `group-streak100|${s.names.join("|")}|${s.totalMessages}|${s.streak}`)
           : s.streak >= 30
-            ? pick(t("quips.group.streak30", { streak: s.streak }))
+            ? pick(t("quips.group.streak30", { streak: s.streak }), `group-streak30|${s.names.join("|")}|${s.totalMessages}|${s.streak}`)
             : s.streak >= 10
-              ? pick(t("quips.group.streak10", { streak: s.streak }))
-              : pick(t("quips.group.streakShort", { streak: s.streak }));
+              ? pick(t("quips.group.streak10", { streak: s.streak }), `group-streak10|${s.names.join("|")}|${s.totalMessages}|${s.streak}`)
+              : pick(t("quips.group.streakShort", { streak: s.streak }), `group-streak-short|${s.names.join("|")}|${s.totalMessages}|${s.streak}`);
         return <Quip>{q}</Quip>;
       })()}
       <Nav back={back} next={next} />
@@ -5239,7 +5268,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
         </div>
       </div>
       {s.novelistLongestTopic && <Sub mt={8}>{t("Their longest message was mostly about \"{topic}\".", { topic: s.novelistLongestTopic })}</Sub>}
-      <Quip>{pick(t("quips.group.novelist", { name: s.novelist }))}</Quip>
+      <Quip>{pick(t("quips.group.novelist", { name: s.novelist }), `group-novelist|${s.names.join("|")}|${s.totalMessages}|${s.novelist}|${s.novelistMaxLen}`)}</Quip>
       <Nav back={back} next={next} />
     </Shell>,
 
@@ -7087,8 +7116,10 @@ function MyResults({ onBack, onRestoreResult }) {
   return (
     <Shell sec="upload" prog={0} total={0}>
       {/* Header row — title + Edit/Done */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%" }}>
-        <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1 }}>My Results</div>
+      <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"flex-end", width:"100%", minHeight:36 }}>
+        <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)", fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1, textAlign:"center", pointerEvents:"none", whiteSpace:"nowrap" }}>
+          My Results
+        </div>
         {rows?.length > 0 && (
           <button
             type="button"
@@ -7435,8 +7466,6 @@ export default function App() {
     const detected = detectLanguage(cappedMsgs);
     setDetectedLang(detected);
     setChatLang(detected.code);
-    setSeed((m?.totalMessages||1) * 31 + (m?.names?.[0]?.charCodeAt(0)||7) * 17);
-    resetPicks();
     setMessages(cappedMsgs);
     setMath(m);
     setAi(null);
