@@ -4325,11 +4325,6 @@ function Shell({ sec, prog, total, children, feedback=null }) {
           from { transform: translateX(var(--wc-enter-from)); }
           to   { transform: translateX(0); }
         }
-        @media (max-height: 820px) {
-          .wc-pane {
-            justify-content: flex-start !important;
-          }
-        }
       `}</style>
       <div className="wc-root" style={{
         width: "min(420px, 100vw)",
