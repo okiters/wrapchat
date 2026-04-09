@@ -4057,10 +4057,23 @@ function ShareCardRenderer({ cardData, captureRef, cardSize }) {
   const inset = Math.round(width * 0.022);
 
   return (
-    <div style={{ position:"fixed", left:"-200vw", top:0, width, height, pointerEvents:"none", opacity:1 }}>
+    <div
+      aria-hidden="true"
+      style={{
+        position:"fixed",
+        inset:0,
+        pointerEvents:"none",
+        overflow:"hidden",
+        opacity:0,
+        zIndex:-1,
+      }}
+    >
       <div
         ref={captureRef}
         style={{
+          position:"absolute",
+          left:-(width + 200),
+          top:0,
           width,
           height,
           boxSizing:"border-box",
@@ -4312,6 +4325,11 @@ function Shell({ sec, prog, total, children, feedback=null }) {
           from { transform: translateX(var(--wc-enter-from)); }
           to   { transform: translateX(0); }
         }
+        @media (max-height: 820px) {
+          .wc-pane {
+            justify-content: flex-start !important;
+          }
+        }
       `}</style>
       <div className="wc-root" style={{
         width: "min(420px, 100vw)",
@@ -4397,31 +4415,36 @@ function Shell({ sec, prog, total, children, feedback=null }) {
         )}
 
         {/* ── SLIDING CONTENT AREA ── */}
-        <div style={{ flex:1, position:"relative", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+        <div style={{ flex:1, minHeight:0, position:"relative", overflow:"hidden", display:"flex", flexDirection:"column" }}>
           {/* Outgoing content */}
           {exitContent && (
-            <div style={{
+            <div className="wc-pane" style={{
               position:"absolute", inset:0,
               display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-              padding:"16px 20px 24px", gap:10,
+              padding:"16px 20px calc(24px + env(safe-area-inset-bottom, 0px))", gap:10,
               transform:`translateX(${exitTo})`,
               transition:`transform ${SLIDE_MS}ms ${SLIDE_EASE}`,
               willChange:"transform",
               pointerEvents:"none",
+              overflowY:"auto",
             }}>
               {exitContent.node}
             </div>
           )}
           {/* Incoming content */}
-          <div style={{
+          <div className="wc-pane" style={{
             position: exitContent ? "absolute" : "relative",
             inset: exitContent ? 0 : "auto",
             flex: exitContent ? "none" : 1,
             display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-            padding:"16px 20px 24px", gap:10,
+            width:"100%",
+            minHeight:0,
+            padding:"16px 20px calc(24px + env(safe-area-inset-bottom, 0px))", gap:10,
             animation: exitContent ? `wcContentIn ${SLIDE_MS}ms ${SLIDE_EASE} both` : "none",
             ["--wc-enter-from"]: enterFrom,
             willChange: exitContent ? "transform" : "auto",
+            overflowY:"auto",
+            overscrollBehavior:"contain",
           }}>
             {children}
           </div>
@@ -6348,6 +6371,7 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
   const fileRef = useRef();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const showAdminEntry = Boolean(onAdmin) && ADMIN_EMAILS.length > 0;
   const handle = file => {
     if (!file) return;
     if (file.size > 50 * 1024 * 1024) {
@@ -6411,19 +6435,33 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
       </div>
       {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
       <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>{t("Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.")}</div>
-      <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
+      <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap", width:"100%", marginTop:4 }}>
         {onHistory && (
-          <button onClick={onHistory} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
+          <button onClick={onHistory} className="wc-btn" style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:999, color:"rgba(255,255,255,0.72)", fontSize:12, cursor:"pointer", padding:"8px 14px", fontWeight:700, letterSpacing:0.1 }}>
             {t("My Results")}
           </button>
         )}
-        {canAdmin && onAdmin && (
-          <button onClick={onAdmin} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
+        {showAdminEntry && (
+          <button
+            onClick={onAdmin}
+            className="wc-btn"
+            style={{
+              background:canAdmin ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
+              border:"1px solid rgba(255,255,255,0.1)",
+              borderRadius:999,
+              color:canAdmin ? "#fff" : "rgba(255,255,255,0.68)",
+              fontSize:12,
+              cursor:"pointer",
+              padding:"8px 14px",
+              fontWeight:700,
+              letterSpacing:0.1,
+            }}
+          >
             {t("Feedback Inbox")}
           </button>
         )}
         {onLogout && (
-          <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
+          <button onClick={onLogout} className="wc-btn" style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:999, color:"rgba(255,255,255,0.58)", fontSize:12, cursor:"pointer", padding:"8px 14px", fontWeight:700, letterSpacing:0.1 }}>
             {t("Log out")}
           </button>
         )}
