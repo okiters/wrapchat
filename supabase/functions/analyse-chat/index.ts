@@ -75,7 +75,20 @@ serve(async (req) => {
 
     const data = await res.json();
     const raw = data.content?.[0]?.text?.trim() ?? "{}";
-    const parsed = JSON.parse(raw.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim());
+
+    // Strip markdown fences first
+    const stripped = raw.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+
+    // Try direct parse; if that fails, extract the first {...} block to handle
+    // non-English preamble/suffix that Claude may add around the JSON object
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stripped);
+    } catch {
+      const match = stripped.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error("No JSON object found in response");
+      parsed = JSON.parse(match[0]);
+    }
 
     return new Response(
       JSON.stringify(parsed),

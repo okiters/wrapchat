@@ -1,12 +1,50 @@
 import { useState, useEffect, useLayoutEffect, useRef, createContext, useContext } from "react";
+import html2canvas from "html2canvas";
 import { supabase } from "./supabase";
+import partnerIcon from "../../assets/partner.svg";
+import datingIcon from "../../assets/dating.svg";
+import exIcon from "../../assets/ex.svg";
+import familyIcon from "../../assets/family.svg";
+import friendIcon from "../../assets/friend.svg";
+import colleagueIcon from "../../assets/colleage.svg";
+import otherIcon from "../../assets/other.svg";
 
 // Provided by App during the results phase; Shell reads it to show the close button.
 // null means "no close button" (upload, auth, loading, etc.)
 const CloseResultsContext = createContext(null);
+const ShareResultsContext = createContext(null);
+const FeedbackContext = createContext(null);
 
 // Provided by Slide; Shell reads it to animate only its content area.
 const SlideContext = createContext({ dir: "fwd", id: 0 });
+
+// UI language preference — "english" stores as-is, "auto" follows detected chat lang.
+// uiLang is the resolved code ("en","tr","es","pt","ar","fr","de","it").
+const UILanguageContext = createContext({ uiLang: "en", uiLangPref: "english", updateUiLangPref: () => {} });
+function useUILanguage() { return useContext(UILanguageContext); }
+
+function isAdminUser(user) {
+  const email = String(user?.email || "").trim().toLowerCase();
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email);
+}
+
+const FEEDBACK_OPTIONS = [
+  "Events are mixing",
+  "Wrong person",
+  "Didn't happen",
+  "Tone misread",
+  "Overclaiming",
+  "Missing context",
+  "Other",
+];
+
+const ADMIN_EMAILS = Array.from(new Set(
+  String(import.meta.env.VITE_ADMIN_EMAILS || import.meta.env.VITE_ADMIN_EMAIL || "")
+    .split(",")
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean)
+));
 
 // ─────────────────────────────────────────────────────────────────
 // PARSER
@@ -1157,7 +1195,7 @@ function buildLangInstruction(chatLang) {
   if (!chatLang || chatLang === "en") return "";
   const label = LANG_META[chatLang];
   if (!label) return "";
-  return ` LANGUAGE INSTRUCTION: This chat is primarily in ${label}. Write ALL descriptive fields — observations, summaries, verdicts, labels, and any paraphrased or quoted text you compose — in ${label}. JSON keys must stay in English. Names must appear exactly as they do in the chat.`;
+  return `\n\nLANGUAGE INSTRUCTION: You must respond entirely in ${label}. Every field in your JSON response must be written in ${label}. Do not use English unless ${label} is English. If you cannot confidently respond in ${label}, default to English.`;
 }
 
 function buildAnalystSystemPrompt(role, relationshipType, extraRules = "", chatLang = "en") {
@@ -1680,6 +1718,7 @@ ${chatText}
 Return exactly this JSON structure:
 ${fields}`;
 
+  if (import.meta.env.DEV) console.log("[CoreA] chatLang:", chatLang, "| system prompt tail:", system.slice(-200));
   const raw = await callClaude(system, userContent, CORE_A_MAX_TOKENS);
   return normalizeCoreAnalysisA(raw, math, relationshipType);
 }
@@ -1763,6 +1802,7 @@ ${chatText}
 Return exactly this JSON structure:
 ${fields}`;
 
+  if (import.meta.env.DEV) console.log("[CoreB] chatLang:", chatLang, "| system prompt tail:", system.slice(-200));
   const raw = await callClaude(system, userContent, CORE_B_MAX_TOKENS);
   return normalizeCoreAnalysisB(raw, math, relationshipType);
 }
@@ -1870,6 +1910,312 @@ const PILL_LABEL = {
   roast:"The Roast", lovely:"The Lovely", funny:"The Funny", stats:"The Stats", ai:"Insight", finale:"WrapChat",
   toxicity:"Toxicity Report", lovelang:"Love Language", growth:"Growth Report", accounta:"Accountability", energy:"Energy Report",
 };
+
+const SHARE_CARD_WIDTH = 1080;
+const SHARE_URL = "wrapchat.app";
+
+function getShareCardSize() {
+  if (typeof window === "undefined") {
+    return { width: SHARE_CARD_WIDTH, height: 1920 };
+  }
+
+  const viewportWidth = Math.max(window.innerWidth || 0, 1);
+  const viewportHeight = Math.max(window.innerHeight || 0, 1);
+  const rawRatio = Math.max(viewportWidth, viewportHeight) / Math.max(Math.min(viewportWidth, viewportHeight), 1);
+  const portraitRatio = Math.min(Math.max(rawRatio, 1.6), 2.35);
+
+  return {
+    width: SHARE_CARD_WIDTH,
+    height: Math.round(SHARE_CARD_WIDTH * portraitRatio),
+  };
+}
+
+function shortName(name) {
+  return String(name || "").trim().split(/\s+/)[0] || "Someone";
+}
+
+function compactNumber(value) {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num)) return "0";
+  if (num >= 1000000) return `${(num / 1000000).toFixed(num >= 10000000 ? 0 : 1).replace(/\.0$/, "")}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(num >= 10000 ? 0 : 1).replace(/\.0$/, "")}K`;
+  return `${num}`;
+}
+
+function clampCopy(value, max = 110) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "Open the full WrapChat report for the full story.";
+  return text.length > max ? `${text.slice(0, max - 1).trim()}…` : text;
+}
+
+function formatShareScore(value, max = 10) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return `—/${max}`;
+  return `${Math.round(num)}/${max}`;
+}
+
+function getReportLabel(reportType) {
+  return REPORT_TYPES.find(r => r.id === reportType)?.label || "General Wrapped";
+}
+
+function buildShareCardData({ math, ai, reportType }) {
+  if (!math) return null;
+
+  const names = Array.isArray(math.names) ? math.names.map(shortName).filter(Boolean) : [];
+  const duoLabel = names.length >= 2 ? `${names[0]} & ${names[1]}` : (names[0] || "Your chat");
+  const castLabel = math.isGroup
+    ? `${names.slice(0, 3).join(", ")}${names.length > 3 ? " +" : ""}`
+    : duoLabel;
+  const topFlag = normalizeRedFlags(ai?.redFlags)[0]?.title || math.redFlags?.[0]?.title || "Patterns worth a second look";
+  const report = reportType || "general";
+
+  const card = {
+    palette: report === "general" ? "finale" : (REPORT_TYPES.find(r => r.id === report)?.palette || "upload"),
+    reportLabel: getReportLabel(report),
+    eyebrow: math.isGroup ? "Group chat teaser" : "Private chat teaser",
+    title: math.isGroup ? "This group has lore." : "This chat has a personality.",
+    subtitle: `${compactNumber(math.totalMessages)} messages analyzed`,
+    stats: [
+      { label: "Cast", value: castLabel },
+      { label: "Volume", value: `${compactNumber(math.totalMessages)} msgs` },
+      { label: "Top month", value: math.topMonths?.[0]?.[0] || "Hidden in the full report" },
+    ],
+    insightLabel: "What WrapChat picked up",
+    insight: clampCopy(ai?.vibeOneLiner || ai?.relationshipSummary || "Enough patterns showed up to make the full report worth opening."),
+    cta: "Open the full report for the rest.",
+    shareText: "My WrapChat result card is ready.",
+  };
+
+  if (report === "toxicity") {
+    return {
+      ...card,
+      palette: "toxicity",
+      title: `Health score: ${formatShareScore(ai?.chatHealthScore)}`,
+      subtitle: math.isGroup ? "A teaser from the group toxicity report" : "A teaser from the toxicity report",
+      stats: [
+        { label: "Top flag", value: topFlag },
+        { label: "Power", value: clampCopy(ai?.powerHolder || "Mixed", 24) },
+        { label: "Apologizes more", value: shortName(ai?.apologiesLeader?.name || names[0]) },
+      ],
+      insight: clampCopy(ai?.verdict || ai?.conflictPattern || "The card only shows the surface. The report shows the pattern."),
+      shareText: "I ran my chat through WrapChat's toxicity report.",
+    };
+  }
+
+  if (report === "lovelang") {
+    return {
+      ...card,
+      palette: "lovelang",
+      title: `Compatibility: ${formatShareScore(ai?.compatibilityScore)}`,
+      subtitle: "A teaser from the love language report",
+      stats: [
+        { label: names[0] || "Person A", value: clampCopy(ai?.personA?.language || "Hidden", 22) },
+        { label: names[1] || "Person B", value: clampCopy(ai?.personB?.language || "Hidden", 22) },
+        { label: "Gap", value: clampCopy(ai?.mismatch || "You should see the full report", 26) },
+      ],
+      insight: clampCopy(ai?.compatibilityRead || ai?.mostLovingMoment || "The full report breaks down how each person shows up."),
+      shareText: "I generated a WrapChat love language card.",
+    };
+  }
+
+  if (report === "growth") {
+    const trajectoryMap = { closer:"Getting closer", drifting:"Drifting apart", stable:"Holding steady" };
+    return {
+      ...card,
+      palette: "growth",
+      title: trajectoryMap[ai?.trajectory] || "The arc changed.",
+      subtitle: "A teaser from the growth report",
+      stats: [
+        { label: "Then", value: clampCopy(ai?.thenDepth || "Different energy", 24) },
+        { label: "Now", value: clampCopy(ai?.nowDepth || "Different energy", 24) },
+        { label: "Changed more", value: shortName(ai?.whoChangedMore || "Someone") },
+      ],
+      insight: clampCopy(ai?.arcSummary || ai?.trajectoryDetail || "The full report compares early messages to recent ones."),
+      shareText: "I made a WrapChat growth card.",
+    };
+  }
+
+  if (report === "accounta") {
+    const personA = ai?.personA || {};
+    const personB = ai?.personB || {};
+    const mostReliable = (personA.score || 0) >= (personB.score || 0) ? personA : personB;
+    return {
+      ...card,
+      palette: "accounta",
+      title: "Receipts were found.",
+      subtitle: "A teaser from the accountability report",
+      stats: [
+        { label: "Promises", value: `${(personA.total || 0) + (personB.total || 0)}` },
+        { label: "Most reliable", value: shortName(mostReliable.name || names[0]) },
+        { label: "Top score", value: formatShareScore(mostReliable.score) },
+      ],
+      insight: clampCopy(ai?.overallVerdict || personA.detail || personB.detail || "The full report shows who followed through and who didn't."),
+      shareText: "I pulled an accountability teaser from WrapChat.",
+    };
+  }
+
+  if (report === "energy") {
+    return {
+      ...card,
+      palette: "energy",
+      title: "Energy check-in.",
+      subtitle: "A teaser from the energy report",
+      stats: [
+        { label: shortName(ai?.personA?.name || names[0]), value: formatShareScore(ai?.personA?.netScore) },
+        { label: shortName(ai?.personB?.name || names[1]), value: formatShareScore(ai?.personB?.netScore) },
+        { label: "Match", value: clampCopy(ai?.compatibility || "Open the report", 26) },
+      ],
+      insight: clampCopy(ai?.mostEnergising || ai?.mostDraining || "The full report shows what lifts the chat and what drains it."),
+      shareText: "I generated an energy card with WrapChat.",
+    };
+  }
+
+  if (math.isGroup) {
+    return {
+      ...card,
+      title: "Your group has main-character energy.",
+      stats: [
+        { label: "Main character", value: shortName(math.mainChar || names[0]) },
+        { label: "Ghost", value: shortName(math.ghost || names[names.length - 1]) },
+        { label: "Top word", value: `"${math.topWords?.[0]?.[0] || "..." }"` },
+      ],
+      insight: clampCopy(ai?.groupDynamic || ai?.vibeOneLiner || "The group dynamic is weirder and more revealing than this card admits."),
+      shareText: "My group chat got the WrapChat treatment.",
+    };
+  }
+
+  return {
+    ...card,
+    stats: [
+      { label: "Best streak", value: `${math.streak || 0} days` },
+      { label: "Ghost award", value: shortName(math.ghostName || names[1]) },
+      { label: "Funniest", value: shortName(ai?.funniestPerson || names[0]) },
+    ],
+    insight: clampCopy(ai?.relationshipSummary || ai?.vibeOneLiner || "The full report explains what this chat's whole deal actually is."),
+    shareText: "My WrapChat result card is ready.",
+  };
+}
+
+function canShareFiles(files) {
+  if (!navigator?.share || !files?.length) return false;
+  if (!navigator.canShare) return true;
+  try {
+    return navigator.canShare({ files });
+  } catch {
+    return false;
+  }
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error("Couldn't create share image."));
+    }, "image/png");
+  });
+}
+
+function ShareCardRenderer({ cardData, captureRef, cardSize }) {
+  if (!cardData) return null;
+  const palette = PAL[cardData.palette] || PAL.upload;
+  const width = cardSize?.width || SHARE_CARD_WIDTH;
+  const height = cardSize?.height || 1920;
+  const pad = Math.round(width * 0.06);
+  const inset = Math.round(width * 0.022);
+
+  return (
+    <div style={{ position:"fixed", left:"-200vw", top:0, width, height, pointerEvents:"none", opacity:1 }}>
+      <div
+        ref={captureRef}
+        style={{
+          width,
+          height,
+          boxSizing:"border-box",
+          padding:pad,
+          display:"flex",
+          flexDirection:"column",
+          justifyContent:"space-between",
+          color:"#fff",
+          background:`radial-gradient(circle at top left, ${palette.accent}44 0%, transparent 32%), radial-gradient(circle at bottom right, rgba(255,255,255,0.12) 0%, transparent 28%), linear-gradient(140deg, ${palette.bg} 0%, ${palette.inner} 100%)`,
+          fontFamily:"system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          overflow:"hidden",
+          position:"relative",
+        }}
+      >
+        <div style={{ position:"absolute", inset, border:"1px solid rgba(255,255,255,0.12)", borderRadius:36 }} />
+
+        <div style={{ position:"relative", zIndex:1, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:14, maxWidth:760 }}>
+            <div style={{ alignSelf:"flex-start", padding:"10px 18px", borderRadius:999, background:"rgba(255,255,255,0.12)", fontSize:20, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>
+              {cardData.reportLabel}
+            </div>
+            <div style={{ fontSize:22, color:"rgba(255,255,255,0.68)", fontWeight:600, letterSpacing:"0.04em", textTransform:"uppercase" }}>
+              {cardData.eyebrow}
+            </div>
+          </div>
+          <div style={{ fontSize:28, fontWeight:800, letterSpacing:"-0.04em", color:"rgba(255,255,255,0.9)" }}>WrapChat</div>
+        </div>
+
+        <div style={{ position:"relative", zIndex:1, display:"flex", flexDirection:"column", gap:26 }}>
+          <div style={{ fontSize:92, lineHeight:0.92, fontWeight:900, letterSpacing:"-0.06em", maxWidth:820 }}>
+            {cardData.title}
+          </div>
+          <div style={{ fontSize:34, lineHeight:1.35, color:"rgba(255,255,255,0.8)", maxWidth:760 }}>
+            {cardData.subtitle}
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0, 1fr))", gap:16 }}>
+            {cardData.stats.slice(0, 3).map((stat, index) => (
+              <div key={`${stat.label}-${index}`} style={{ background:"rgba(0,0,0,0.22)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:28, padding:"22px 24px", minHeight:144 }}>
+                <div style={{ fontSize:18, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.48)", marginBottom:14 }}>
+                  {stat.label}
+                </div>
+                <div style={{ fontSize:36, lineHeight:1.12, fontWeight:800, letterSpacing:"-0.04em", wordBreak:"break-word" }}>
+                  {stat.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:32, padding:"28px 30px" }}>
+            <div style={{ fontSize:18, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.48)", marginBottom:12 }}>
+              {cardData.insightLabel}
+            </div>
+            <div style={{ fontSize:36, lineHeight:1.35, color:"#fff", fontWeight:600 }}>
+              {cardData.insight}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ position:"relative", zIndex:1, display:"flex", justifyContent:"space-between", alignItems:"flex-end", gap:20 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            <div style={{ fontSize:28, lineHeight:1.3, color:"rgba(255,255,255,0.85)", fontWeight:700 }}>
+              {cardData.cta}
+            </div>
+            <div style={{ fontSize:24, lineHeight:1.3, color:"rgba(255,255,255,0.62)" }}>
+              Private card. Full details stay inside the app.
+            </div>
+          </div>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontSize:26, fontWeight:800, color:"rgba(255,255,255,0.88)" }}>WrapChat</div>
+            <div style={{ fontSize:22, color:"rgba(255,255,255,0.62)", marginTop:6 }}>{SHARE_URL}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────
 // REPORT TYPES — shown on the report selection screen
@@ -2002,9 +2348,11 @@ By accepting this Privacy Policy, you confirm you have read and understood it in
 const SLIDE_MS   = 480;
 const SLIDE_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
-function Shell({ sec, prog, total, children }) {
+function Shell({ sec, prog, total, children, feedback=null }) {
   const p = PAL[sec] || PAL.upload;
   const onClose = useContext(CloseResultsContext);
+  const share = useContext(ShareResultsContext);
+  const feedbackApi = useContext(FeedbackContext);
   const { dir, id } = useContext(SlideContext);
 
   // Content-only slide animation — chrome (bg, bar, pill, X) stays perfectly still.
@@ -2061,6 +2409,39 @@ function Shell({ sec, prog, total, children }) {
         <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(255,255,255,0.12)", zIndex:5 }}>
           <div style={{ height:"100%", background:"rgba(255,255,255,0.75)", borderRadius:"0 2px 2px 0", width:`${total>0?Math.round((prog/total)*100):0}%`, transition:"width 0.4s" }} />
         </div>
+        {share?.onShare && (
+          <button
+            onClick={share.onShare}
+            className="wc-btn"
+            aria-label="Share result card"
+            disabled={share.busy}
+            style={{
+              position:"absolute",
+              top:14, left:14,
+              minWidth:66, height:30,
+              borderRadius:999,
+              border:"none",
+              background:"rgba(255,255,255,0.12)",
+              color:"#fff",
+              fontSize:12, lineHeight:1,
+              cursor:share.busy ? "wait" : "pointer",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              zIndex:10,
+              padding:"0 12px",
+              transition:"all 0.15s",
+              fontWeight:700,
+              letterSpacing:"0.04em",
+              opacity:share.busy ? 0.7 : 1,
+            }}
+          >
+            {share.busy ? "Saving…" : "Share"}
+          </button>
+        )}
+        {feedback?.resultId && feedbackApi?.openFeedback && (
+          <div style={{ position:"absolute", top:14, right:onClose ? 52 : 14, zIndex:10 }}>
+            <FeedbackButton onClick={() => feedbackApi.openFeedback(feedback)} />
+          </div>
+        )}
         {/* Close button */}
         {onClose && (
           <button
@@ -2180,6 +2561,164 @@ function AICard({ label, value, loading }) {
     <div className="wc-fadeup-2" style={{ background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"14px 18px", width:"100%" }}>
       <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.45)", marginBottom:8 }}>{label}</div>
       {loading ? <Dots /> : <div style={{ fontSize:15, color:"#fff", lineHeight:1.65, fontWeight:400 }}>{value||"—"}</div>}
+    </div>
+  );
+}
+
+function FeedbackButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="wc-btn"
+      aria-label="Report this card"
+      style={{
+        width:28,
+        height:28,
+        borderRadius:"50%",
+        border:"1px solid rgba(255,255,255,0.12)",
+        background:"rgba(255,255,255,0.08)",
+        color:"rgba(255,255,255,0.24)",
+        cursor:"pointer",
+        display:"flex",
+        alignItems:"center",
+        justifyContent:"center",
+        padding:0,
+        transition:"all 0.15s",
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display:"block" }}>
+        <path
+          d="M14 3h4a2 2 0 0 1 2 2v6.2a2 2 0 0 1-2 2h-4.8l.6 4.5a2.1 2.1 0 0 1-4 1.1L7.9 13.2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+}
+
+function FeedbackSheet({ open, target, selected, note, submitting, onSelect, onNoteChange, onSubmit, onClose }) {
+  if (!open || !target) return null;
+
+  return (
+    <div
+      style={{
+        position:"fixed",
+        inset:0,
+        background:"rgba(10,10,18,0.5)",
+        zIndex:200,
+        display:"flex",
+        alignItems:"flex-end",
+        justifyContent:"center",
+        padding:"20px 12px",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width:"min(420px, 100%)",
+          background:PAL.upload.bg,
+          border:"1px solid rgba(255,255,255,0.12)",
+          borderRadius:"28px 28px 20px 20px",
+          padding:"18px 18px 20px",
+          boxShadow:"0 -12px 40px rgba(0,0,0,0.35)",
+          color:"#fff",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ width:40, height:4, borderRadius:999, background:"rgba(255,255,255,0.16)", margin:"0 auto 14px" }} />
+        <div style={{ fontSize:20, fontWeight:800, letterSpacing:-0.4, marginBottom:6 }}>What's off about this?</div>
+        <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", marginBottom:14 }}>{target.cardTitle}</div>
+
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:14 }}>
+          {FEEDBACK_OPTIONS.map(option => {
+            const active = selected === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onSelect(option)}
+                className="wc-btn"
+                style={{
+                  border:"1px solid rgba(255,255,255,0.14)",
+                  borderRadius:999,
+                  padding:"8px 12px",
+                  fontSize:13,
+                  fontWeight:700,
+                  cursor:"pointer",
+                  transition:"all 0.15s",
+                  background:active ? PAL.upload.inner : "rgba(255,255,255,0.08)",
+                  color:"#fff",
+                }}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+
+        <input
+          type="text"
+          value={note}
+          onChange={e => onNoteChange(e.target.value)}
+          placeholder="Optional note"
+          style={{
+            width:"100%",
+            background:"rgba(0,0,0,0.22)",
+            border:"1px solid rgba(255,255,255,0.12)",
+            borderRadius:16,
+            padding:"13px 14px",
+            fontSize:14,
+            color:"#fff",
+            outline:"none",
+            fontFamily:"inherit",
+            marginBottom:16,
+          }}
+        />
+
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="wc-btn"
+            style={{
+              border:"none",
+              background:"transparent",
+              color:"rgba(255,255,255,0.55)",
+              fontSize:14,
+              fontWeight:600,
+              cursor:"pointer",
+              padding:0,
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="wc-btn"
+            disabled={!selected || submitting}
+            style={{
+              padding:"11px 22px",
+              borderRadius:999,
+              border:"none",
+              background:!selected || submitting ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.18)",
+              color:"#fff",
+              fontSize:14,
+              fontWeight:800,
+              cursor:!selected || submitting ? "default" : "pointer",
+              opacity:!selected || submitting ? 0.55 : 1,
+              transition:"all 0.15s",
+            }}
+          >
+            {submitting ? "Sending…" : "Submit"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2320,12 +2859,16 @@ function TextList({ items }) {
 // ─────────────────────────────────────────────────────────────────
 // DUO SCREENS
 // ─────────────────────────────────────────────────────────────────
-function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType }) {
+function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType, resultId }) {
   const total  = s.msgCounts[0]+s.msgCounts[1];
   const pct0   = Math.round((s.msgCounts[0]/total)*100);
   const mMax   = Math.max(...s.msgCounts);
   const nov    = s.avgMsgLen[0]>=s.avgMsgLen[1]?0:1;
   const TOTAL  = mode === "redflags" ? DUO_REDFLAG_SCREENS : DUO_CASUAL_SCREENS;
+  const reportKey = mode === "redflags" ? "toxicity" : "general";
+  const feedback = (cardTitle, cardIndex, enabled = true) => (
+    enabled && resultId ? { resultId, reportType: reportKey, cardIndex, cardTitle } : null
+  );
   const toxicMax = Math.max(...s.toxicityScores, 1);
   const toxicName = ai?.toxicPerson || s.toxicPerson || (aiLoading ? "..." : s.names[0]);
   const toxicReason = ai?.toxicReason || s.toxicReason;
@@ -2360,7 +2903,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType 
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="roast" prog={2} total={TOTAL}>
+    <Shell sec="roast" prog={2} total={TOTAL} feedback={feedback("The Ghost Award", 2, !s.ghostEqual)}>
       {s.ghostEqual ? (
         <>
           <T>Response times</T>
@@ -2445,9 +2988,9 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType 
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovely" prog={5} total={TOTAL}>
+    <Shell sec="lovely" prog={5} total={TOTAL} feedback={feedback("The Kindest One", 5)}>
       <T>The Kindest One</T>
-      <Big>{aiLoading ? "..." : (ai?.kindestPerson || "")}</Big>
+      <Big>{aiLoading ? "..." : (ai?.kindestPerson || "—")}</Big>
       <AICard label="The sweetest moment" value={ai?.sweetMoment} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
@@ -2479,7 +3022,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType 
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="funny" prog={8} total={TOTAL}>
+    <Shell sec="funny" prog={8} total={TOTAL} feedback={feedback("The Funny One", 8)}>
       <T>The Funny One</T>
       <Big>{aiLoading?"...":(ai?.funniestPerson||s.names[0])}</Big>
       <AICard label="Drops lines like" value={ai?.funniestReason} loading={aiLoading} />
@@ -2575,27 +3118,27 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType 
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={14} total={TOTAL}>
+    <Shell sec="ai" prog={14} total={TOTAL} feedback={feedback("What you actually talk about", 14)}>
       <T>What you actually talk about</T>
       <AICard label="Biggest topic" value={ai?.biggestTopic} loading={aiLoading} />
       <AICard label="Most tense moment" value={ai?.tensionMoment} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={15} total={TOTAL}>
+    <Shell sec="ai" prog={15} total={TOTAL} feedback={feedback("The Drama Report", 15)}>
       <T>The Drama Report</T>
       <Big>{aiLoading?"...":(ai?.dramaStarter||s.names[0])}</Big>
       <AICard label="How they do it" value={ai?.dramaContext} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={16} total={TOTAL}>
+    <Shell sec="ai" prog={16} total={TOTAL} feedback={feedback("What's really going on", 16)}>
       <T>What's really going on</T>
       <AICard label={relReadLabel(relationshipType)} value={ai?.relationshipSummary} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={17} total={TOTAL}>
+    <Shell sec="ai" prog={17} total={TOTAL} feedback={feedback("Chat vibe", 17)}>
       <T>Chat vibe</T>
       <div style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"1.4rem 1.5rem",width:"100%",textAlign:"center",marginTop:16,fontSize:16,lineHeight:1.7,fontStyle:"italic",color:"#fff",minHeight:80,display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
         {aiLoading?<Dots />:(ai?.vibeOneLiner||"A chaotic, wholesome connection.")}
@@ -2605,7 +3148,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType 
     </Shell>,
   ];
   const redFlagScreens = [
-    <Shell sec="ai" prog={1} total={TOTAL}>
+    <Shell sec="ai" prog={1} total={TOTAL} feedback={feedback("Relationship reading", 1)}>
       <T>Relationship reading</T>
       <Big>{relationshipStatus}</Big>
       <AICard label="Observed pattern" value={relationshipStatusWhy} loading={aiLoading && !relationshipStatusWhy} />
@@ -2619,13 +3162,13 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType 
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="roast" prog={3} total={TOTAL}>
+    <Shell sec="roast" prog={3} total={TOTAL} feedback={feedback("What the chat shows", 3)}>
       <T>What the chat shows</T>
       <FlagList flags={duoFlags} loading={aiLoading && !duoFlags?.length} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="stats" prog={4} total={TOTAL}>
+    <Shell sec="stats" prog={4} total={TOTAL} feedback={feedback("Toxicity scorecard", 4)}>
       <T>Toxicity scorecard</T>
       <Big>{toxicName}</Big>
       <div style={{width:"100%",marginTop:10}}>
@@ -2636,21 +3179,21 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType 
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={5} total={TOTAL}>
+    <Shell sec="ai" prog={5} total={TOTAL} feedback={feedback("Tension snapshot", 5)}>
       <T>Tension snapshot</T>
       <AICard label="Most tense moment" value={ai?.tensionMoment} loading={aiLoading} />
       <AICard label={relReadLabel(relationshipType)} value={ai?.relationshipSummary} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={6} total={TOTAL}>
+    <Shell sec="ai" prog={6} total={TOTAL} feedback={feedback("What keeps repeating", 6)}>
       <T>What keeps repeating</T>
       <AICard label="Main topic" value={ai?.biggestTopic} loading={aiLoading} />
       <AICard label="Pattern note" value={duoFlags[0]?.detail || "The strongest pattern is shown above."} loading={aiLoading && !duoFlags[0]?.detail} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="roast" prog={7} total={TOTAL}>
+    <Shell sec="roast" prog={7} total={TOTAL} feedback={feedback("Toxicity report", 7)}>
       <T>Toxicity report</T>
       <Big>{toxicityLevel}</Big>
       <AICard label="Overall read" value={toxicityReport} loading={aiLoading && !toxicityReport} />
@@ -2666,10 +3209,14 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType 
 // ─────────────────────────────────────────────────────────────────
 // GROUP SCREENS
 // ─────────────────────────────────────────────────────────────────
-function GroupScreen({ s, ai, aiLoading, step, back, next, mode }) {
+function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
   const mMax   = Math.max(...s.msgCounts,1);
   const COLORS = ["#E06030","#4A90D4","#3ABDA0","#C4809A","#8A70D4","#D4A840"];
   const TOTAL  = mode === "redflags" ? GROUP_REDFLAG_SCREENS : GROUP_CASUAL_SCREENS;
+  const reportKey = mode === "redflags" ? "toxicity" : "general";
+  const feedback = (cardTitle, cardIndex, enabled = true) => (
+    enabled && resultId ? { resultId, reportType: reportKey, cardIndex, cardTitle } : null
+  );
   const toxicMax = Math.max(...s.toxicityScores, 1);
   const toxicName = ai?.toxicPerson || s.toxicPerson || s.names[0];
   const toxicReason = ai?.toxicReason || s.toxicReason;
@@ -2699,7 +3246,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode }) {
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="roast" prog={2} total={TOTAL}>
+    <Shell sec="roast" prog={2} total={TOTAL} feedback={feedback("The Ghost", 2)}>
       <T>The Ghost</T>
       <Big>{s.ghost}</Big>
       <Sub>{s.msgCounts[s.msgCounts.length-1].toLocaleString()} messages total. Why are they even here?</Sub>
@@ -2774,7 +3321,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovely" prog={6} total={TOTAL}>
+    <Shell sec="lovely" prog={6} total={TOTAL} feedback={feedback("The Hype Person", 6)}>
       <T>The Hype Person</T>
       <Big>{s.hype}</Big>
       <Sub>Started {s.convStarterPct} of all conversations. The engine of this group.</Sub>
@@ -2782,14 +3329,14 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovely" prog={7} total={TOTAL}>
+    <Shell sec="lovely" prog={7} total={TOTAL} feedback={feedback("The Kindest One", 7)}>
       <T>The Kindest One</T>
-      <Big>{aiLoading ? "..." : (ai?.kindestPerson || "")}</Big>
+      <Big>{aiLoading ? "..." : (ai?.kindestPerson || "—")}</Big>
       <AICard label="The sweetest moment" value={ai?.sweetMoment} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="funny" prog={8} total={TOTAL}>
+    <Shell sec="funny" prog={8} total={TOTAL} feedback={feedback("The Funny One", 8)}>
       <T>The Funny One</T>
       <Big>{aiLoading?"...":(ai?.funniestPerson||s.names[0])}</Big>
       <AICard label="Drops lines like" value={ai?.funniestReason} loading={aiLoading} />
@@ -2839,35 +3386,35 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={13} total={TOTAL}>
+    <Shell sec="ai" prog={13} total={TOTAL} feedback={feedback("What you actually talk about", 13)}>
       <T>What you actually talk about</T>
       <AICard label="Biggest topic" value={ai?.biggestTopic} loading={aiLoading} />
       <AICard label="The inside joke" value={ai?.insideJoke} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={14} total={TOTAL}>
+    <Shell sec="ai" prog={14} total={TOTAL} feedback={feedback("The Drama Report", 14)}>
       <T>The Drama Report</T>
       <Big>{aiLoading?"...":(ai?.dramaStarter||s.names[0])}</Big>
       <AICard label="How they do it" value={ai?.dramaContext} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={15} total={TOTAL}>
+    <Shell sec="ai" prog={15} total={TOTAL} feedback={feedback("Most missed member", 15)}>
       <T>Most missed member</T>
       <Big>{aiLoading?"...":(ai?.mostMissed||s.names[0])}</Big>
       <Sub>When they go quiet, the group feels it.</Sub>
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={16} total={TOTAL}>
+    <Shell sec="ai" prog={16} total={TOTAL} feedback={feedback("The group read", 16)}>
       <T>The group read</T>
       <AICard label="Group dynamic" value={ai?.groupDynamic} loading={aiLoading} />
       <AICard label="Most tense moment" value={ai?.tensionMoment} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="ai" prog={17} total={TOTAL}>
+    <Shell sec="ai" prog={17} total={TOTAL} feedback={feedback("Group vibe", 17)}>
       <T>Group vibe</T>
       <div style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"1.4rem 1.5rem",width:"100%",textAlign:"center",marginTop:16,fontSize:16,lineHeight:1.7,fontStyle:"italic",color:"#fff",minHeight:80,display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
         {aiLoading?<Dots />:(ai?.vibeOneLiner||"Chaotic. Wholesome. Somehow still going.")}
@@ -2877,7 +3424,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode }) {
     </Shell>,
   ];
   const redFlagScreens = [
-    <Shell sec="ai" prog={1} total={TOTAL}>
+    <Shell sec="ai" prog={1} total={TOTAL} feedback={feedback("Group pattern read", 1)}>
       <T>Group pattern read</T>
       <AICard label="Group dynamic" value={ai?.groupDynamic} loading={aiLoading} />
       <AICard label="Most tense moment" value={ai?.tensionMoment} loading={aiLoading} />
@@ -2890,13 +3437,13 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="roast" prog={3} total={TOTAL}>
+    <Shell sec="roast" prog={3} total={TOTAL} feedback={feedback("What the chat shows", 3)}>
       <T>What the chat shows</T>
       <FlagList flags={groupFlags} loading={aiLoading && !groupFlags?.length} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="stats" prog={4} total={TOTAL}>
+    <Shell sec="stats" prog={4} total={TOTAL} feedback={feedback("Toxicity scorecard", 4)}>
       <T>Toxicity scorecard</T>
       <Big>{aiLoading && !toxicName ? "..." : toxicName}</Big>
       <div style={{width:"100%",marginTop:10}}>
@@ -2913,7 +3460,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="roast" prog={6} total={TOTAL}>
+    <Shell sec="roast" prog={6} total={TOTAL} feedback={feedback("Toxicity report", 6)}>
       <T>Toxicity report</T>
       <Big>{toxicityLevel}</Big>
       <AICard label="Overall read" value={toxicityReport} loading={aiLoading && !toxicityReport} />
@@ -2954,10 +3501,13 @@ function ScoreRing({ score, max=10, size=110, color="#fff" }) {
 // TOXICITY REPORT SCREENS  (7 cards)
 // ─────────────────────────────────────────────────────────────────
 const TOXICITY_SCREENS = 7;
-function ToxicityReportScreen({ s, ai, aiLoading, step, back, next }) {
+function ToxicityReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const loading = aiLoading && !ai;
+  const feedback = (cardTitle, cardIndex, enabled = true) => (
+    enabled && resultId ? { resultId, reportType: "toxicity", cardIndex, cardTitle } : null
+  );
   const screens = [
-    <Shell sec="toxicity" prog={1} total={TOXICITY_SCREENS}>
+    <Shell sec="toxicity" prog={1} total={TOXICITY_SCREENS} feedback={feedback("Chat Health Score", 1)}>
       <T>Chat Health Score</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.chatHealthScore || 5)} max={10} size={130} color="#E04040" />
@@ -2967,7 +3517,7 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="toxicity" prog={2} total={TOXICITY_SCREENS}>
+    <Shell sec="toxicity" prog={2} total={TOXICITY_SCREENS} feedback={feedback("Individual health scores", 2)}>
       <T>Individual health scores</T>
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:12, marginTop:16 }}>
         {(loading ? s.names.slice(0,2).map(n=>({name:n,score:5,detail:"Analysing…"})) : (ai?.healthScores||[])).map((p, i) => (
@@ -2983,7 +3533,7 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="toxicity" prog={3} total={TOXICITY_SCREENS}>
+    <Shell sec="toxicity" prog={3} total={TOXICITY_SCREENS} feedback={feedback("Who apologises more", 3)}>
       <T>Who apologises more</T>
       <Big>{loading ? "…" : (ai?.apologiesLeader?.name || s.names[0])}</Big>
       <AICard label={`${(loading?"…":ai?.apologiesLeader?.name) || s.names[0]} — context`} value={ai?.apologiesLeader?.context} loading={loading} />
@@ -2991,7 +3541,7 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="toxicity" prog={4} total={TOXICITY_SCREENS}>
+    <Shell sec="toxicity" prog={4} total={TOXICITY_SCREENS} feedback={feedback("Red flag moments", 4)}>
       <T>Red flag moments</T>
       {loading
         ? <div style={{ display:"flex", justifyContent:"center", padding:"20px 0" }}><Dots /></div>
@@ -3008,20 +3558,20 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="toxicity" prog={5} total={TOXICITY_SCREENS}>
+    <Shell sec="toxicity" prog={5} total={TOXICITY_SCREENS} feedback={feedback("Conflict pattern", 5)}>
       <T>Conflict pattern</T>
       <AICard label="How arguments unfold" value={ai?.conflictPattern} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="toxicity" prog={6} total={TOXICITY_SCREENS}>
+    <Shell sec="toxicity" prog={6} total={TOXICITY_SCREENS} feedback={feedback("Power balance", 6)}>
       <T>Power balance</T>
       <Big>{loading ? "…" : (ai?.powerHolder || "Balanced")}</Big>
       <AICard label="Power dynamic" value={ai?.powerBalance} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="toxicity" prog={7} total={TOXICITY_SCREENS}>
+    <Shell sec="toxicity" prog={7} total={TOXICITY_SCREENS} feedback={feedback("The verdict", 7)}>
       <T>The verdict</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.chatHealthScore||5)} max={10} size={130} color="#E04040" />
@@ -3039,10 +3589,15 @@ function ToxicityReportScreen({ s, ai, aiLoading, step, back, next }) {
 // LOVE LANGUAGE REPORT SCREENS  (5 cards)
 // ─────────────────────────────────────────────────────────────────
 const LOVELANG_SCREENS = 5;
-function LoveLangReportScreen({ s, ai, aiLoading, step, back, next }) {
+function LoveLangReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const loading = aiLoading && !ai;
+  const personATitle = `${ai?.personA?.name || s.names[0]}'s love language`;
+  const personBTitle = `${ai?.personB?.name || s.names[1] || s.names[0]}'s love language`;
+  const feedback = (cardTitle, cardIndex, enabled = true) => (
+    enabled && resultId ? { resultId, reportType: "lovelang", cardIndex, cardTitle } : null
+  );
   const screens = [
-    <Shell sec="lovelang" prog={1} total={LOVELANG_SCREENS}>
+    <Shell sec="lovelang" prog={1} total={LOVELANG_SCREENS} feedback={feedback(personATitle, 1)}>
       <T>{loading ? "…" : (ai?.personA?.name || s.names[0])}'s love language</T>
       <div style={{ marginTop:12, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
         <div style={{ fontSize:60, lineHeight:1 }}>{loading ? "💝" : (ai?.personA?.languageEmoji || "💝")}</div>
@@ -3052,7 +3607,7 @@ function LoveLangReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="lovelang" prog={2} total={LOVELANG_SCREENS}>
+    <Shell sec="lovelang" prog={2} total={LOVELANG_SCREENS} feedback={feedback(personBTitle, 2)}>
       <T>{loading ? "…" : (ai?.personB?.name || s.names[1]||s.names[0])}'s love language</T>
       <div style={{ marginTop:12, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
         <div style={{ fontSize:60, lineHeight:1 }}>{loading ? "💝" : (ai?.personB?.languageEmoji || "💝")}</div>
@@ -3062,20 +3617,20 @@ function LoveLangReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovelang" prog={3} total={LOVELANG_SCREENS}>
+    <Shell sec="lovelang" prog={3} total={LOVELANG_SCREENS} feedback={feedback("The language gap", 3)}>
       <T>The language gap</T>
       <AICard label="Do they speak the same language?" value={ai?.mismatch} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovelang" prog={4} total={LOVELANG_SCREENS}>
+    <Shell sec="lovelang" prog={4} total={LOVELANG_SCREENS} feedback={feedback("Most loving moment", 4)}>
       <T>Most loving moment</T>
       <div style={{ fontSize:40, textAlign:"center", marginTop:16 }}>💕</div>
       <AICard label="The moment" value={ai?.mostLovingMoment} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="lovelang" prog={5} total={LOVELANG_SCREENS}>
+    <Shell sec="lovelang" prog={5} total={LOVELANG_SCREENS} feedback={feedback("Love language compatibility", 5)}>
       <T>Love language compatibility</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.compatibilityScore||5)} max={10} size={130} color="#F08EBF" />
@@ -3091,12 +3646,15 @@ function LoveLangReportScreen({ s, ai, aiLoading, step, back, next }) {
 // GROWTH REPORT SCREENS  (5 cards)
 // ─────────────────────────────────────────────────────────────────
 const GROWTH_SCREENS = 5;
-function GrowthReportScreen({ s, ai, aiLoading, step, back, next }) {
+function GrowthReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const loading = aiLoading && !ai;
   const arrowMap = { deeper:"↑", shallower:"↓", "about the same":"→" };
   const trajMap  = { closer:"Getting closer", drifting:"Drifting apart", stable:"Holding steady" };
+  const feedback = (cardTitle, cardIndex, enabled = true) => (
+    enabled && resultId ? { resultId, reportType: "growth", cardIndex, cardTitle } : null
+  );
   const screens = [
-    <Shell sec="growth" prog={1} total={GROWTH_SCREENS}>
+    <Shell sec="growth" prog={1} total={GROWTH_SCREENS} feedback={feedback("Then vs Now", 1)}>
       <T>Then vs Now</T>
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, marginTop:16 }}>
         <div style={{ background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"16px 18px", borderLeft:"3px solid rgba(255,255,255,0.2)" }}>
@@ -3114,28 +3672,28 @@ function GrowthReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="growth" prog={2} total={GROWTH_SCREENS}>
+    <Shell sec="growth" prog={2} total={GROWTH_SCREENS} feedback={feedback("Who changed more", 2)}>
       <T>Who changed more</T>
       <Big>{loading ? "…" : (ai?.whoChangedMore||"—")}</Big>
       <AICard label="How they changed" value={ai?.whoChangedHow} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="growth" prog={3} total={GROWTH_SCREENS}>
+    <Shell sec="growth" prog={3} total={GROWTH_SCREENS} feedback={feedback("What changed in the chat", 3)}>
       <T>What changed in the chat</T>
       <AICard label="Topics that appeared" value={ai?.topicsAppeared} loading={loading} />
       <AICard label="Topics that faded" value={ai?.topicsDisappeared} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="growth" prog={4} total={GROWTH_SCREENS}>
+    <Shell sec="growth" prog={4} total={GROWTH_SCREENS} feedback={feedback("Relationship trajectory", 4)}>
       <T>Relationship trajectory</T>
       <Big>{loading ? "…" : (trajMap[ai?.trajectory]||ai?.trajectory||"—")}</Big>
       <AICard label="What the data shows" value={ai?.trajectoryDetail} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="growth" prog={5} total={GROWTH_SCREENS}>
+    <Shell sec="growth" prog={5} total={GROWTH_SCREENS} feedback={feedback("The arc", 5)}>
       <T>The arc</T>
       <div style={{ background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:14, padding:"1.4rem 1.5rem", width:"100%", textAlign:"center", marginTop:16, fontSize:16, lineHeight:1.7, fontStyle:"italic", color:"#fff", minHeight:80, display:"flex", alignItems:"center", justifyContent:"center" }}>
         {loading ? <Dots /> : (ai?.arcSummary||"—")}
@@ -3150,10 +3708,15 @@ function GrowthReportScreen({ s, ai, aiLoading, step, back, next }) {
 // ACCOUNTABILITY REPORT SCREENS  (5 cards)
 // ─────────────────────────────────────────────────────────────────
 const ACCOUNTA_SCREENS = 5;
-function AccountaReportScreen({ s, ai, aiLoading, step, back, next }) {
+function AccountaReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const loading = aiLoading && !ai;
+  const personATitle = `${ai?.personA?.name || s.names[0]}'s accountability`;
+  const personBTitle = `${ai?.personB?.name || s.names[1] || s.names[0]}'s accountability`;
+  const feedback = (cardTitle, cardIndex, enabled = true) => (
+    enabled && resultId ? { resultId, reportType: "accounta", cardIndex, cardTitle } : null
+  );
   const screens = [
-    <Shell sec="accounta" prog={1} total={ACCOUNTA_SCREENS}>
+    <Shell sec="accounta" prog={1} total={ACCOUNTA_SCREENS} feedback={feedback("Promises made", 1)}>
       <T>Promises made</T>
       <div style={{ width:"100%", display:"flex", gap:12, marginTop:16, justifyContent:"center" }}>
         {[ai?.personA, ai?.personB].filter(Boolean).map((p, i) => (
@@ -3168,7 +3731,7 @@ function AccountaReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="accounta" prog={2} total={ACCOUNTA_SCREENS}>
+    <Shell sec="accounta" prog={2} total={ACCOUNTA_SCREENS} feedback={feedback(personATitle, 2)}>
       <T>{loading ? "…" : (ai?.personA?.name || s.names[0])}'s accountability</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.personA?.score||5)} max={10} size={120} color="#6AB4F0" />
@@ -3187,7 +3750,7 @@ function AccountaReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="accounta" prog={3} total={ACCOUNTA_SCREENS}>
+    <Shell sec="accounta" prog={3} total={ACCOUNTA_SCREENS} feedback={feedback(personBTitle, 3)}>
       <T>{loading ? "…" : (ai?.personB?.name || s.names[1]||s.names[0])}'s accountability</T>
       <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
         <ScoreRing score={loading ? 0 : (ai?.personB?.score||5)} max={10} size={120} color="#6AB4F0" />
@@ -3206,7 +3769,7 @@ function AccountaReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="accounta" prog={4} total={ACCOUNTA_SCREENS}>
+    <Shell sec="accounta" prog={4} total={ACCOUNTA_SCREENS} feedback={feedback("Most notable broken promise", 4)}>
       <T>Most notable broken promise</T>
       {loading
         ? <div style={{ display:"flex", justifyContent:"center", padding:"20px 0" }}><Dots /></div>
@@ -3221,7 +3784,7 @@ function AccountaReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="accounta" prog={5} total={ACCOUNTA_SCREENS}>
+    <Shell sec="accounta" prog={5} total={ACCOUNTA_SCREENS} feedback={feedback("Most notable kept promise", 5)}>
       <T>Most notable kept promise</T>
       {loading
         ? <div style={{ display:"flex", justifyContent:"center", padding:"20px 0" }}><Dots /></div>
@@ -3243,10 +3806,15 @@ function AccountaReportScreen({ s, ai, aiLoading, step, back, next }) {
 // ENERGY REPORT SCREENS  (6 cards)
 // ─────────────────────────────────────────────────────────────────
 const ENERGY_SCREENS = 6;
-function EnergyReportScreen({ s, ai, aiLoading, step, back, next }) {
+function EnergyReportScreen({ s, ai, aiLoading, step, back, next, resultId }) {
   const loading = aiLoading && !ai;
+  const personATitle = `${ai?.personA?.name || s.names[0]}'s energy`;
+  const personBTitle = `${ai?.personB?.name || s.names[1] || s.names[0]}'s energy`;
+  const feedback = (cardTitle, cardIndex, enabled = true) => (
+    enabled && resultId ? { resultId, reportType: "energy", cardIndex, cardTitle } : null
+  );
   const screens = [
-    <Shell sec="energy" prog={1} total={ENERGY_SCREENS}>
+    <Shell sec="energy" prog={1} total={ENERGY_SCREENS} feedback={feedback("Net energy scores", 1)}>
       <T>Net energy scores</T>
       <div style={{ width:"100%", display:"flex", gap:16, marginTop:16, justifyContent:"center" }}>
         {(loading ? s.names.slice(0,2).map(n=>({name:n,netScore:5,type:""})) : [ai?.personA,ai?.personB].filter(Boolean)).map((p, i) => (
@@ -3261,7 +3829,7 @@ function EnergyReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
 
-    <Shell sec="energy" prog={2} total={ENERGY_SCREENS}>
+    <Shell sec="energy" prog={2} total={ENERGY_SCREENS} feedback={feedback(personATitle, 2)}>
       <T>{loading ? "…" : (ai?.personA?.name || s.names[0])}'s energy</T>
       <AICard label="Positive energy" value={ai?.personA?.goodNews} loading={loading} />
       <AICard label="Draining patterns" value={ai?.personA?.venting} loading={loading} />
@@ -3269,7 +3837,7 @@ function EnergyReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="energy" prog={3} total={ENERGY_SCREENS}>
+    <Shell sec="energy" prog={3} total={ENERGY_SCREENS} feedback={feedback(personBTitle, 3)}>
       <T>{loading ? "…" : (ai?.personB?.name || s.names[1]||s.names[0])}'s energy</T>
       <AICard label="Positive energy" value={ai?.personB?.goodNews} loading={loading} />
       <AICard label="Draining patterns" value={ai?.personB?.venting} loading={loading} />
@@ -3277,21 +3845,21 @@ function EnergyReportScreen({ s, ai, aiLoading, step, back, next }) {
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="energy" prog={4} total={ENERGY_SCREENS}>
+    <Shell sec="energy" prog={4} total={ENERGY_SCREENS} feedback={feedback("Most energising moment", 4)}>
       <T>Most energising moment</T>
       <div style={{ fontSize:40, textAlign:"center", marginTop:16 }}>⚡</div>
       <AICard label="The moment" value={ai?.mostEnergising} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="energy" prog={5} total={ENERGY_SCREENS}>
+    <Shell sec="energy" prog={5} total={ENERGY_SCREENS} feedback={feedback("Most draining moment", 5)}>
       <T>Most draining moment</T>
       <div style={{ fontSize:40, textAlign:"center", marginTop:16 }}>🪫</div>
       <AICard label="The moment" value={ai?.mostDraining} loading={loading} />
       <Nav back={back} next={next} />
     </Shell>,
 
-    <Shell sec="energy" prog={6} total={ENERGY_SCREENS}>
+    <Shell sec="energy" prog={6} total={ENERGY_SCREENS} feedback={feedback("Energy compatibility", 6)}>
       <T>Energy compatibility</T>
       <div style={{ width:"100%", display:"flex", gap:12, marginTop:16, justifyContent:"center" }}>
         {(loading ? s.names.slice(0,2).map(n=>({name:n,netScore:5})) : [ai?.personA,ai?.personB].filter(Boolean)).map((p, i) => (
@@ -3329,7 +3897,10 @@ function PremiumFinale({ s, restart, back, reportType }) {
 // ─────────────────────────────────────────────────────────────────
 // FINALE
 // ─────────────────────────────────────────────────────────────────
-function Finale({ s, ai, aiLoading, restart, back, prog, total, mode }) {
+function Finale({ s, ai, aiLoading, restart, back, prog, total, mode, resultId }) {
+  const feedback = resultId && (mode === "redflags" || ai?.vibeOneLiner)
+    ? { resultId, reportType: mode === "redflags" ? "toxicity" : "general", cardIndex: prog, cardTitle: mode === "redflags" ? "Red flags, unwrapped." : (s.isGroup ? "Your group, unwrapped." : "Your chat, unwrapped.") }
+    : null;
   const cells = mode === "redflags"
     ? (s.isGroup
       ? [
@@ -3366,7 +3937,7 @@ function Finale({ s, ai, aiLoading, restart, back, prog, total, mode }) {
           {label:"Best streak",value:`${s.streak} days`},
         ]);
   return (
-    <Shell sec="finale" prog={prog} total={total}>
+    <Shell sec="finale" prog={prog} total={total} feedback={feedback}>
       <T s={24}>{mode === "redflags" ? "Red flags, unwrapped." : (s.isGroup?"Your group, unwrapped.":"Your chat, unwrapped.")}</T>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:16,width:"100%"}}>
         {cells.map((c,i)=><Cell key={i} label={c.label} value={c.value} />)}
@@ -3424,15 +3995,15 @@ function postAuthPhaseForUser(user) {
 // ─────────────────────────────────────────────────────────────────
 function RelationshipSelect({ onSelect, onBack }) {
   const romanticOptions = [
-    { id:"partner", label:"Partner", emoji:"💍", desc:"Committed" },
-    { id:"dating",  label:"Dating",  emoji:"💕", desc:"Early stages" },
-    { id:"ex",      label:"Ex",      emoji:"💔", desc:"Former" },
+    { id:"partner", label:"Partner", icon:partnerIcon, desc:"Committed" },
+    { id:"dating",  label:"Dating",  icon:datingIcon, desc:"Early stages" },
+    { id:"ex",      label:"Ex",      icon:exIcon, desc:"Former" },
   ];
   const options = [
-    { id:"family",    label:"Family",    emoji:"👨‍👩‍👧", desc:"Parent, sibling or relative" },
-    { id:"friend",    label:"Friend",    emoji:"👯",  desc:"Close friend or bestie" },
-    { id:"colleague", label:"Colleague", emoji:"💼",  desc:"Coworker or professional contact" },
-    { id:"other",     label:"Other",     emoji:"👤",  desc:"Someone you know" },
+    { id:"family",    label:"Related",   icon:familyIcon, desc:"Parent, sibling or relative" },
+    { id:"friend",    label:"Friend",    icon:friendIcon, desc:"Close friend or bestie" },
+    { id:"colleague", label:"Colleague", icon:colleagueIcon, desc:"Coworker or professional contact" },
+    { id:"other",     label:"Other",     icon:otherIcon, desc:"Someone you know" },
   ];
   const optionButtonStyle = {
     background:"rgba(255,255,255,0.08)",
@@ -3444,6 +4015,13 @@ function RelationshipSelect({ onSelect, onBack }) {
     width:"100%",
     minHeight:80,
   };
+  const iconStyle = {
+    width:32,
+    height:32,
+    objectFit:"contain",
+    filter:"brightness(0) invert(1)",
+    opacity:0.96,
+  };
   return (
     <Shell sec="upload" prog={0} total={1}>
       <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.15, textAlign:"center", width:"100%" }}>Who is this chat with?</div>
@@ -3454,10 +4032,10 @@ function RelationshipSelect({ onSelect, onBack }) {
               key={opt.id}
               type="button"
               onClick={() => onSelect(opt.id)}
-              className="wc-btn"
-              style={{ ...optionButtonStyle, flex:1, padding:"12px 10px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center" }}
-            >
-              <div style={{ fontSize:28, lineHeight:1, marginBottom:8 }}>{opt.emoji}</div>
+            className="wc-btn"
+            style={{ ...optionButtonStyle, flex:1, padding:"12px 10px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center" }}
+          >
+              <img src={opt.icon} alt="" aria-hidden="true" style={{ ...iconStyle, marginBottom:8 }} />
               <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>{opt.label}</div>
               <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:4 }}>{opt.desc}</div>
             </button>
@@ -3471,7 +4049,7 @@ function RelationshipSelect({ onSelect, onBack }) {
             className="wc-btn"
             style={{ ...optionButtonStyle, padding:"16px 18px", display:"flex", alignItems:"center", gap:14, textAlign:"left" }}
           >
-            <div style={{ fontSize:28, flexShrink:0 }}>{opt.emoji}</div>
+            <img src={opt.icon} alt="" aria-hidden="true" style={{ ...iconStyle, flexShrink:0 }} />
             <div>
               <div style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3 }}>{opt.label}</div>
               <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:2 }}>{opt.desc}</div>
@@ -3847,7 +4425,22 @@ function TooShort({ onBack }) {
   );
 }
 
-function Upload({ onParsed, onLogout, onHistory }) {
+function AdminLocked({ onBack }) {
+  return (
+    <Shell sec="upload" prog={0} total={0}>
+      <div style={{ fontSize:32, fontWeight:800, color:"#fff", letterSpacing:-1.2, lineHeight:1.1, textAlign:"center", width:"100%" }}>Admin access only</div>
+      <div style={{ background:"rgba(0,0,0,0.25)", borderRadius:24, padding:"28px 24px", textAlign:"center", width:"100%" }}>
+        <div style={{ fontSize:36, lineHeight:1 }}>🔒</div>
+        <div style={{ fontSize:14, color:"rgba(255,255,255,0.58)", marginTop:12, lineHeight:1.7 }}>
+          This inbox is only visible to the configured admin email.
+        </div>
+      </div>
+      <Btn onClick={onBack}>← Back</Btn>
+    </Shell>
+  );
+}
+
+function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
   const fileRef = useRef();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -3891,6 +4484,11 @@ function Upload({ onParsed, onLogout, onHistory }) {
         {onHistory && (
           <button onClick={onHistory} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
             My Results
+          </button>
+        )}
+        {canAdmin && onAdmin && (
+          <button onClick={onAdmin} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>
+            Feedback Inbox
           </button>
         )}
         {onLogout && (
@@ -4070,21 +4668,368 @@ function Slide({ children, dir, id }) {
 async function saveResult(type, result, mathData) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return null;
     const safeMathData = {
       ...mathData,
       evidenceTimeline: mathData.evidenceTimeline?.map(({ date, title }) => ({ date, title })) ?? [],
       redFlags: mathData.redFlags?.map(({ title }) => ({ title })) ?? [],
     };
-    await supabase.from("results").insert({
+    const { data, error } = await supabase.from("results").insert({
       user_id:     user.id,
       report_type: type,
       chat_type:   mathData.isGroup ? "group" : "duo",
       names:       mathData.names,
       result_data: result,
       math_data:   safeMathData,
+    }).select("id").single();
+    if (error) return null;
+    return data;
+  } catch { return null; /* silent — never interrupt the user flow */ }
+}
+
+async function submitFeedback({ resultId, reportType, cardIndex, cardTitle, errorType, errorNote }) {
+  try {
+    if (!resultId || !reportType || !cardTitle || !errorType) return false;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { error } = await supabase.from("feedback").insert({
+      user_id: user.id,
+      result_id: resultId,
+      report_type: reportType,
+      card_index: cardIndex,
+      card_title: cardTitle,
+      error_type: errorType,
+      error_note: String(errorNote || "").trim() || null,
     });
+    return !error;
   } catch { /* silent — never interrupt the user flow */ }
+  return false;
+}
+
+function pushSummaryRow(rows, label, value, max = 140) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text || text === "—" || text === "..." || text === "…") return;
+  rows.push({ label, value: cleanQuote(text, max) });
+}
+
+function buildFeedbackSummary(feedbackRow, resultRow) {
+  if (!feedbackRow || !resultRow) return [];
+  const math = resultRow.math_data || {};
+  const ai = resultRow.result_data || {};
+  const rows = [];
+  const card = Number(feedbackRow.card_index || 0);
+  const isGroup = !!math.isGroup;
+
+  if (feedbackRow.report_type === "general") {
+    if (!isGroup) {
+      if (card === 2) {
+        pushSummaryRow(rows, "Ghost", math.ghostName);
+        pushSummaryRow(rows, "Reply times", `${math.names?.[0] || "A"} ${math.ghostAvg?.[0] || "—"} • ${math.names?.[1] || "B"} ${math.ghostAvg?.[1] || "—"}`, 90);
+        pushSummaryRow(rows, "AI read", ai.ghostContext);
+      } else if (card === 5) {
+        pushSummaryRow(rows, "Kindest", ai.kindestPerson);
+        pushSummaryRow(rows, "Sweetest moment", ai.sweetMoment);
+      } else if (card === 8) {
+        pushSummaryRow(rows, "Funniest", ai.funniestPerson || math.names?.[0]);
+        pushSummaryRow(rows, "Reason", ai.funniestReason);
+      } else if (card === 14) {
+        pushSummaryRow(rows, "Biggest topic", ai.biggestTopic);
+        pushSummaryRow(rows, "Tense moment", ai.tensionMoment);
+      } else if (card === 15) {
+        pushSummaryRow(rows, "Drama starter", ai.dramaStarter);
+        pushSummaryRow(rows, "How", ai.dramaContext);
+      } else if (card === 16) {
+        pushSummaryRow(rows, relReadLabel(ai.relationshipType), ai.relationshipSummary);
+      } else if (card === 17) {
+        pushSummaryRow(rows, "Vibe", ai.vibeOneLiner);
+      } else if (card >= DUO_CASUAL_SCREENS + 1) {
+        pushSummaryRow(rows, "Funniest", ai.funniestPerson);
+        pushSummaryRow(rows, "Drama", ai.dramaStarter);
+        pushSummaryRow(rows, "Vibe", ai.vibeOneLiner);
+      }
+    } else {
+      if (card === 2) {
+        pushSummaryRow(rows, "Ghost", math.ghost);
+        pushSummaryRow(rows, "AI read", ai.ghostContext);
+      } else if (card === 6) {
+        pushSummaryRow(rows, "Hype person", math.hype);
+        pushSummaryRow(rows, "Reason", ai.hypePersonReason);
+      } else if (card === 7) {
+        pushSummaryRow(rows, "Kindest", ai.kindestPerson);
+        pushSummaryRow(rows, "Sweetest moment", ai.sweetMoment);
+      } else if (card === 8) {
+        pushSummaryRow(rows, "Funniest", ai.funniestPerson);
+        pushSummaryRow(rows, "Reason", ai.funniestReason);
+      } else if (card === 13) {
+        pushSummaryRow(rows, "Biggest topic", ai.biggestTopic);
+        pushSummaryRow(rows, "Inside joke", ai.insideJoke);
+      } else if (card === 14) {
+        pushSummaryRow(rows, "Drama starter", ai.dramaStarter);
+        pushSummaryRow(rows, "How", ai.dramaContext);
+      } else if (card === 15) {
+        pushSummaryRow(rows, "Most missed", ai.mostMissed);
+      } else if (card === 16) {
+        pushSummaryRow(rows, "Group dynamic", ai.groupDynamic);
+        pushSummaryRow(rows, "Tense moment", ai.tensionMoment);
+      } else if (card === 17) {
+        pushSummaryRow(rows, "Vibe", ai.vibeOneLiner);
+      } else if (card >= GROUP_CASUAL_SCREENS + 1) {
+        pushSummaryRow(rows, "Funniest", ai.funniestPerson);
+        pushSummaryRow(rows, "Drama", ai.dramaStarter);
+        pushSummaryRow(rows, "Vibe", ai.vibeOneLiner);
+      }
+    }
+  } else if (feedbackRow.report_type === "toxicity") {
+    if (card === 1 || card === 7) {
+      pushSummaryRow(rows, "Health score", ai.chatHealthScore != null ? `${ai.chatHealthScore}/10` : "");
+      pushSummaryRow(rows, "Verdict", ai.verdict);
+    } else if (card === 2) {
+      (ai.healthScores || []).slice(0, 3).forEach((item, index) => {
+        pushSummaryRow(rows, index === 0 ? "Scores" : " ", `${item.name}: ${item.score}/10 — ${item.detail}`, 120);
+      });
+    } else if (card === 3) {
+      pushSummaryRow(rows, "Apologises more", ai.apologiesLeader?.name);
+      pushSummaryRow(rows, "Their context", ai.apologiesLeader?.context);
+      pushSummaryRow(rows, "Other context", ai.apologiesOther?.context);
+    } else if (card === 4) {
+      (ai.redFlagMoments || []).slice(0, 2).forEach((item, index) => {
+        pushSummaryRow(rows, index === 0 ? "Flagged moment" : "Another", `${item.person || ""} ${item.date ? `• ${item.date}` : ""} ${item.description || ""} ${item.quote ? `— "${item.quote}"` : ""}`, 130);
+      });
+    } else if (card === 5) {
+      pushSummaryRow(rows, "Conflict pattern", ai.conflictPattern);
+    } else if (card === 6) {
+      pushSummaryRow(rows, "Power holder", ai.powerHolder);
+      pushSummaryRow(rows, "Dynamic", ai.powerBalance);
+    }
+  } else if (feedbackRow.report_type === "lovelang") {
+    if (card === 1) {
+      pushSummaryRow(rows, "Person", ai.personA?.name);
+      pushSummaryRow(rows, "Language", ai.personA?.language);
+      pushSummaryRow(rows, "Examples", ai.personA?.examples);
+    } else if (card === 2) {
+      pushSummaryRow(rows, "Person", ai.personB?.name);
+      pushSummaryRow(rows, "Language", ai.personB?.language);
+      pushSummaryRow(rows, "Examples", ai.personB?.examples);
+    } else if (card === 3) {
+      pushSummaryRow(rows, "Mismatch", ai.mismatch);
+    } else if (card === 4) {
+      pushSummaryRow(rows, "Most loving moment", ai.mostLovingMoment);
+    } else if (card === 5) {
+      pushSummaryRow(rows, "Compatibility", ai.compatibilityScore != null ? `${ai.compatibilityScore}/10` : "");
+      pushSummaryRow(rows, "Read", ai.compatibilityRead);
+    }
+  } else if (feedbackRow.report_type === "growth") {
+    if (card === 1) {
+      pushSummaryRow(rows, "Early", ai.thenDepth);
+      pushSummaryRow(rows, "Recent", ai.nowDepth);
+      pushSummaryRow(rows, "Change", ai.depthChange);
+    } else if (card === 2) {
+      pushSummaryRow(rows, "Changed more", ai.whoChangedMore);
+      pushSummaryRow(rows, "How", ai.whoChangedHow);
+    } else if (card === 3) {
+      pushSummaryRow(rows, "Appeared", ai.topicsAppeared);
+      pushSummaryRow(rows, "Faded", ai.topicsDisappeared);
+    } else if (card === 4) {
+      pushSummaryRow(rows, "Trajectory", ai.trajectory);
+      pushSummaryRow(rows, "Detail", ai.trajectoryDetail);
+    } else if (card === 5) {
+      pushSummaryRow(rows, "Arc", ai.arcSummary);
+    }
+  } else if (feedbackRow.report_type === "accounta") {
+    if (card === 1) {
+      pushSummaryRow(rows, "Promises", `${ai.personA?.name || math.names?.[0] || "A"} ${ai.personA?.total || 0} • ${ai.personB?.name || math.names?.[1] || "B"} ${ai.personB?.total || 0}`, 100);
+      pushSummaryRow(rows, "Verdict", ai.overallVerdict);
+    } else if (card === 2) {
+      pushSummaryRow(rows, "Person", ai.personA?.name);
+      pushSummaryRow(rows, "Score", ai.personA?.score != null ? `${ai.personA.score}/10` : "");
+      pushSummaryRow(rows, "Pattern", ai.personA?.detail);
+    } else if (card === 3) {
+      pushSummaryRow(rows, "Person", ai.personB?.name);
+      pushSummaryRow(rows, "Score", ai.personB?.score != null ? `${ai.personB.score}/10` : "");
+      pushSummaryRow(rows, "Pattern", ai.personB?.detail);
+    } else if (card === 4) {
+      pushSummaryRow(rows, "Broken promise", ai.notableBroken?.promise);
+      pushSummaryRow(rows, "Outcome", ai.notableBroken?.outcome);
+    } else if (card === 5) {
+      pushSummaryRow(rows, "Kept promise", ai.notableKept?.promise);
+      pushSummaryRow(rows, "Outcome", ai.notableKept?.outcome);
+    }
+  } else if (feedbackRow.report_type === "energy") {
+    if (card === 1 || card === 6) {
+      pushSummaryRow(rows, "Scores", `${ai.personA?.name || math.names?.[0] || "A"} ${ai.personA?.netScore ?? "—"}/10 • ${ai.personB?.name || math.names?.[1] || "B"} ${ai.personB?.netScore ?? "—"}/10`, 100);
+      pushSummaryRow(rows, "Compatibility", ai.compatibility);
+    } else if (card === 2) {
+      pushSummaryRow(rows, "Person", ai.personA?.name);
+      pushSummaryRow(rows, "Positive", ai.personA?.goodNews);
+      pushSummaryRow(rows, "Draining", ai.personA?.venting);
+    } else if (card === 3) {
+      pushSummaryRow(rows, "Person", ai.personB?.name);
+      pushSummaryRow(rows, "Positive", ai.personB?.goodNews);
+      pushSummaryRow(rows, "Draining", ai.personB?.venting);
+    } else if (card === 4) {
+      pushSummaryRow(rows, "Most energising", ai.mostEnergising);
+    } else if (card === 5) {
+      pushSummaryRow(rows, "Most draining", ai.mostDraining);
+    }
+  }
+
+  if (!rows.length) {
+    pushSummaryRow(rows, "Reported card", feedbackRow.card_title);
+    pushSummaryRow(rows, "Report type", feedbackRow.report_type);
+  }
+
+  return rows.slice(0, 6);
+}
+
+function AdminFeedbackInbox({ onBack, onLogout }) {
+  const [rows, setRows] = useState(null);
+  const [resultsById, setResultsById] = useState({});
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      setErr("");
+      const { data: feedbackRows, error: feedbackError } = await supabase
+        .from("feedback")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (!alive) return;
+      if (feedbackError) {
+        setErr("Couldn't load feedback right now.");
+        setRows([]);
+        return;
+      }
+
+      const list = feedbackRows || [];
+      setRows(list);
+      const resultIds = Array.from(new Set(list.map(item => item.result_id).filter(Boolean)));
+      if (!resultIds.length) {
+        setResultsById({});
+        return;
+      }
+
+      const { data: results, error: resultsError } = await supabase
+        .from("results")
+        .select("*")
+        .in("id", resultIds);
+
+      if (!alive) return;
+      if (resultsError) {
+        setErr("Couldn't load the related result cards.");
+        setResultsById({});
+        return;
+      }
+
+      setResultsById(Object.fromEntries((results || []).map(row => [row.id, row])));
+    };
+
+    load();
+    return () => { alive = false; };
+  }, []);
+
+  return (
+    <Shell sec="upload" prog={0} total={0}>
+      <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1, width:"100%", textAlign:"center" }}>Feedback Inbox</div>
+      <Sub mt={2}>Review reported cards and why they were flagged.</Sub>
+      {!ADMIN_EMAILS.length && (
+        <div style={{ fontSize:12, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 14px", borderRadius:16, width:"100%", textAlign:"center", lineHeight:1.6 }}>
+          Set `VITE_ADMIN_EMAIL` or `VITE_ADMIN_EMAILS` in `.env` to unlock admin access for your account.
+        </div>
+      )}
+      {rows === null && !err && (
+        <div style={{ width:"100%", display:"flex", justifyContent:"center", padding:"28px 0" }}><Dots /></div>
+      )}
+      {err && (
+        <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center" }}>{err}</div>
+      )}
+      {rows?.length === 0 && !err && (
+        <div style={{ fontSize:14, color:"rgba(255,255,255,0.38)", textAlign:"center", padding:"20px 0", lineHeight:1.6 }}>No feedback yet.</div>
+      )}
+      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:14, maxHeight:"62vh", overflowY:"auto", paddingRight:2 }}>
+        {rows?.map(row => {
+          const resultRow = resultsById[row.result_id];
+          const summaryRows = buildFeedbackSummary(row, resultRow);
+          const namesLabel = Array.isArray(resultRow?.names) && resultRow.names.length
+            ? `${resultRow.names.slice(0, 3).join(", ")}${resultRow.names.length > 3 ? ` +${resultRow.names.length - 3}` : ""}`
+            : "";
+          const messageLabel = resultRow?.math_data?.totalMessages != null
+            ? `${resultRow.math_data.totalMessages.toLocaleString()} messages`
+            : "";
+          const submittedAt = row.created_at
+            ? new Date(row.created_at).toLocaleString("en-US", { month:"short", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" })
+            : "Unknown time";
+          return (
+            <div key={row.id} style={{ background:"rgba(0,0,0,0.22)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:22, padding:"16px 16px 18px", display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.42)", marginBottom:6 }}>
+                    {row.report_type} · card {row.card_index} · {submittedAt}
+                  </div>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#fff", letterSpacing:-0.4, marginBottom:6 }}>
+                    {row.card_title || "Untitled card"}
+                  </div>
+                  {(namesLabel || messageLabel) && (
+                    <div style={{ fontSize:12, color:"rgba(255,255,255,0.52)", lineHeight:1.5 }}>
+                      {[namesLabel, messageLabel].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display:"inline-flex", alignItems:"center", borderRadius:999, padding:"7px 12px", background:"rgba(255,255,255,0.08)", color:"#fff", fontSize:13, fontWeight:700, flexShrink:0 }}>
+                  {row.error_type || "Unspecified"}
+                </div>
+              </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:"minmax(0, 1fr) minmax(0, 1.35fr)", gap:12 }}>
+                <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"12px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.42)", marginBottom:8 }}>
+                    Feedback
+                  </div>
+                  <div style={{ fontSize:14, color:"rgba(255,255,255,0.8)", lineHeight:1.65 }}>
+                    {row.error_note || "No extra note added."}
+                  </div>
+                </div>
+
+                <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"12px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.42)", marginBottom:10 }}>
+                    Model output
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"88px 1fr", gap:"8px 12px", alignItems:"start" }}>
+                    {summaryRows.map((item, index) => (
+                      <div key={`${item.label}-${index}`} style={{ display:"contents" }}>
+                        <div style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.45)", textTransform:"uppercase", letterSpacing:"0.05em" }}>
+                          {item.label}
+                        </div>
+                        <div style={{ fontSize:13, color:"#fff", lineHeight:1.55, fontWeight:500 }}>
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
+                    {!summaryRows.length && (
+                      <>
+                        <div style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.45)", textTransform:"uppercase", letterSpacing:"0.05em" }}>
+                          Note
+                        </div>
+                        <div style={{ fontSize:13, color:"#fff", lineHeight:1.55, fontWeight:500 }}>
+                          No saved text summary for this card.
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
+        <Btn onClick={onBack}>← Back</Btn>
+        {onLogout && <button onClick={onLogout} className="wc-btn" style={{ background:"none", border:"none", color:"rgba(255,255,255,0.32)", fontSize:12, cursor:"pointer", padding:"4px 8px", fontWeight:600, letterSpacing:0.1 }}>Log out</button>}
+      </div>
+    </Shell>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -4289,6 +5234,7 @@ function MyResults({ onBack, onRestoreResult }) {
 // ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [phase,            setPhase]            = useState("auth");
+  const [authedUser,       setAuthedUser]       = useState(null);
   const [messages,         setMessages]         = useState(null);
   const [math,             setMath]             = useState(null);
   const [ai,               setAi]               = useState(null);
@@ -4305,11 +5251,37 @@ export default function App() {
   const [dir,              setDir]              = useState("fwd");
   const [sid,              setSid]              = useState(0);
   const [resultsOrigin,    setResultsOrigin]    = useState("upload"); // "upload" | "history"
+  const [shareBusy,        setShareBusy]        = useState(false);
+  const [shareCardSize,    setShareCardSize]    = useState(() => getShareCardSize());
+  const [currentResultId,  setCurrentResultId]  = useState(null);
+  const [feedbackTarget,   setFeedbackTarget]   = useState(null);
+  const [feedbackChoice,   setFeedbackChoice]   = useState("");
+  const [feedbackNote,     setFeedbackNote]     = useState("");
+  const [feedbackBusy,     setFeedbackBusy]     = useState(false);
+  const [feedbackThanks,   setFeedbackThanks]   = useState(false);
+  const shareCardRef = useRef(null);
 
   // Keep a ref so the visibilitychange handler always sees the current phase
   // without being re-registered on every render.
   const phaseRef = useRef(phase);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  useEffect(() => {
+    const updateShareCardSize = () => setShareCardSize(getShareCardSize());
+    updateShareCardSize();
+    window.addEventListener("resize", updateShareCardSize);
+    window.addEventListener("orientationchange", updateShareCardSize);
+    return () => {
+      window.removeEventListener("resize", updateShareCardSize);
+      window.removeEventListener("orientationchange", updateShareCardSize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!feedbackThanks) return undefined;
+    const t = setTimeout(() => setFeedbackThanks(false), 2000);
+    return () => clearTimeout(t);
+  }, [feedbackThanks]);
 
   // When the tab becomes visible again while stuck on the loading screen,
   // check if a result was already saved (e.g. the fetch completed in the
@@ -4321,6 +5293,7 @@ export default function App() {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setAuthedUser(user);
 
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
       const { data } = await supabase
@@ -4344,6 +5317,7 @@ export default function App() {
       }
       setMath(data.math_data || null);
       setReportType(data.report_type || null);
+      setCurrentResultId(data.id || null);
       setRelationshipType(data.result_data?.relationshipType ?? null);
       setAiLoading(false);
       setStep(0);
@@ -4360,6 +5334,7 @@ export default function App() {
   // Check for an existing session on mount and listen for auth changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthedUser(session?.user || null);
       if (session?.user) {
         setStep(0);
         setDir("fwd");
@@ -4368,6 +5343,7 @@ export default function App() {
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthedUser(session?.user || null);
       if (session?.user) {
         setStep(0);
         setDir("fwd");
@@ -4411,6 +5387,8 @@ export default function App() {
     setCoreAnalysisA(null); setCoreAnalysisAKey("");
     setCoreAnalysisB(null); setCoreAnalysisBKey("");
     setAiLoading(false); setReportType(null); setRelationshipType(null);
+    setCurrentResultId(null);
+    setFeedbackTarget(null); setFeedbackChoice(""); setFeedbackNote(""); setFeedbackBusy(false); setFeedbackThanks(false);
     setChatLang("en"); setDetectedLang(null);
     setStep(0); setDir("fwd"); setSid(s => s+1);
   };
@@ -4441,6 +5419,7 @@ export default function App() {
     setCoreAnalysisB(null);
     setCoreAnalysisBKey("");
     setRelationshipType(null);
+    setCurrentResultId(null);
     setPhase("select");
     setSid(s => s+1);
   };
@@ -4452,6 +5431,7 @@ export default function App() {
     setSid(s => s+1);
     setAiLoading(true);
     setAi(null);
+    setCurrentResultId(null);
     try {
       const pipeline = REPORT_PIPELINES[type];
       let result;
@@ -4478,7 +5458,10 @@ export default function App() {
       }
 
       setAi(result || {});
-      if (result) saveResult(type, result, math);
+      if (result) {
+        const saved = await saveResult(type, result, math);
+        setCurrentResultId(saved?.id || null);
+      }
     } catch { setAi({}); }
     setAiLoading(false);
     setResultsOrigin("upload");
@@ -4509,14 +5492,107 @@ export default function App() {
     setPhase(dest);
     setSid(s => s + 1);
   };
+
+  const openFeedback = (target) => {
+    setFeedbackTarget(target);
+    setFeedbackChoice("");
+    setFeedbackNote("");
+  };
+
+  const closeFeedback = (force = false) => {
+    if (feedbackBusy && !force) return;
+    setFeedbackTarget(null);
+    setFeedbackChoice("");
+    setFeedbackNote("");
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackTarget || !feedbackChoice || feedbackBusy) return;
+    setFeedbackBusy(true);
+    const ok = await submitFeedback({
+      resultId: feedbackTarget.resultId,
+      reportType: feedbackTarget.reportType,
+      cardIndex: feedbackTarget.cardIndex,
+      cardTitle: feedbackTarget.cardTitle,
+      errorType: feedbackChoice,
+      errorNote: feedbackNote,
+    });
+    setFeedbackBusy(false);
+    closeFeedback(true);
+    if (ok) setFeedbackThanks(true);
+  };
+  const shareCardData = buildShareCardData({ math, ai, reportType });
+  const shareFilename = `wrapchat-${reportType || "general"}-card.png`;
+
+  const handleShareResult = async () => {
+    if (!shareCardRef.current || !shareCardData || shareBusy) return;
+    setShareBusy(true);
+    let blob = null;
+    try {
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const canvas = await html2canvas(shareCardRef.current, {
+        backgroundColor: null,
+        scale: 1,
+        useCORS: true,
+        logging: false,
+        width: shareCardSize.width,
+        height: shareCardSize.height,
+      });
+      blob = await canvasToBlob(canvas);
+      const file = typeof File === "function"
+        ? new File([blob], shareFilename, { type: "image/png" })
+        : null;
+
+      if (file && canShareFiles([file])) {
+        await navigator.share({
+          files: [file],
+          title: `WrapChat • ${shareCardData.reportLabel}`,
+          text: shareCardData.shareText,
+        });
+      } else {
+        downloadBlob(blob, shareFilename);
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        if (blob) downloadBlob(blob, shareFilename);
+        console.error("Share card capture failed", error);
+      }
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
   const wrap = child => (
-    <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}>
-      <Slide dir={dir} id={sid}>
-        <CloseResultsContext.Provider value={closeResults}>
-          {child}
-        </CloseResultsContext.Provider>
-      </Slide>
-    </div>
+    <ShareResultsContext.Provider value={shareCardData ? { onShare: handleShareResult, busy: shareBusy } : null}>
+      <FeedbackContext.Provider value={{ openFeedback }}>
+        <>
+          <div style={{ width:"min(420px, 100vw)", margin:"0 auto", overflow:"hidden" }}>
+            <Slide dir={dir} id={sid}>
+              <CloseResultsContext.Provider value={closeResults}>
+                {child}
+              </CloseResultsContext.Provider>
+            </Slide>
+          </div>
+          <ShareCardRenderer captureRef={shareCardRef} cardData={shareCardData} cardSize={shareCardSize} />
+          <FeedbackSheet
+            open={!!feedbackTarget}
+            target={feedbackTarget}
+            selected={feedbackChoice}
+            note={feedbackNote}
+            submitting={feedbackBusy}
+            onSelect={setFeedbackChoice}
+            onNoteChange={setFeedbackNote}
+            onSubmit={handleSubmitFeedback}
+            onClose={closeFeedback}
+          />
+          {feedbackThanks && (
+            <div style={{ position:"fixed", left:"50%", bottom:24, transform:"translateX(-50%)", zIndex:210, background:"rgba(12,12,18,0.92)", border:"1px solid rgba(255,255,255,0.12)", color:"#fff", padding:"12px 16px", borderRadius:999, fontSize:14, fontWeight:700, boxShadow:"0 10px 30px rgba(0,0,0,0.28)", transition:"opacity 0.25s" }}>
+              Got it, thank you.
+            </div>
+          )}
+        </>
+      </FeedbackContext.Provider>
+    </ShareResultsContext.Provider>
   );
 
   const onRestoreResult = (row) => {
@@ -4530,6 +5606,7 @@ export default function App() {
       setCoreAnalysisBKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null));
     }
     setReportType(row.report_type);
+    setCurrentResultId(row.id || null);
     setRelationshipType(row.result_data?.relationshipType ?? null);
     setAiLoading(false);
     setStep(0);
@@ -4550,8 +5627,15 @@ export default function App() {
       <TermsFlow onAccepted={onAcceptedTerms} onLogout={logout} />
     </Slide>
   );
+  if (phase === "admin") return (
+    <Slide dir="fwd" id={sid}>
+      {isAdminUser(authedUser)
+        ? <AdminFeedbackInbox onBack={() => { setPhase("upload"); setSid(s => s+1); }} onLogout={logout} />
+        : <AdminLocked onBack={() => { setPhase("upload"); setSid(s => s+1); }} />}
+    </Slide>
+  );
   if (phase === "history")  return <Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>;
-  if (phase === "upload")   return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} /></Slide>;
+  if (phase === "upload")   return <Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={isAdminUser(authedUser)} /></Slide>;
   if (phase === "tooshort") return <Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>;
   if (phase === "select") return (
     <Slide dir="fwd" id={sid}>
@@ -4574,24 +5658,24 @@ export default function App() {
 
   // ── Premium report routing ──
   if (reportType === "toxicity") {
-    if (step < TOXICITY_SCREENS) return wrap(<ToxicityReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} />);
-    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} />);
+    if (step < TOXICITY_SCREENS) return wrap(<ToxicityReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} resultId={currentResultId} />);
+    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} resultId={currentResultId} />);
   }
   if (reportType === "lovelang") {
-    if (step < LOVELANG_SCREENS) return wrap(<LoveLangReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} />);
-    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} />);
+    if (step < LOVELANG_SCREENS) return wrap(<LoveLangReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} resultId={currentResultId} />);
+    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} resultId={currentResultId} />);
   }
   if (reportType === "growth") {
-    if (step < GROWTH_SCREENS) return wrap(<GrowthReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} />);
-    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} />);
+    if (step < GROWTH_SCREENS) return wrap(<GrowthReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} resultId={currentResultId} />);
+    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} resultId={currentResultId} />);
   }
   if (reportType === "accounta") {
-    if (step < ACCOUNTA_SCREENS) return wrap(<AccountaReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} />);
-    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} />);
+    if (step < ACCOUNTA_SCREENS) return wrap(<AccountaReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} resultId={currentResultId} />);
+    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} resultId={currentResultId} />);
   }
   if (reportType === "energy") {
-    if (step < ENERGY_SCREENS) return wrap(<EnergyReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} />);
-    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} />);
+    if (step < ENERGY_SCREENS) return wrap(<EnergyReportScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} resultId={currentResultId} />);
+    return wrap(<PremiumFinale s={math} restart={restart} back={back} reportType={reportType} resultId={currentResultId} />);
   }
 
   // ── General Wrapped (existing casual analysis) ──
@@ -4600,10 +5684,10 @@ export default function App() {
   let screen;
   if (step < contentCount) {
     screen = math.isGroup
-      ? <GroupScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} mode="casual" />
-      : <DuoScreen   s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} mode="casual" relationshipType={relationshipType} />;
+      ? <GroupScreen s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} mode="casual" resultId={currentResultId} />
+      : <DuoScreen   s={math} ai={ai} aiLoading={aiLoading} step={step} back={back} next={next} mode="casual" relationshipType={relationshipType} resultId={currentResultId} />;
   } else {
-    screen = <Finale s={math} ai={ai} aiLoading={aiLoading} restart={restart} back={back} prog={total} total={total} mode="casual" />;
+    screen = <Finale s={math} ai={ai} aiLoading={aiLoading} restart={restart} back={back} prog={total} total={total} mode="casual" resultId={currentResultId} />;
   }
   return wrap(screen);
 }
