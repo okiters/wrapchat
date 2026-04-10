@@ -2258,35 +2258,52 @@ const STOP_WORDS = new Set([
   "poll omitted","this message was deleted","you deleted this message",
   "missed voice call","missed video call","message deleted",
   "edited","forwarded","forwarded many times",
+  "call","voice","omitted","missed","missed call","voice call",
+  "voice message","call omitted","missed voice","missed video","waiting","ringing",
 
   // ── WhatsApp UI — Turkish ──
   "görüntü silindi","video silindi","ses silindi","belge silindi",
   "konum silindi","çıkartma","bu mesaj silindi","mesaj silindi",
   "cevapsız sesli arama","cevapsız görüntülü arama","düzenlendi","iletildi",
+  "arama","sesli","atlandı","cevapsız","sesli arama","görüntülü arama",
+  "sesli mesaj","arama atlandı","cevapsız arama","bekliyor","çalıyor",
+  "sesli not","görüntülü not",
 
   // ── WhatsApp UI — Spanish ──
   "imagen omitida","video omitido","audio omitido","documento omitido",
   "ubicación omitida","este mensaje fue eliminado","editado","reenviado",
+  "llamada","voz","omitido","perdida","llamada perdida","llamada de voz",
+  "mensaje de voz","nota de voz","llamada omitida","esperando","sonando",
 
   // ── WhatsApp UI — Portuguese ──
   "imagem ocultada","vídeo ocultado","áudio ocultado","documento ocultado",
   "esta mensagem foi apagada","editada","encaminhada",
+  "chamada","voz","omitido","perdida","chamada perdida","chamada de voz",
+  "mensagem de voz","nota de voz","chamada omitida","aguardando","chamando",
 
   // ── WhatsApp UI — French ──
   "image omise","vidéo omise","audio omis","document omis",
   "ce message a été supprimé","modifié","transféré",
+  "appel","voix","omis","manqué","appel manqué","appel vocal",
+  "message vocal","note vocale","appel omis","en attente","sonnerie",
 
   // ── WhatsApp UI — German ──
   "bild weggelassen","video weggelassen","audio weggelassen","dokument weggelassen",
   "diese nachricht wurde gelöscht","bearbeitet","weitergeleitet",
+  "anruf","sprache","weggelassen","verpasst","verpasster anruf","sprachanruf",
+  "sprachnachricht","sprachnotiz","anruf weggelassen","wartend","klingelt",
 
   // ── WhatsApp UI — Italian ──
   "immagine omessa","video omesso","audio omesso","documento omesso",
   "questo messaggio è stato eliminato","modificato","inoltrato",
+  "chiamata","voce","omessa","persa","chiamata persa","chiamata vocale",
+  "messaggio vocale","nota vocale","chiamata omessa","in attesa","squillando",
 
   // ── WhatsApp UI — Arabic ──
   "تم حذف هذه الرسالة","صورة محذوفة","فيديو محذوف","صوت محذوف",
   "مستند محذوف","تم التعديل","تمت إعادة التوجيه",
+  "مكالمة","صوت","محذوف","فائتة","مكالمة فائتة","مكالمة صوتية",
+  "رسالة صوتية","مكالمة محذوفة","في الانتظار","يرن",
 ]);
 
 const WA_NOISE_WORDS = new Set([
@@ -2924,7 +2941,7 @@ function localStats(messages) {
     ghostName=pm(a0)>=pm(a1)?namesSorted[0]:namesSorted[1];
     const raw0=rawAvgMin(namesSorted[0]),raw1=rawAvgMin(namesSorted[1]);
     const maxRaw=Math.max(raw0,raw1);
-    ghostEqual=maxRaw>0&&Math.abs(raw0-raw1)/maxRaw<0.20;
+    ghostEqual=maxRaw>0&&Math.abs(raw0-raw1)<30;
   }
 
   // ── Therapist detection ──
@@ -3262,7 +3279,7 @@ function buildSampleText(messages) {
 async function callClaude(systemPrompt, userContent, maxTokens = 1500, schemaMode = "analysis") {
   const { data: { session } } = await supabase.auth.getSession();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutId = setTimeout(() => controller.abort(), 180000);
   try {
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-chat`,
@@ -6171,7 +6188,7 @@ function postAuthPhaseForUser(user) {
 // ─────────────────────────────────────────────────────────────────
 // RELATIONSHIP SELECT SCREEN
 // ─────────────────────────────────────────────────────────────────
-function RelationshipSelect({ onSelect, onBack }) {
+function RelationshipSelect({ onSelect, onBack, error = "" }) {
   const t = useT();
   const romanticOptions = [
     { id:"partner", label:"Partner", icon:partnerIcon, desc:"Romantic partner or spouse" },
@@ -6205,6 +6222,7 @@ function RelationshipSelect({ onSelect, onBack }) {
     <Shell sec="upload" prog={0} total={1}>
       <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.15, textAlign:"center", width:"100%" }}>{t("Who is this chat with?")}</div>
       <div style={{ fontSize:13, color:"rgba(255,255,255,0.52)", textAlign:"center", lineHeight:1.6, width:"100%" }}>{t("This helps the AI frame the analysis correctly.")}</div>
+      {error && <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center" }}>{error}</div>}
       <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10, marginTop:6 }}>
         <div style={{ display:"flex", gap:10, width:"100%" }}>
           {romanticOptions.map(opt => (
@@ -6808,7 +6826,7 @@ const LANG_OPTIONS = [
   { code: "it", label: "Italian"    },
 ];
 
-function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangChange }) {
+function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangChange, error = "" }) {
   const t = useT();
   const [langOpen, setLangOpen] = useState(false);
 
@@ -6819,6 +6837,7 @@ function ReportSelect({ math, onSelect, onBack, chatLang, detectedLang, onLangCh
     <Shell sec="upload" prog={0} total={1}>
       <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1.5, lineHeight:1.1, textAlign:"center", width:"100%" }}>{t("Choose your report")}</div>
       <Sub mt={4}>{math?.totalMessages?.toLocaleString()} {t("messages")} · {math?.names?.slice(0,3).join(", ") || ""}{(math?.names?.length||0)>3?` +${math.names.length-3}`:""}</Sub>
+      {error && <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%", textAlign:"center" }}>{error}</div>}
       {math?.cappedGroup && (
         <div style={{ fontSize:12, color:"rgba(255,255,255,0.55)", background:"rgba(255,255,255,0.08)", borderRadius:14, padding:"8px 14px", width:"100%", textAlign:"center", lineHeight:1.6 }}>
           {t("Large group detected — analysing the top {cap} members out of {count}.", { cap: GROUP_PARTICIPANT_CAP, count: math.originalParticipantCount })}
@@ -7651,6 +7670,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
   const [feedbackBusy,     setFeedbackBusy]     = useState(false);
   const [feedbackThanks,   setFeedbackThanks]   = useState(false);
   const [uploadError,      setUploadError]      = useState("");
+  const [analysisError,    setAnalysisError]    = useState("");
   const consumedImportRef = useRef(null);
   const resolvedUiLang = resolveUiLang(uiLangPref, detectedLang?.code);
 
@@ -7787,6 +7807,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
   // Called when terms are accepted → proceed to upload
   const onAcceptedTerms = () => {
     setUploadError("");
+    setAnalysisError("");
     setStep(0);
     setDir("fwd");
     setPhase("upload");
@@ -7805,12 +7826,14 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
     setFeedbackTarget(null); setFeedbackChoice(""); setFeedbackNote(""); setFeedbackBusy(false); setFeedbackThanks(false);
     setChatLang("en"); setDetectedLang(null);
     setUploadError("");
+    setAnalysisError("");
     setStep(0); setDir("fwd"); setSid(s => s+1);
   };
 
   // Step 1: file parsed → check thresholds, cap large groups, compute local stats, detect language
   const onParsed = ({ messages: msgs, tooShort }) => {
     setUploadError("");
+    setAnalysisError("");
     if (tooShort) {
       setPhase("tooshort");
       setSid(s => s + 1);
@@ -7890,6 +7913,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
 
   // Run AI analysis with the selected report type and relationship type
   const runAnalysis = async (type, relType) => {
+    setAnalysisError("");
     setStep(0);
     setPhase("loading");
     setSid(s => s+1);
@@ -7910,12 +7934,28 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
       result = buildStoredResultData(canonicalResult, translationOverlay ? chatLang : "en", translationOverlay);
     } catch (error) {
       console.error(`Analysis failed for report "${type}" [lang=${chatLang}]`, error);
+      const fallbackPhase = math?.isGroup ? "select" : "relationship";
+      const msg = String(error?.message || "").includes("timed out")
+        ? "The AI took too long to answer. Please try again."
+        : "The AI analysis didn't come through. Please try again.";
+      setAnalysisError(msg);
+      setAiLoading(false);
+      setPhase(fallbackPhase);
+      setStep(0);
+      setSid(s => s + 1);
+      return;
     }
     const displayLang = result ? getStoredResultDisplayLanguage(result) : "en";
-    setAi(result ? getDisplayResultData(result, displayLang) : {});
-    // Always attempt to save so resultId exists and feedback buttons render.
-    // An empty result is still a valid DB row — it lets users flag a failed card.
-    const saved = await saveResult(type, result || {}, math);
+    if (!result) {
+      setAnalysisError("The AI analysis didn't return a usable result. Please try again.");
+      setAiLoading(false);
+      setPhase(math?.isGroup ? "select" : "relationship");
+      setStep(0);
+      setSid(s => s + 1);
+      return;
+    }
+    setAi(getDisplayResultData(result, displayLang));
+    const saved = await saveResult(type, result, math);
     setCurrentResultId(saved?.id || null);
     setAiLoading(false);
     setResultsOrigin("upload");
@@ -7926,6 +7966,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
 
   // Step 2: user picks a report → for duo chats, show relationship screen first
   const onSelectReport = (type) => {
+    setAnalysisError("");
     setReportType(type);
     if (!math.isGroup) {
       setPhase("relationship");
@@ -7937,6 +7978,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
 
   // Step 3 (duo only): user picks relationship type → run analysis
   const onSelectRelationship = (relType) => {
+    setAnalysisError("");
     setRelationshipType(relType);
     runAnalysis(reportType, relType);
   };
@@ -8105,16 +8147,17 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
       <ReportSelect
         math={math}
         onSelect={onSelectReport}
-        onBack={() => { setPhase("upload"); setSid(s => s+1); }}
+        onBack={() => { setAnalysisError(""); setPhase("upload"); setSid(s => s+1); }}
         chatLang={chatLang}
         detectedLang={detectedLang}
-        onLangChange={code => { setChatLang(code); setCoreAnalysisA(null); setCoreAnalysisAKey(""); setCoreAnalysisB(null); setCoreAnalysisBKey(""); }}
+        onLangChange={code => { setAnalysisError(""); setChatLang(code); setCoreAnalysisA(null); setCoreAnalysisAKey(""); setCoreAnalysisB(null); setCoreAnalysisBKey(""); }}
+        error={analysisError}
       />
     </Slide>)
   );
   if (phase === "relationship") return (
     withUiLanguage(<Slide dir="fwd" id={sid}>
-      <RelationshipSelect onSelect={onSelectRelationship} onBack={() => { setPhase("select"); setSid(s => s+1); }} />
+      <RelationshipSelect onSelect={onSelectRelationship} onBack={() => { setAnalysisError(""); setPhase("select"); setSid(s => s+1); }} error={analysisError} />
     </Slide>)
   );
   if (phase === "loading") return withUiLanguage(<Loading math={math} reportType={reportType} />);
