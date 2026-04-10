@@ -2886,6 +2886,17 @@ function localStats(messages) {
   });
   const topWords = Object.entries(wordFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
+  const bigramFreq = {};
+  messages.forEach(({body}) => {
+    if (/media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i.test(body) || body.startsWith("http")) return;
+    const words = body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).filter(w => w.length>2 && !TOKEN_STOP_WORDS.has(w) && !TOKEN_WA_NOISE_WORDS.has(w) && !/^\d+$/.test(w));
+    for (let i=0;i<words.length-1;i++){
+      const bg=`${words[i]} ${words[i+1]}`;
+      bigramFreq[bg]=(bigramFreq[bg]||0)+1;
+    }
+  });
+  const topBigrams = Object.entries(bigramFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
   const emojiRe = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
   const emojiFreq = {};
   messages.forEach(({body}) => (body.match(emojiRe)||[]).forEach(e => (emojiFreq[e]=(emojiFreq[e]||0)+1)));
@@ -3033,7 +3044,7 @@ function localStats(messages) {
     analysisVersion: LOCAL_STATS_VERSION,
     isGroup, names: namesSorted,
     msgCounts,
-    topWords, spiritEmoji: isGroup?[spiritEmojiAll]:namesSorted.map(n=>spiritByName[n]||"💬"),
+    topWords, topBigrams, spiritEmoji: isGroup?[spiritEmojiAll]:namesSorted.map(n=>spiritByName[n]||"💬"),
     avgMsgLen: namesSorted.map(n=>avgLenByName[n]),
     maxMsgLen: namesSorted.map(n=>maxLenByName[n]),
     mediaCounts: namesSorted.map(n=>mediaByName[n]),
@@ -5245,14 +5256,18 @@ function MonthBadge({ month, count, medal }) {
     </div>
   );
 }
-function Words({ words }) {
+function Words({ words, bigrams }) {
   const M=["🥇","🥈","🥉"];
+  const top5w=(words||[]).slice(0,5);
+  const top5b=(bigrams||[]).slice(0,5);
+  const combined=[...top5w.map(([w,c])=>({w,c,bi:false})),...top5b.map(([w,c])=>({w,c,bi:true}))];
   return (
     <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:4 }}>
-      {words.map(([w,c],i)=>(
-        <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background: i<3 ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)", borderRadius:14 }}>
+      {combined.map(({w,c,bi},i)=>(
+        <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background: i<3 ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)", borderRadius:14, opacity: bi ? 0.75 : 1 }}>
           <span style={{ width:26, fontSize:14, flexShrink:0 }}>{M[i]||i+1}</span>
           <span style={{ flex:1, fontWeight:700, color:"#fff", fontSize:15, letterSpacing:-0.2 }}>{w}</span>
+          {bi && <span style={{ fontSize:10, color:"rgba(255,255,255,0.4)", fontWeight:600, letterSpacing:"0.05em", textTransform:"uppercase", marginRight:4 }}>2-word</span>}
           <span style={{ fontSize:13, color:"rgba(255,255,255,0.55)", fontWeight:600 }}>{c.toLocaleString()}x</span>
         </div>
       ))}
@@ -5485,7 +5500,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
 
     <Shell sec="funny" prog={10} total={TOTAL} feedback={feedback("Top 10 most used words", 10)}>
       <T>{t("Top 10 most used words")}</T>
-      <Words words={s.topWords} />
+      <Words words={s.topWords} bigrams={s.topBigrams} />
       <Nav back={back} next={next} />
     </Shell>,
 
@@ -5751,7 +5766,7 @@ function GroupScreen({ s, ai, aiLoading, step, back, next, mode, resultId }) {
 
     <Shell sec="funny" prog={10} total={TOTAL} feedback={feedback("Top 10 most used words", 10)}>
       <T>{t("Top 10 most used words")}</T>
-      <Words words={s.topWords} />
+      <Words words={s.topWords} bigrams={s.topBigrams} />
       <Nav back={back} next={next} />
     </Shell>,
 
