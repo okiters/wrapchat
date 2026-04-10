@@ -2306,11 +2306,29 @@ const STOP_WORDS = new Set([
   "رسالة صوتية","مكالمة محذوفة","في الانتظار","يرن",
 ]);
 
+const TOKEN_STOP_WORDS = new Set(
+  Array.from(STOP_WORDS).flatMap(term =>
+    String(term || "")
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean)
+  )
+);
+
 const WA_NOISE_WORDS = new Set([
   "image","images","video","videos","audio","voice","sticker","gif","document","documents",
   "contact","contacts","media","photo","photos","file","files","location","poll","call","calls",
   "missed","omitted","deleted","message","messages","edited","forwarded","attached",
 ]);
+
+const TOKEN_WA_NOISE_WORDS = new Set(
+  Array.from(WA_NOISE_WORDS).flatMap(term =>
+    String(term || "")
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean)
+  )
+);
 
 const ROMANCE_RE = /\b(love you|luv you|miss you|my love|baby|babe|bb|darling|good night love|good morning love|kiss you|date night|come over|sleep well|xoxo|sevgilim|askim|aşkım|canim|canım|ozledim|özledim|tatlim|tatlım|bebegim|bebeğim)\b/i;
 const FRIEND_RE = /\b(bestie|bro|broski|dude|girl|sis|mate|homie|kanka|knk|abi|abla)\b/i;
@@ -2863,7 +2881,7 @@ function localStats(messages) {
   messages.forEach(({body}) => {
     if (/media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i.test(body) || body.startsWith("http")) return;
     body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w => {
-      if (w.length>2 && !STOP_WORDS.has(w) && !/^\d+$/.test(w)) wordFreq[w]=(wordFreq[w]||0)+1;
+      if (w.length>2 && !TOKEN_STOP_WORDS.has(w) && !/^\d+$/.test(w)) wordFreq[w]=(wordFreq[w]||0)+1;
     });
   });
   const topWords = Object.entries(wordFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
@@ -2933,15 +2951,14 @@ function localStats(messages) {
       const prev=messages[i-1],curr=messages[i];
       if(curr.name!==prev.name && curr.name in rt){const d=(curr.date-prev.date)/60000;if(d>1&&d<1440)rt[curr.name].push(d);}
     }
-    const rawAvgMin=n=>{const a=rt[n]||[];return a.length?a.reduce((s,t)=>s+t,0)/a.length:0;};
-    const fmt=n=>{const a=rt[n]||[];if(!a.length)return"instant";const avg=a.reduce((s,t)=>s+t,0)/a.length;return avg<60?`${Math.round(avg)}m`:`${Math.round(avg/60)}h ${Math.round(avg%60)}m`;};
+    const rawAvgMin=n=>{const a=rt[n]||[];return a.length?Math.round(a.reduce((s,t)=>s+t,0)/a.length):0;};
+    const fmtMinutes=mins=>{if(!mins)return"instant";return mins<60?`${mins}m`:`${Math.floor(mins/60)}h ${mins%60}m`;};
+    const fmt=n=>fmtMinutes(rawAvgMin(n));
     const a0=fmt(namesSorted[0]),a1=fmt(namesSorted[1]||namesSorted[0]);
     ghostAvg=[a0,a1];
-    const pm=s=>{const h=s.match(/(\d+)h/),mn=s.match(/(\d+)m/);return(h?+h[1]*60:0)+(mn?+mn[1]:0);};
-    ghostName=pm(a0)>=pm(a1)?namesSorted[0]:namesSorted[1];
     const raw0=rawAvgMin(namesSorted[0]),raw1=rawAvgMin(namesSorted[1]);
-    const maxRaw=Math.max(raw0,raw1);
-    ghostEqual=maxRaw>0&&Math.abs(raw0-raw1)<30;
+    ghostName=raw0>=raw1?namesSorted[0]:namesSorted[1];
+    ghostEqual=raw0>0&&raw1>0&&Math.abs(raw0-raw1)<30;
   }
 
   // ── Therapist detection ──
@@ -2973,7 +2990,7 @@ function localStats(messages) {
     const wf={};
     byName[n].forEach(({body})=>{
       if(/media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i.test(body)||body.startsWith("http"))return;
-      body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w=>{if(w.length>2&&!STOP_WORDS.has(w)&&!WA_NOISE_WORDS.has(w)&&!/^\d+$/.test(w))wf[w]=(wf[w]||0)+1;});
+      body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w=>{if(w.length>2&&!TOKEN_STOP_WORDS.has(w)&&!TOKEN_WA_NOISE_WORDS.has(w)&&!/^\d+$/.test(w))wf[w]=(wf[w]||0)+1;});
     });
     sigWordByName[n]=Object.entries(wf).sort((a,b)=>b[1]-a[1])[0]?.[0]||"...";
   });
@@ -3013,6 +3030,7 @@ function localStats(messages) {
   });
 
   return {
+    analysisVersion: LOCAL_STATS_VERSION,
     isGroup, names: namesSorted,
     msgCounts,
     topWords, spiritEmoji: isGroup?[spiritEmojiAll]:namesSorted.map(n=>spiritByName[n]||"💬"),
@@ -3039,7 +3057,7 @@ function localStats(messages) {
       if (!longest) return null;
       const wf = {};
       longest.body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w=>{
-        if(w.length>3&&!STOP_WORDS.has(w)&&!WA_NOISE_WORDS.has(w)&&!/^\d+$/.test(w))wf[w]=(wf[w]||0)+1;
+        if(w.length>3&&!TOKEN_STOP_WORDS.has(w)&&!TOKEN_WA_NOISE_WORDS.has(w)&&!/^\d+$/.test(w))wf[w]=(wf[w]||0)+1;
       });
       return Object.entries(wf).sort((a,b)=>b[1]-a[1])[0]?.[0]||null;
     })(),
@@ -3294,7 +3312,8 @@ async function callClaude(systemPrompt, userContent, maxTokens = 1500, schemaMod
       }
     );
     if (!res.ok) throw new Error(`Edge function error ${res.status}`);
-    return res.json();
+    const raw = await res.json();
+    return extractClaudePayload(raw);
   } catch (error) {
     if (error?.name === "AbortError") throw new Error("Analysis timed out");
     throw error;
@@ -3303,7 +3322,104 @@ async function callClaude(systemPrompt, userContent, maxTokens = 1500, schemaMod
   }
 }
 
+function tryParseJsonText(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const withoutFence = trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  const candidates = [withoutFence];
+  const firstBrace = withoutFence.indexOf("{");
+  const lastBrace = withoutFence.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    candidates.push(withoutFence.slice(firstBrace, lastBrace + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  return null;
+}
+
+function isAnalysisPayload(value) {
+  return !!(
+    value &&
+    typeof value === "object" &&
+    (
+      Array.isArray(value.people) ||
+      (value.shared && typeof value.shared === "object") ||
+      (value.meta && typeof value.meta === "object")
+    )
+  );
+}
+
+function extractClaudePayload(raw) {
+  const queue = [raw];
+  const seen = new Set();
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current) continue;
+
+    if (typeof current === "string") {
+      const parsed = tryParseJsonText(current);
+      if (parsed) queue.unshift(parsed);
+      continue;
+    }
+
+    if (Array.isArray(current)) {
+      current.forEach(item => queue.push(item));
+      continue;
+    }
+
+    if (typeof current !== "object" || seen.has(current)) continue;
+    seen.add(current);
+
+    if (isAnalysisPayload(current)) return current;
+
+    [
+      "analysis",
+      "result",
+      "data",
+      "payload",
+      "parsed",
+      "json",
+      "response",
+      "output",
+      "completion",
+      "choices",
+      "choice",
+      "candidate",
+      "candidates",
+      "answer",
+      "artifact",
+      "text",
+      "content",
+      "message",
+      "messages",
+      "delta",
+      "raw",
+      "body",
+    ].forEach(key => {
+      if (key in current) queue.push(current[key]);
+    });
+  }
+
+  return raw;
+}
+
 const CORE_ANALYSIS_VERSION = 2;
+const LOCAL_STATS_VERSION = 2;
+const CORE_ANALYSIS_CACHE_VERSION = 2;
 const CORE_A_MAX_TOKENS = 2600;
 const CORE_B_MAX_TOKENS = 2600;
 
@@ -3783,12 +3899,16 @@ function hasMeaningfulString(value) {
   return Boolean(text && text !== "—" && text !== "..." && text !== "…");
 }
 
+function countMeaningfulStrings(values) {
+  return values.filter(hasMeaningfulString).length;
+}
+
 function hasMeaningfulAnalysisResult(type, result) {
   if (!result || typeof result !== "object") return false;
 
   switch (type) {
     case "general":
-      return [
+      return countMeaningfulStrings([
         result.vibeOneLiner,
         result.biggestTopic,
         result.ghostContext,
@@ -3798,9 +3918,9 @@ function hasMeaningfulAnalysisResult(type, result) {
         result.groupDynamic,
         result.tensionMoment,
         result.sweetMoment,
-      ].some(hasMeaningfulString);
+      ]) >= 3;
     case "toxicity":
-      return [
+      return countMeaningfulStrings([
         result.verdict,
         result.conflictPattern,
         result.powerBalance,
@@ -3808,17 +3928,17 @@ function hasMeaningfulAnalysisResult(type, result) {
         result.apologiesOther?.context,
         ...(result.redFlagMoments || []).flatMap(item => [item?.description, item?.quote]),
         ...(result.healthScores || []).map(item => item?.detail),
-      ].some(hasMeaningfulString);
+      ]) >= 3;
     case "lovelang":
-      return [
+      return countMeaningfulStrings([
         result.personA?.examples,
         result.personB?.examples,
         result.mismatch,
         result.mostLovingMoment,
         result.compatibilityRead,
-      ].some(hasMeaningfulString);
+      ]) >= 2;
     case "growth":
-      return [
+      return countMeaningfulStrings([
         result.thenDepth,
         result.nowDepth,
         result.whoChangedHow,
@@ -3826,17 +3946,17 @@ function hasMeaningfulAnalysisResult(type, result) {
         result.topicsDisappeared,
         result.trajectoryDetail,
         result.arcSummary,
-      ].some(hasMeaningfulString);
+      ]) >= 3;
     case "accounta":
-      return [
+      return countMeaningfulStrings([
         result.personA?.detail,
         result.personB?.detail,
         result.notableBroken?.promise,
         result.notableKept?.promise,
         result.overallVerdict,
-      ].some(hasMeaningfulString);
+      ]) >= 2;
     case "energy":
-      return [
+      return countMeaningfulStrings([
         result.personA?.goodNews,
         result.personA?.venting,
         result.personB?.goodNews,
@@ -3844,7 +3964,7 @@ function hasMeaningfulAnalysisResult(type, result) {
         result.mostEnergising,
         result.mostDraining,
         result.compatibility,
-      ].some(hasMeaningfulString);
+      ]) >= 3;
     default:
       return false;
   }
@@ -4123,6 +4243,7 @@ async function aiEnergyAnalysis(messages, math, relationshipType, coreAnalysis =
 
 function getCoreAnalysisCacheKey(math, relationshipType, chatLang = "en") {
   return [
+    `core-cache-v${CORE_ANALYSIS_CACHE_VERSION}`,
     math?.isGroup ? "group" : "duo",
     relationshipType || "none",
     chatLang || "en",
@@ -4140,7 +4261,7 @@ const REPORT_PIPELINES = {
   energy:   { strategy: "core", cache: "a", derive: deriveEnergyReportFromCore },
 };
 
-const STORED_RESULT_META_KEYS = new Set(["translations", "displayLanguage", "sourceLanguage"]);
+const STORED_RESULT_META_KEYS = new Set(["translations", "displayLanguage", "sourceLanguage", "analysisCacheVersion"]);
 
 const REPORT_TRANSLATION_FIELDS = {
   general: [
@@ -4299,6 +4420,7 @@ function buildStoredResultData(baseResult, displayLanguage = "en", translationOv
     ...canonical,
     sourceLanguage: "en",
     displayLanguage: lang,
+    analysisCacheVersion: CORE_ANALYSIS_CACHE_VERSION,
     translations,
   };
 }
@@ -7777,6 +7899,26 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
     return () => clearTimeout(t);
   }, [feedbackThanks]);
 
+  useEffect(() => {
+    if (!messages?.length) return;
+    if (math?.analysisVersion === LOCAL_STATS_VERSION) return;
+
+    try {
+      const refreshed = localStats(messages);
+      if (!refreshed) return;
+      refreshed.cappedGroup = math?.cappedGroup ?? refreshed.cappedGroup;
+      refreshed.originalParticipantCount = math?.originalParticipantCount ?? refreshed.originalParticipantCount;
+      setMath(refreshed);
+      setCurrentResultId(null);
+      setCoreAnalysisA(null);
+      setCoreAnalysisAKey("");
+      setCoreAnalysisB(null);
+      setCoreAnalysisBKey("");
+    } catch (error) {
+      console.error("Local stats refresh failed", error);
+    }
+  }, [math, messages]);
+
   // When the tab becomes visible again while stuck on the loading screen,
   // check if a result was already saved (e.g. the fetch completed in the
   // background) and restore it without asking the user to re-upload.
@@ -7803,14 +7945,20 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
 
       const displayLang = getStoredResultDisplayLanguage(data.result_data);
       const displayResult = getDisplayResultData(data.result_data, displayLang);
+      const canReuseCore = data.result_data?.analysisCacheVersion === CORE_ANALYSIS_CACHE_VERSION;
 
       setAi(displayResult || {});
-      if (data.result_data?.coreAnalysis?.part === "a") {
+      if (canReuseCore && data.result_data?.coreAnalysis?.part === "a") {
         setCoreAnalysisA(data.result_data.coreAnalysis);
         setCoreAnalysisAKey(getCoreAnalysisCacheKey(data.math_data || null, data.result_data?.relationshipType ?? null, "en"));
-      } else if (data.result_data?.coreAnalysis?.part === "b") {
+      } else if (canReuseCore && data.result_data?.coreAnalysis?.part === "b") {
         setCoreAnalysisB(data.result_data.coreAnalysis);
         setCoreAnalysisBKey(getCoreAnalysisCacheKey(data.math_data || null, data.result_data?.relationshipType ?? null, "en"));
+      } else {
+        setCoreAnalysisA(null);
+        setCoreAnalysisAKey("");
+        setCoreAnalysisB(null);
+        setCoreAnalysisBKey("");
       }
       setMath(data.math_data || null);
       setReportType(data.report_type || null);
@@ -8177,13 +8325,19 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
   const onRestoreResult = (row) => {
     setMath(row.math_data);
     const displayLang = getStoredResultDisplayLanguage(row.result_data);
+    const canReuseCore = row.result_data?.analysisCacheVersion === CORE_ANALYSIS_CACHE_VERSION;
     setAi(getDisplayResultData(row.result_data, displayLang));
-    if (row.result_data?.coreAnalysis?.part === "a") {
+    if (canReuseCore && row.result_data?.coreAnalysis?.part === "a") {
       setCoreAnalysisA(row.result_data.coreAnalysis);
       setCoreAnalysisAKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null, "en"));
-    } else if (row.result_data?.coreAnalysis?.part === "b") {
+    } else if (canReuseCore && row.result_data?.coreAnalysis?.part === "b") {
       setCoreAnalysisB(row.result_data.coreAnalysis);
       setCoreAnalysisBKey(getCoreAnalysisCacheKey(row.math_data || null, row.result_data?.relationshipType ?? null, "en"));
+    } else {
+      setCoreAnalysisA(null);
+      setCoreAnalysisAKey("");
+      setCoreAnalysisB(null);
+      setCoreAnalysisBKey("");
     }
     setReportType(row.report_type);
     setCurrentResultId(row.id || null);
