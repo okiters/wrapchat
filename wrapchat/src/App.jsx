@@ -1,6 +1,8 @@
 import { useState, useEffect, useLayoutEffect, useRef, createContext, useContext } from "react";
 import html2canvas from "html2canvas";
 import { supabase } from "./supabase";
+import { processImportedChatFile } from "./import/fileProcessing";
+import { MIN_MESSAGES } from "./import/whatsappParser";
 import partnerIcon from "../../assets/partner.svg";
 import datingIcon from "../../assets/dating.svg";
 import exIcon from "../../assets/ex.svg";
@@ -49,109 +51,6 @@ const ADMIN_EMAILS = Array.from(new Set(
     .map(email => email.trim().toLowerCase())
     .filter(Boolean)
 ));
-
-// ─────────────────────────────────────────────────────────────────
-// PARSER
-// ─────────────────────────────────────────────────────────────────
-
-// System messages to always skip (applied to both body and sender name)
-const SYSTEM_RE = /end-to-end encrypted|end-to-end şifreli|is a contact|bir kişidir|added|removed|left|created group|changed the|security code|<attached:|Messages and calls|Mesajlar ve aramalar/i;
-
-// iOS bracket format:     [DD.MM.YY, HH:MM:SS] Name: body
-// Android no-bracket fmt: DD/MM/YYYY, HH:MM - Name: body
-// Both formats support optional AM/PM for 12-hour locales
-const HEADER_IOS     = /^\[(\d{1,2}[./]\d{1,2}[./]\d{2,4}),\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][Mm])?)\]\s(.+?):\s/;
-const HEADER_ANDROID = /^(\d{1,2}[./]\d{1,2}[./]\d{2,4}),\s(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap][Mm])?)\s-\s(.+?):\s/;
-
-// Minimum real messages required to produce a meaningful wrap
-const MIN_MESSAGES = 50;
-
-function detectFormat(lines) {
-  for (const line of lines) {
-    if (HEADER_IOS.test(line))     return "ios";
-    if (HEADER_ANDROID.test(line)) return "android";
-  }
-  return null;
-}
-
-function parseTimestamp(dateStr, timeStr) {
-  // Date — always day-first (DD.MM.YY / DD/MM/YYYY) matching WhatsApp's global default
-  const parts = dateStr.split(/[./]/).map(Number);
-  const day   = parts[0];
-  const month = parts[1];
-  const year  = parts[2] < 100 ? 2000 + parts[2] : parts[2];
-  const date  = new Date(year, month - 1, day);
-
-  // Time — supports HH:MM, HH:MM:SS, and 12-hour AM/PM variants
-  const tp = timeStr.match(/(\d+):(\d+)(?::(\d+))?\s*([APap][Mm])?/);
-  if (tp) {
-    let h      = parseInt(tp[1]);
-    const min  = parseInt(tp[2]);
-    const sec  = parseInt(tp[3] || 0);
-    const ampm = tp[4]?.toLowerCase();
-    if (ampm === "pm" && h < 12) h += 12;
-    if (ampm === "am" && h === 12) h = 0;
-    date.setHours(h, min, sec);
-  }
-  return isNaN(date.getTime()) ? null : date;
-}
-
-function normalizeBody(body) {
-  if (/audio omitted|voice omitted|\.(opus|aac|m4a)/i.test(body)) return "<Voice omitted>";
-  if (/^<attached:.*>$/.test(body) || /\.(jpg|jpeg|png|mp4|pdf|webp)/i.test(body)) return "<Media omitted>";
-  return body;
-}
-
-// Returns { messages, formatDetected, tooShort }
-function parseWhatsApp(text) {
-  // Strip invisible Unicode chars WhatsApp injects (LRM, ZWNBSP, directional marks etc.)
-  const clean    = text.replace(/[\u200e\u200f\u202a-\u202e\ufeff\u2066-\u2069]/g, "");
-  const rawLines = clean.split("\n");
-
-  const format = detectFormat(rawLines);
-  if (!format) return { messages: [], formatDetected: false, tooShort: false };
-
-  const HEADER = format === "ios" ? HEADER_IOS : HEADER_ANDROID;
-
-  // ── Step 1: join continuation lines ──
-  // A line that does not start with a timestamp header is a continuation of the previous message
-  const joined = [];
-  for (const line of rawLines) {
-    if (HEADER.test(line)) {
-      joined.push(line);
-    } else if (joined.length > 0 && line.trim().length > 0) {
-      joined[joined.length - 1] += " " + line.trim();
-    }
-  }
-
-  // ── Step 2: parse each joined line ──
-  const messages = [];
-  for (const line of joined) {
-    const m = line.match(HEADER);
-    if (!m) continue;
-
-    const dateStr = m[1];
-    const timeStr = m[2];
-    const name    = m[3].trim();
-    const body    = line.slice(m[0].length).trim();
-
-    if (!body || SYSTEM_RE.test(body) || SYSTEM_RE.test(name)) continue;
-
-    const date = parseTimestamp(dateStr, timeStr);
-    if (!date) continue;
-
-    messages.push({
-      name,
-      body:  normalizeBody(body),
-      date,
-      hour:  date.getHours(),
-      month: date.getMonth(),
-      year:  date.getFullYear(),
-    });
-  }
-
-  return { messages, formatDetected: true, tooShort: messages.length < MIN_MESSAGES };
-}
 
 // ─────────────────────────────────────────────────────────────────
 // LANGUAGE DETECTION  — heuristic only, no external dependency.
@@ -2390,6 +2289,12 @@ const STOP_WORDS = new Set([
   "مستند محذوف","تم التعديل","تمت إعادة التوجيه",
 ]);
 
+const WA_NOISE_WORDS = new Set([
+  "image","images","video","videos","audio","voice","sticker","gif","document","documents",
+  "contact","contacts","media","photo","photos","file","files","location","poll","call","calls",
+  "missed","omitted","deleted","message","messages","edited","forwarded","attached",
+]);
+
 const ROMANCE_RE = /\b(love you|luv you|miss you|my love|baby|babe|bb|darling|good night love|good morning love|kiss you|date night|come over|sleep well|xoxo|sevgilim|askim|aşkım|canim|canım|ozledim|özledim|tatlim|tatlım|bebegim|bebeğim)\b/i;
 const FRIEND_RE = /\b(bestie|bro|broski|dude|girl|sis|mate|homie|kanka|knk|abi|abla)\b/i;
 const WORK_RE = /\b(meeting|deadline|project|client|invoice|brief|office|shift|deck|review this|sunum|mesai|müşteri|musteri|patron|toplantı|toplanti)\b/i;
@@ -3051,7 +2956,7 @@ function localStats(messages) {
     const wf={};
     byName[n].forEach(({body})=>{
       if(/media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i.test(body)||body.startsWith("http"))return;
-      body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w=>{if(w.length>2&&!STOP.has(w)&&!WA_NOISE.has(w)&&!/^\d+$/.test(w))wf[w]=(wf[w]||0)+1;});
+      body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w=>{if(w.length>2&&!STOP_WORDS.has(w)&&!WA_NOISE_WORDS.has(w)&&!/^\d+$/.test(w))wf[w]=(wf[w]||0)+1;});
     });
     sigWordByName[n]=Object.entries(wf).sort((a,b)=>b[1]-a[1])[0]?.[0]||"...";
   });
@@ -3117,7 +3022,7 @@ function localStats(messages) {
       if (!longest) return null;
       const wf = {};
       longest.body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w=>{
-        if(w.length>3&&!STOP.has(w)&&!WA_NOISE.has(w)&&!/^\d+$/.test(w))wf[w]=(wf[w]||0)+1;
+        if(w.length>3&&!STOP_WORDS.has(w)&&!WA_NOISE_WORDS.has(w)&&!/^\d+$/.test(w))wf[w]=(wf[w]||0)+1;
       });
       return Object.entries(wf).sort((a,b)=>b[1]-a[1])[0]?.[0]||null;
     })(),
@@ -3356,19 +3261,29 @@ function buildSampleText(messages) {
 
 async function callClaude(systemPrompt, userContent, maxTokens = 1500, schemaMode = "analysis") {
   const { data: { session } } = await supabase.auth.getSession();
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-chat`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${session?.access_token}`,
-      },
-      body: JSON.stringify({ system: systemPrompt, userContent, max_tokens: maxTokens, schema_mode: schemaMode }),
-    }
-  );
-  if (!res.ok) throw new Error(`Edge function error ${res.status}`);
-  return res.json();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-chat`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ system: systemPrompt, userContent, max_tokens: maxTokens, schema_mode: schemaMode }),
+        signal: controller.signal,
+      }
+    );
+    if (!res.ok) throw new Error(`Edge function error ${res.status}`);
+    return res.json();
+  } catch (error) {
+    if (error?.name === "AbortError") throw new Error("Analysis timed out");
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 const CORE_ANALYSIS_VERSION = 2;
@@ -6752,31 +6667,26 @@ function AdminLocked({ onBack }) {
   );
 }
 
-function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
+function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin, uploadError = "", onClearError }) {
   const { uiLangPref, updateUiLangPref } = useUILanguage();
   const t = useT();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const showAdminEntry = Boolean(onAdmin) && ADMIN_EMAILS.length > 0;
   const uploadInputId = "wrapchat-upload-input";
-  const handle = file => {
+  const displayErr = err || uploadError;
+
+  const handle = async file => {
     if (!file) return;
-    if (file.size > 50 * 1024 * 1024) {
-      setErr("This file is too large (max 50 MB). Try exporting a shorter date range.");
-      return;
-    }
+    onClearError?.();
     setBusy(true); setErr("");
-    const r = new FileReader();
-    r.onload = e => {
-      const result = parseWhatsApp(e.target.result);
-      if (!result.formatDetected) {
-        setErr("Couldn't read this file. Make sure it's a WhatsApp .txt export.");
-        setBusy(false);
-        return;
-      }
-      onParsed(result);
-    };
-    r.readAsText(file);
+    try {
+      const result = await processImportedChatFile(file);
+      onParsed(result.payload);
+    } catch (error) {
+      setErr(String(error?.message || "Couldn't open this file. Please export the chat again and retry."));
+      setBusy(false);
+    }
   };
   return (
     <Shell sec="upload" prog={0} total={1}>
@@ -6819,8 +6729,8 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin }) {
       >
         <div style={{ fontSize:17, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>{busy ? t("Reading your chat…") : t("Upload your chat")}</div>
       </label>
-      <input id={uploadInputId} type="file" accept=".txt" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
-      {err && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{err}</div>}
+      <input id={uploadInputId} type="file" accept=".txt,.zip,text/plain,application/zip" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
+      {displayErr && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{displayErr}</div>}
       <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>{t("Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.")}</div>
       <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap", width:"100%", marginTop:4 }}>
         {onHistory && (
@@ -7712,7 +7622,7 @@ function MyResults({ onBack, onRestoreResult }) {
 // ─────────────────────────────────────────────────────────────────
 // APP
 // ─────────────────────────────────────────────────────────────────
-export default function App() {
+export default function App({ pendingImportedChat = null, onPendingImportedChatConsumed = () => {} }) {
   const [phase,            setPhase]            = useState("auth");
   const [authedUser,       setAuthedUser]       = useState(null);
   const [messages,         setMessages]         = useState(null);
@@ -7740,6 +7650,8 @@ export default function App() {
   const [feedbackNote,     setFeedbackNote]     = useState("");
   const [feedbackBusy,     setFeedbackBusy]     = useState(false);
   const [feedbackThanks,   setFeedbackThanks]   = useState(false);
+  const [uploadError,      setUploadError]      = useState("");
+  const consumedImportRef = useRef(null);
   const resolvedUiLang = resolveUiLang(uiLangPref, detectedLang?.code);
 
   useEffect(() => {
@@ -7874,6 +7786,7 @@ export default function App() {
 
   // Called when terms are accepted → proceed to upload
   const onAcceptedTerms = () => {
+    setUploadError("");
     setStep(0);
     setDir("fwd");
     setPhase("upload");
@@ -7891,37 +7804,63 @@ export default function App() {
     setCurrentResultId(null);
     setFeedbackTarget(null); setFeedbackChoice(""); setFeedbackNote(""); setFeedbackBusy(false); setFeedbackThanks(false);
     setChatLang("en"); setDetectedLang(null);
+    setUploadError("");
     setStep(0); setDir("fwd"); setSid(s => s+1);
   };
 
   // Step 1: file parsed → check thresholds, cap large groups, compute local stats, detect language
   const onParsed = ({ messages: msgs, tooShort }) => {
+    setUploadError("");
     if (tooShort) {
       setPhase("tooshort");
       setSid(s => s + 1);
       return;
     }
-    const { messages: cappedMsgs, cappedGroup, originalParticipantCount } = capLargeGroup(msgs);
-    const m = localStats(cappedMsgs);
-    if (m) {
-      m.cappedGroup = cappedGroup;
-      m.originalParticipantCount = originalParticipantCount;
-    }
-    const detected = detectLanguage(cappedMsgs);
-    setDetectedLang(detected);
-    setChatLang(detected.code);
-    setMessages(cappedMsgs);
-    setMath(m);
-    setAi(null);
-    setCoreAnalysisA(null);
-    setCoreAnalysisAKey("");
-    setCoreAnalysisB(null);
-    setCoreAnalysisBKey("");
-    setRelationshipType(null);
-    setCurrentResultId(null);
-    setPhase("select");
-    setSid(s => s+1);
+    // Yield to the browser's render cycle so "Reading your chat…" appears
+    // before the heavy synchronous computation blocks the main thread.
+    setTimeout(() => {
+      try {
+        const { messages: cappedMsgs, cappedGroup, originalParticipantCount } = capLargeGroup(msgs);
+        const m = localStats(cappedMsgs);
+        if (m) {
+          m.cappedGroup = cappedGroup;
+          m.originalParticipantCount = originalParticipantCount;
+        }
+        const detected = detectLanguage(cappedMsgs);
+        setDetectedLang(detected);
+        setChatLang(detected.code);
+        setMessages(cappedMsgs);
+        setMath(m);
+        setAi(null);
+        setCoreAnalysisA(null);
+        setCoreAnalysisAKey("");
+        setCoreAnalysisB(null);
+        setCoreAnalysisBKey("");
+        setRelationshipType(null);
+        setCurrentResultId(null);
+        setPhase("select");
+        setSid(s => s+1);
+      } catch (error) {
+        console.error("Post-parse analysis failed", error);
+        setMessages(null);
+        setMath(null);
+        setDetectedLang(null);
+        setUploadError("Couldn't finish reading this chat. Try exporting again or using a shorter date range.");
+        setPhase("upload");
+        setSid(s => s + 1);
+      }
+    }, 0);
   };
+
+  useEffect(() => {
+    if (!pendingImportedChat?.id || !pendingImportedChat.payload) return;
+    if (consumedImportRef.current === pendingImportedChat.id) return;
+    if (!authedUser || phase !== "upload") return;
+
+    consumedImportRef.current = pendingImportedChat.id;
+    onParsed(pendingImportedChat.payload);
+    onPendingImportedChatConsumed(pendingImportedChat.id);
+  }, [authedUser, onPendingImportedChatConsumed, pendingImportedChat, phase]);
 
   const generatePipelineResult = async (type, relType) => {
     const pipeline = REPORT_PIPELINES[type];
@@ -8159,7 +8098,7 @@ export default function App() {
     </Slide>)
   );
   if (phase === "history")  return withUiLanguage(<Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>);
-  if (phase === "upload")   return withUiLanguage(<Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={isAdminUser(authedUser)} /></Slide>);
+  if (phase === "upload")   return withUiLanguage(<Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={isAdminUser(authedUser)} uploadError={uploadError} onClearError={() => setUploadError("")} /></Slide>);
   if (phase === "tooshort") return withUiLanguage(<Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>);
   if (phase === "select") return (
     withUiLanguage(<Slide dir="fwd" id={sid}>

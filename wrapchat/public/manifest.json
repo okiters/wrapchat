@@ -1,0 +1,36 @@
+{
+  "name": "WrapChat",
+  "short_name": "WrapChat",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0c1520",
+  "theme_color": "#0c1520",
+  "description": "Read your WhatsApp export and jump straight into your WrapChat analysis.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "share_target": {
+    "action": "/import",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "chat",
+          "accept": [
+            "text/plain",
+            ".txt",
+            "application/zip",
+            ".zip"
+          ]
+        }
+      ]
+    }
+  }
+}
