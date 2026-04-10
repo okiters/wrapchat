@@ -2214,7 +2214,7 @@ const STOP_WORDS = new Set([
   "ben","sen","biz","siz","onlar","beni","seni","onu","bize","size","onlara",
   "için","ama","fakat","lakin","ya","veya","gibi","kadar","daha","en","çok",
   "az","ne","nasıl","neden","çünkü","eğer","ise","değil","var","yok","olan",
-  "oldu","olacak","oluyor","olmuş","işte","şey","diye","bile","hem","hiç","artık",
+  "oldu","olacak","oluyor","olmuş","işte","şey","diye","bile","hem","hiç","sana","bana","artık",
 
   // ── Spanish ──
   "yo","tú","él","ella","nosotros","ellos","ellas","me","te","se",
@@ -2238,7 +2238,7 @@ const STOP_WORDS = new Set([
   "euch","mir","dir","ihm","ihnen","ein","eine","einen","einem","einer",
   "eines","der","die","das","den","dem","des","und","oder","aber","weil",
   "dass","wenn","ob","nicht","kein","keine","auch","noch","schon","nur",
-  "so","sehr","eigentlich","irgendwie",
+  "so","sehr",
 
   // ── Italian ──
   "io","tu","lui","lei","noi","voi","loro","mi","ti","si","ci","vi",
@@ -3420,7 +3420,7 @@ function extractClaudePayload(raw) {
 const CORE_ANALYSIS_VERSION = 2;
 const LOCAL_STATS_VERSION = 3;
 const CORE_ANALYSIS_CACHE_VERSION = 3;
-const APP_BUILD_ID = "2026.04.10-3";
+const APP_BUILD_ID = "2026.04.10-4";
 const CORE_A_MAX_TOKENS = 2600;
 const CORE_B_MAX_TOKENS = 2600;
 
@@ -3439,7 +3439,17 @@ function buildLangInstruction(chatLang) {
 }
 
 function buildAnalystSystemPrompt(role, relationshipType, extraRules = "", chatLang = "en") {
-  return `You are WrapChat, ${role}. Be specific, grounded, and evidence-led. Reference real patterns, real phrases, and real moments from the chat instead of generic observations. Be conservative before singling out one person: if the evidence is mixed, close, or mostly based on tone, prefer balanced labels like "Tie", "Shared", "Balanced", or "None clearly identified" instead of over-assigning blame. Do not pile onto the loudest or most active person unless multiple distinct examples support it. Keep the tone honest but not cruel, mocking, or absolute. Avoid repetitive wording across fields: if two answers overlap, make them distinct in angle and concrete detail rather than repeating the same judgment. When negative and positive evidence coexist, acknowledge both. Return ONLY valid JSON with no markdown fences or explanation outside the JSON.${buildRelationshipContextBlock(relationshipType)}${extraRules ? ` ${extraRules}` : ""}${buildLangInstruction(chatLang)}`;
+  return `PRIORITY RULES — READ THESE FIRST, THEY OVERRIDE EVERYTHING ELSE:
+
+1. FUNNY ATTRIBUTION: When person B reacts with a laugh (😂, lol, lmao, haha, 'im dead', 💀, 🤣, keyboard mash like 'skdjfhsdf') immediately after a line from person A — the funny person is person A. Never attribute humour to the person who is laughing. The reactor is the audience, not the comedian.
+
+2. DIRECTION OF ACTIONS: The actor is always the sender of that exact message line. If Ozge sends a birthday message, Ozge is being kind. If Aslı sends a laugh reaction, Aslı is the audience. Never reverse who did what to whom.
+
+3. RELATIONSHIP LABEL: You will be told the relationship type. Never override it. Cousins are not father-daughter. Friends are not partners. Use only the confirmed label — never infer relationship from tone, warmth, or emoji use.
+
+4. GEOGRAPHY: Never claim participants live in different countries, cities, or continents unless the chat explicitly states this. Do not infer distance from the fact that they use WhatsApp or video call.
+
+You are WrapChat, ${role}. Be specific, grounded, and evidence-led. Reference real patterns, real phrases, and real moments from the chat instead of generic observations. Be conservative before singling out one person: if the evidence is mixed, close, or mostly based on tone, prefer balanced labels like "Tie", "Shared", "Balanced", or "None clearly identified" instead of over-assigning blame. Do not pile onto the loudest or most active person unless multiple distinct examples support it. Keep the tone honest but not cruel, mocking, or absolute. Avoid repetitive wording across fields: if two answers overlap, make them distinct in angle and concrete detail rather than repeating the same judgment. When negative and positive evidence coexist, acknowledge both. Return ONLY valid JSON with no markdown fences or explanation outside the JSON.${buildRelationshipContextBlock(relationshipType)}${extraRules ? ` ${extraRules}` : ""}${buildLangInstruction(chatLang)}`;
 }
 
 function clampScore(value, fallback = 5) {
