@@ -2380,11 +2380,17 @@ function detectRelationship(messages) {
     son: /\b(oğlum|oğlumsun|my son|mon fils|mein sohn|mio figlio|mi hijo|meu filho|ابني)\b/i,
     mother: /\b(annem|anneciğim|mom|mum|mama|mother|anne|mamá|mãe|أمي|maman|mutter|mamma|madre)\b/i,
     father: /\b(babam|babaciğim|dad|daddy|father|baba|papá|pai|أبي|papa|vater|papà|padre)\b/i,
+    grandmother: /\b(anneannem|babaanne(m)?|grandma|grandmother|abuela|avó|جدتي|grand[- ]m[eè]re|großmutter|nonna)\b/i,
+    grandfather: /\b(dedem|dedeciğim|grandpa|granddad|grandfather|abuelo|avô|جدي|grand[- ]p[eè]re|großvater|nonno)\b/i,
     sister: /\b(ablam|kız kardeşim|sis|sister|hermana|irmã|أختي|sœur|schwester|sorella)\b/i,
     brother: /\b(ağabeyim|kardeşim|bro|brother|hermano|irmão|أخي|frère|bruder|fratello)\b/i,
     cousin: /\b(kuzenimi|kuzenimsin|kuzenim|cousin|primo|prima|عمي|cousine|vetter|kusine|cugino|cugina)\b/i,
     aunt: /\b(teyzem|halam|aunt|auntie|tía|tia|خالتي|عمتي|tante|zia)\b/i,
     uncle: /\b(amcam|dayım|uncle|tío|tio|عمي|خالي|oncle|onkel|zio)\b/i,
+    husband: /\b(kocam|eşim|husband|hubby|my husband|esposo|marido|زوجي|mari|ehemann|marito)\b/i,
+    wife: /\b(karım|eşim|wife|wifey|my wife|esposa|زوجتي|femme|ehefrau|moglie)\b/i,
+    boyfriend: /\b(erkek arkadaşım|boyfriend|novio|namorado|petit ami|freund|ragazzo|حبيبي)\b/i,
+    girlfriend: /\b(kız arkadaşım|girlfriend|novia|namorada|petite amie|freundin|ragazza|حبيبتي)\b/i,
     romantic: /\b(sevgilim|aşkım|canım|tatlım|bebeğim|babe|baby|darling|my love|amor|querido|querida|habibi|habibti|mon amour|liebling|amore)\b/i,
     friend: /\b(arkadaşım|dostum|bestie|best friend|amigo|amiga|ami|freund|amico)\b/i,
     colleague: /\b(iş arkadaşım|meslektaşım|colleague|coworker|collègue|kollege|collega)\b/i,
@@ -2392,7 +2398,7 @@ function detectRelationship(messages) {
   };
 
   const snippets = [];
-  const sample = messages.slice(0, 1200);
+  const sample = messages.slice(0, 1600);
 
   for (let i = 0; i < sample.length; i++) {
     const msg = sample[i];
@@ -2403,25 +2409,103 @@ function detectRelationship(messages) {
         const start = Math.max(0, i - 2);
         const end = Math.min(sample.length - 1, i + 2);
         const context = sample.slice(start, end + 1)
-          .map(m => `${m.name}: ${m.body}`)
+          .map(m => `[${formatEvidenceDate(m.date)}] ${m.name}: ${m.body}`)
           .join("\n");
-        snippets.push({ key, context });
+        snippets.push({
+          key,
+          speaker: msg.name,
+          date: formatEvidenceDate(msg.date),
+          quote: cleanQuote(msg.body, 120),
+          context,
+        });
         break;
       }
     }
 
-    if (snippets.length >= 15) break;
+    if (snippets.length >= 18) break;
   }
 
   if (!snippets.length) return null;
   return snippets;
 }
 
+const RELATIONSHIP_CONTEXT_CACHE = new Map();
+
+function defaultSpecificRelationship(userSelectedType) {
+  return {
+    partner: "partners",
+    dating: "dating",
+    ex: "exes",
+    family: "family members",
+    friend: "close friends",
+    colleague: "colleagues",
+    other: "someone they know",
+  }[userSelectedType] || "someone they know";
+}
+
+function inferRelationshipCategoryFromSpecific(specific, fallback = "other") {
+  const label = String(specific || "").toLowerCase();
+  if (!label) return fallback;
+  if (/partner|spouse|dating|ex/.test(label)) return /ex/.test(label) ? "ex" : (/dating/.test(label) ? "dating" : "partner");
+  if (/friend/.test(label)) return "friend";
+  if (/colleague|boss|employee|coworker|work/.test(label)) return "colleague";
+  if (/father|mother|sibling|cousin|grandparent|aunt|uncle|family/.test(label)) return "family";
+  return fallback;
+}
+
+function normalizeRelationshipCategory(value, fallback = "other") {
+  const label = String(value || "").trim().toLowerCase();
+  if (!label) return fallback;
+  if (["partner", "dating", "ex", "family", "friend", "colleague", "other", "unknown"].includes(label)) return label;
+  if (/partner|spouse|wife|husband/.test(label)) return "partner";
+  if (/dating|boyfriend|girlfriend/.test(label)) return "dating";
+  if (/ex/.test(label)) return "ex";
+  if (/friend/.test(label)) return "friend";
+  if (/colleague|coworker|boss|employee|work/.test(label)) return "colleague";
+  if (/family|father|mother|sibling|cousin|grandparent|aunt|uncle/.test(label)) return "family";
+  return fallback;
+}
+
+function normalizeRelationshipSpecificLabel(value, fallbackCategory = "other") {
+  const raw = String(value || "").trim();
+  const label = raw.toLowerCase();
+  if (!label) return defaultSpecificRelationship(fallbackCategory);
+  if (/father|dad/.test(label) && (/child|daughter|son/.test(label) || label === "father")) return "father and child";
+  if (/mother|mom|mum/.test(label) && (/child|daughter|son/.test(label) || label === "mother")) return "mother and child";
+  if (/grandmother|grandfather|grandma|grandpa|grandparent/.test(label)) return "grandparent and grandchild";
+  if (/sibling|brother|sister/.test(label)) return "siblings";
+  if (/cousin/.test(label)) return "cousins";
+  if (/aunt|uncle|niece|nephew/.test(label)) return "aunt/uncle and niece/nephew";
+  if (/boss|employee|manager|direct report/.test(label)) return "boss and employee";
+  if (/colleague|coworker|workmate/.test(label)) return "colleagues";
+  if (/best friend/.test(label)) return "best friends";
+  if (/friend|bestie/.test(label)) return "close friends";
+  if (/husband|wife|spouse|married/.test(label)) return "spouses";
+  if (/partner/.test(label)) return "partners";
+  if (/boyfriend|girlfriend|dating|seeing each other/.test(label)) return "dating";
+  if (/ex/.test(label)) return "exes";
+  if (/family/.test(label)) return "family members";
+  if (/other|unclear|unknown/.test(label)) return defaultSpecificRelationship(fallbackCategory);
+  return raw;
+}
+
+function buildRelationshipLine(relationshipContext, userSelectedType) {
+  const category = relationshipContext?.category || userSelectedType || "other";
+  const specific = relationshipContext?.specificRelationship || defaultSpecificRelationship(category);
+  const confidence = relationshipContext?.confidence || "low";
+  const reasoning = relationshipContext?.reasoning || `Use the user-selected relationship type "${userSelectedType}" unless direct wording in the chat makes the relationship more specific.`;
+  const evidence = relationshipContext?.evidence ? `Strongest evidence: ${relationshipContext.evidence}.` : "";
+  const warning = relationshipContext?.endearmentWarning
+    ? `IMPORTANT ENDEARMENT WARNING: ${relationshipContext.endearmentWarning} — do not interpret that word as a literal family title.`
+    : "";
+  return `CONFIRMED RELATIONSHIP: Describe the two participants as ${specific} (category: ${category}, confidence: ${confidence}). ${reasoning} ${evidence} ${warning} Never replace this with a different family or romance label unless the confirmed wording above already says so.`;
+}
+
 async function confirmRelationship(snippets, names, userSelectedType) {
-  if (!snippets || !snippets.length) return null;
+  if (!snippets || !snippets.length || names.length < 2) return null;
 
   const snippetText = snippets
-    .map((s, i) => `SNIPPET ${i + 1} (keyword: ${s.key}):\n${s.context}`)
+    .map((s, i) => `SNIPPET ${i + 1} (signal: ${s.key} | ${s.date} | ${s.speaker})\nTrigger line: "${s.quote}"\n${s.context}`)
     .join("\n\n");
 
   const system = `You are a relationship analyst. You will be shown short excerpts from a WhatsApp chat between ${names[0]} and ${names[1]}. Your only job is to determine the actual relationship between these two specific people based on the evidence.
@@ -2431,13 +2515,18 @@ CRITICAL RULES:
 - Only confirm a relationship label if you see the keyword being used to DIRECTLY ADDRESS the other chat participant, or if context makes it unambiguous that the keyword describes their relationship.
 - Examples of direct address: "sen benim kuzenimsin", "kızım sen nasılsın", "hey sis"
 - Examples of third party reference: "kuzenim geldi", "my cousin called", "ablam söyledi" — these do NOT confirm the relationship between the two chat participants.
-- The user selected "${userSelectedType}" as the relationship type. Use this as a strong prior — only override it if you see direct and unambiguous evidence.
+- The user selected "${userSelectedType}" as the relationship type. Use this as a strong prior.
+- If the user selected "family", prefer a specific family label like father and child / cousins / siblings / grandparent and grandchild when the wording supports it.
+- If the user selected "partner", prefer "spouses" when the wording clearly says husband/wife, otherwise "partners".
+- Only override the user's broad category if the chat evidence is direct and unambiguous.
 
 Return ONLY a JSON object with no extra text:
 {
-  "confirmedRelationship": "one of: romantic / mother / father / sister / brother / cousin / aunt / uncle / friend / colleague / boss / unknown",
+  "category": "one of: partner / dating / ex / family / friend / colleague / other / unknown",
+  "specificRelationship": "one of: spouses / partners / dating / exes / father and child / mother and child / siblings / cousins / grandparent and grandchild / aunt/uncle and niece/nephew / family members / best friends / close friends / colleagues / boss and employee / someone they know / unclear",
   "confidence": "high / medium / low",
   "reasoning": "one sentence explaining the key evidence",
+  "evidence": "a short quote or paraphrase from the strongest direct-address snippet",
   "endearmentWarning": "if any keyword appears to be used as a term of endearment rather than a literal title, name it here — e.g. 'kızım is used as affection not literal daughter'. Otherwise null."
 }`;
 
@@ -2445,13 +2534,51 @@ Return ONLY a JSON object with no extra text:
 
   try {
     const raw = await callClaude(system, userContent, 300, "relationship");
-    const text = raw?.content?.[0]?.text || raw?.choices?.[0]?.message?.content || "";
-    const clean = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(clean);
+    const parsed = raw && typeof raw === "object"
+      ? raw
+      : tryParseJsonText(String(raw || ""));
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
   } catch (e) {
     console.warn("[confirmRelationship] failed:", e);
     return null;
   }
+}
+
+async function resolveRelationshipContext(messages, names, userSelectedType) {
+  if (!Array.isArray(messages) || messages.length < 2 || !Array.isArray(names) || names.length < 2) return null;
+
+  const cacheKey = [
+    userSelectedType || "other",
+    names.slice(0, 2).join("|"),
+    messages.length,
+    +messages[0]?.date || 0,
+    +messages[messages.length - 1]?.date || 0,
+  ].join("::");
+
+  if (RELATIONSHIP_CONTEXT_CACHE.has(cacheKey)) {
+    return RELATIONSHIP_CONTEXT_CACHE.get(cacheKey);
+  }
+
+  const snippets = detectRelationship(messages);
+  const raw = snippets ? await confirmRelationship(snippets, names, userSelectedType) : null;
+  const category = normalizeRelationshipCategory(
+    raw?.category,
+    inferRelationshipCategoryFromSpecific(raw?.specificRelationship, userSelectedType || "other")
+  );
+  const context = {
+    category,
+    specificRelationship: normalizeRelationshipSpecificLabel(raw?.specificRelationship, category),
+    confidence: ["high", "medium", "low"].includes(String(raw?.confidence || "").toLowerCase())
+      ? String(raw.confidence).toLowerCase()
+      : (snippets?.length ? "medium" : "low"),
+    reasoning: String(raw?.reasoning || "").trim(),
+    evidence: String(raw?.evidence || snippets?.[0]?.quote || "").trim(),
+    endearmentWarning: raw?.endearmentWarning ? String(raw.endearmentWarning).trim() : null,
+  };
+
+  RELATIONSHIP_CONTEXT_CACHE.set(cacheKey, context);
+  return context;
 }
 
 const DUO_CONTENT_SCREENS = 20;
@@ -2925,23 +3052,17 @@ function localStats(messages) {
   const namesSorted = [...namesAll].sort((a,b) => byName[b].length - byName[a].length);
 
   const wordFreq = {};
-  messages.forEach(({body}) => {
-    if (/media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i.test(body) || body.startsWith("http")) return;
-    body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w => {
-      if (w.length>2 && !TOKEN_STOP_WORDS.has(w) && !TOKEN_WA_NOISE_WORDS.has(w) && !/^\d+$/.test(w)) wordFreq[w]=(wordFreq[w]||0)+1;
-    });
-  });
-  const topWords = Object.entries(wordFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
-
   const bigramFreq = {};
+  const NOISE_RE = /media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i;
   messages.forEach(({body}) => {
-    if (/media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i.test(body) || body.startsWith("http")) return;
+    if (NOISE_RE.test(body) || body.startsWith("http")) return;
     const words = body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).filter(w => w.length>2 && !TOKEN_STOP_WORDS.has(w) && !TOKEN_WA_NOISE_WORDS.has(w) && !/^\d+$/.test(w));
-    for (let i=0;i<words.length-1;i++){
-      const bg=`${words[i]} ${words[i+1]}`;
-      bigramFreq[bg]=(bigramFreq[bg]||0)+1;
+    for (let i=0;i<words.length;i++){
+      wordFreq[words[i]]=(wordFreq[words[i]]||0)+1;
+      if (i<words.length-1){const bg=`${words[i]} ${words[i+1]}`;bigramFreq[bg]=(bigramFreq[bg]||0)+1;}
     }
   });
+  const topWords = Object.entries(wordFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const topBigrams = Object.entries(bigramFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
   const emojiRe = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
@@ -3373,7 +3494,17 @@ async function callClaude(systemPrompt, userContent, maxTokens = 1500, schemaMod
         signal: controller.signal,
       }
     );
-    if (!res.ok) throw new Error(`Edge function error ${res.status}`);
+    if (!res.ok) {
+      let detail = "";
+      try {
+        const text = await res.text();
+        const parsed = tryParseJsonText(text);
+        detail = String(parsed?.error || text || "").trim();
+      } catch {
+        // Fall back to the status code below.
+      }
+      throw new Error(detail || `Edge function error ${res.status}`);
+    }
     const raw = await res.json();
     return extractClaudePayload(raw);
   } catch (error) {
@@ -3410,6 +3541,19 @@ function tryParseJsonText(value) {
     }
   }
   return null;
+}
+
+function userFacingAnalysisError(error) {
+  const message = String(error?.message || "").trim();
+  if (!message) return "The AI analysis didn't come through. Please try again.";
+  if (message.includes("timed out")) return "The AI took too long to answer. Please try again.";
+  if (/unauthorized/i.test(message)) return "Your session expired. Please log in again and retry.";
+  if (/ANTHROPIC_API_KEY secret not set/i.test(message)) return "The AI server isn't configured correctly yet.";
+  if (/Analysis failed/i.test(message) || /Edge function error 502/i.test(message)) return "The AI provider failed to return a usable answer. Please try again.";
+  if (/AI returned an empty analysis/i.test(message)) return "The AI answered, but the result was empty. Please try again.";
+  if (/Missing required fields/i.test(message)) return "The analysis request was incomplete. Please try again.";
+  if (/failed to fetch|networkerror|load failed/i.test(message.toLowerCase())) return "The app couldn't reach the AI server. Check your connection and try again.";
+  return message;
 }
 
 function isAnalysisPayload(value) {
@@ -3482,7 +3626,6 @@ function extractClaudePayload(raw) {
 const CORE_ANALYSIS_VERSION = 2;
 const LOCAL_STATS_VERSION = 3;
 const CORE_ANALYSIS_CACHE_VERSION = 3;
-const APP_BUILD_ID = "2026.04.10-5";
 const CORE_A_MAX_TOKENS = 2600;
 const CORE_B_MAX_TOKENS = 2600;
 
@@ -3678,7 +3821,7 @@ function normalizeCorePersonB(person, fallbackName = "") {
   };
 }
 
-function normalizeCoreAnalysisA(raw, math, relationshipType) {
+function normalizeCoreAnalysisA(raw, math, relationshipType, relationshipContext = null) {
   const source = raw && typeof raw === "object" ? raw : {};
   const meta = source.meta && typeof source.meta === "object" ? source.meta : {};
   const shared = source.shared && typeof source.shared === "object" ? source.shared : {};
@@ -3700,6 +3843,12 @@ function normalizeCoreAnalysisA(raw, math, relationshipType) {
     meta: {
       confidenceNote: strOr(meta.confidenceNote),
       dominantTone: strOr(meta.dominantTone),
+      relationshipCategory: relationshipContext?.category || relationshipType || null,
+      relationshipSpecific: strOr(relationshipContext?.specificRelationship, defaultSpecificRelationship(relationshipContext?.category || relationshipType || "other")),
+      relationshipConfidence: strOr(relationshipContext?.confidence, "low"),
+      relationshipReasoning: strOr(relationshipContext?.reasoning),
+      relationshipEvidence: strOr(relationshipContext?.evidence),
+      endearmentWarning: strOr(relationshipContext?.endearmentWarning),
     },
     people,
     shared: {
@@ -3750,7 +3899,7 @@ function normalizeCoreAnalysisA(raw, math, relationshipType) {
   };
 }
 
-function normalizeCoreAnalysisB(raw, math, relationshipType) {
+function normalizeCoreAnalysisB(raw, math, relationshipType, relationshipContext = null) {
   const source = raw && typeof raw === "object" ? raw : {};
   const meta = source.meta && typeof source.meta === "object" ? source.meta : {};
   const shared = source.shared && typeof source.shared === "object" ? source.shared : {};
@@ -3773,6 +3922,12 @@ function normalizeCoreAnalysisB(raw, math, relationshipType) {
     meta: {
       confidenceNote: strOr(meta.confidenceNote),
       dominantTone: strOr(meta.dominantTone),
+      relationshipCategory: relationshipContext?.category || relationshipType || null,
+      relationshipSpecific: strOr(relationshipContext?.specificRelationship, defaultSpecificRelationship(relationshipContext?.category || relationshipType || "other")),
+      relationshipConfidence: strOr(relationshipContext?.confidence, "low"),
+      relationshipReasoning: strOr(relationshipContext?.reasoning),
+      relationshipEvidence: strOr(relationshipContext?.evidence),
+      endearmentWarning: strOr(relationshipContext?.endearmentWarning),
     },
     people,
     shared: {
@@ -3800,6 +3955,10 @@ function attachReportMeta(report, relationshipType, coreAnalysis = null) {
   return {
     ...(report && typeof report === "object" ? report : {}),
     relationshipType: relationshipType ?? null,
+    relationshipSpecific: coreAnalysis?.meta?.relationshipSpecific || null,
+    relationshipConfidence: coreAnalysis?.meta?.relationshipConfidence || null,
+    relationshipEvidence: coreAnalysis?.meta?.relationshipEvidence || null,
+    relationshipReasoning: coreAnalysis?.meta?.relationshipReasoning || null,
     ...(coreAnalysis ? { coreAnalysis } : {}),
   };
 }
@@ -4057,15 +4216,10 @@ function hasMeaningfulAnalysisResult(type, result) {
 
 async function generateCoreAnalysisA(messages, math, relationshipType, chatLang = "en") {
   const chatText = buildSampleText(messages);
-  const relSnippets = detectRelationship(messages);
-  const relConfirmation = relSnippets ? await confirmRelationship(relSnippets, math.names || [], relationshipType) : null;
-  const confirmedRel = relConfirmation?.confirmedRelationship || relationshipType;
-  const relConfidence = relConfirmation?.confidence || "low";
-  const relReasoning = relConfirmation?.reasoning || "";
-  const endearmentWarning = relConfirmation?.endearmentWarning || null;
-  const relationshipLine = `CONFIRMED RELATIONSHIP: The two participants in this chat are ${confirmedRel} (confidence: ${relConfidence}). ${relReasoning} ${endearmentWarning ? `IMPORTANT ENDEARMENT WARNING: ${endearmentWarning} — do not interpret this word as a literal family title.` : ""} Never use any other relationship label anywhere in any field. Never say father/daughter, parent/child, or any other relationship word unless it exactly matches the confirmed label above.`;
   const names = math.names || [];
   const isGroup = math.isGroup;
+  const relationshipContext = !isGroup ? await resolveRelationshipContext(messages, names, relationshipType) : null;
+  const relationshipLine = !isGroup ? buildRelationshipLine(relationshipContext, relationshipType) : "";
   const personCount = Math.min(names.length || 0, isGroup ? Math.min(names.length || 0, 6) : 2);
   const earlyMsgs = messages.slice(0, Math.min(120, Math.max(40, Math.floor(messages.length * 0.18))));
   const lateMsgs  = messages.slice(Math.max(0, messages.length - Math.min(120, Math.max(40, Math.floor(messages.length * 0.18)))));
@@ -4162,6 +4316,7 @@ async function generateCoreAnalysisA(messages, math, relationshipType, chatLang 
   const userContent = `Here is a ${isGroup ? "group" : "two-person"} WhatsApp chat between ${names.slice(0, 6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages. ${math.totalMessages > 10000 ? `This is a very large chat — every summary field (especially vibeOneLiner, biggestTopic, insideJoke) must reflect dominant patterns that recur across the full history. A single window is a tiny fraction of the whole. Never let one moment, joke, or exchange define a summary field. Weight only what appears repeatedly across multiple windows.` : ""} The content below is divided into ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N · date · type ━━━. Windows are non-contiguous excerpts; do not infer connections between separate windows. Every line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that specific line.
 
 IMPORTANT CONTEXT: ${isGroup ? `The least active member (the ghost) is ${math.ghost}. The conversation starter is ${math.convStarter}.` : `By reply time, ${math.ghostName} is slower to respond. The conversation starter is ${math.convStarter}. Local analysis found that ${math.funniestPerson} caused the most laugh reactions from the other person (${math.laughCausedBy?.[math.funniestPerson] || 0} times) — confirm or correct this based on the chat.`}
+${!isGroup && relationshipContext?.evidence ? `RELATIONSHIP EVIDENCE: A direct-address snippet supporting the confirmed relationship is: "${relationshipContext.evidence}". Use it as confirmation, but do not over-quote it.` : ""}
 
 EARLY SNAPSHOT (contiguous excerpt from the start of the chat — use ONLY for growth/change fields: thenDepth, nowDepth, depthChange, whoChangedMore, whoChangedHow, topicsAppeared, topicsDisappeared, trajectory, trajectoryDetail, arcSummary):
 ${earlyText}
@@ -4177,14 +4332,15 @@ ${fields}`;
 
   if (import.meta.env.DEV) console.log("[CoreA] chatLang:", chatLang, "| system prompt tail:", system.slice(-200));
   const raw = await callClaude(system, userContent, CORE_A_MAX_TOKENS);
-  return normalizeCoreAnalysisA(raw, math, relationshipType);
+  return normalizeCoreAnalysisA(raw, math, relationshipType, relationshipContext);
 }
 
-async function generateCoreAnalysisB(messages, math, relationshipType, chatLang = "en", confirmedRel = null, relConfidence = "low", relReasoning = "", endearmentWarning = null) {
+async function generateCoreAnalysisB(messages, math, relationshipType, chatLang = "en") {
   const chatText = buildSampleText(messages);
-  const _confirmedRel = confirmedRel || relationshipType;
-  const relationshipLine = `CONFIRMED RELATIONSHIP: The two participants in this chat are ${_confirmedRel} (confidence: ${relConfidence}). ${relReasoning} ${endearmentWarning ? `IMPORTANT ENDEARMENT WARNING: ${endearmentWarning} — do not interpret this word as a literal family title.` : ""} Never use any other relationship label anywhere in any field. Never say father/daughter, parent/child, or any other relationship word unless it exactly matches the confirmed label above.`;
   const names = math.names || [];
+  const isGroup = !!math?.isGroup;
+  const relationshipContext = !isGroup ? await resolveRelationshipContext(messages, names, relationshipType) : null;
+  const relationshipLine = !isGroup ? buildRelationshipLine(relationshipContext, relationshipType) : "";
   const personCount = Math.min(names.length || 0, 2);
   const fields = `{
   "schemaVersion": ${CORE_ANALYSIS_VERSION},
@@ -4255,7 +4411,7 @@ async function generateCoreAnalysisB(messages, math, relationshipType, chatLang 
     relationshipLine
   );
 
-  const userContent = `Here is a WhatsApp chat between ${names.slice(0, 6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history. Do not connect events across windows unless the messages explicitly link them. Every line shows the speaker: [timestamp] SpeakerName: body.
+  const userContent = `Here is a WhatsApp chat between ${names.slice(0, 6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). ${!isGroup && relationshipContext?.evidence ? `A direct-address snippet supporting the confirmed relationship is: "${relationshipContext.evidence}".` : ""} The content below is ISOLATED WINDOWS from across the full history. Do not connect events across windows unless the messages explicitly link them. Every line shows the speaker: [timestamp] SpeakerName: body.
 
 ${chatText}
 
@@ -4264,7 +4420,7 @@ ${fields}`;
 
   if (import.meta.env.DEV) console.log("[CoreB] chatLang:", chatLang, "| system prompt tail:", system.slice(-200));
   const raw = await callClaude(system, userContent, CORE_B_MAX_TOKENS);
-  return normalizeCoreAnalysisB(raw, math, relationshipType);
+  return normalizeCoreAnalysisB(raw, math, relationshipType, relationshipContext);
 }
 
 async function aiAnalysis(messages, math, relationshipType, coreAnalysis = null) {
@@ -4895,20 +5051,6 @@ function Shell({ sec, prog, total, children, feedback=null }) {
         flexDirection: "column",
         fontFamily: "system-ui, sans-serif",
       }}>
-        <div style={{
-          position: "absolute",
-          left: 12,
-          bottom: 10,
-          zIndex: 12,
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          color: "rgba(255,255,255,0.28)",
-          pointerEvents: "none",
-          textTransform: "uppercase",
-        }}>
-          build {APP_BUILD_ID}
-        </div>
         {/* ── STATIC CHROME — never moves ── */}
         {/* Thin progress bar at very top */}
         <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(255,255,255,0.12)", zIndex:5 }}>
@@ -5324,7 +5466,7 @@ function Words({ words, bigrams }) {
   const M=["🥇","🥈","🥉"];
   const top5w=(words||[]).slice(0,5);
   const top5b=(bigrams||[]).slice(0,5);
-  const combined=[...top5w.map(([w,c])=>({w,c,bi:false})),...top5b.map(([w,c])=>({w,c,bi:true}))];
+  const combined=[...top5w.map(([w,c])=>({w,c})),...top5b.map(([w,c])=>({w,c}))];
   return (
     <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:4 }}>
       {combined.map(({w,c},i)=>(
@@ -5444,6 +5586,9 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
   const relationshipStatus = ai?.relationshipStatus || s.relationshipStatus || (aiLoading ? "..." : "Complicated");
   const relationshipStatusWhy = ai?.relationshipStatusWhy || s.relationshipStatusWhy;
   const statusEvidence = ai?.statusEvidence || s.statusEvidence;
+  const relationshipSpecific = ai?.relationshipSpecific || null;
+  const relationshipEvidence = ai?.relationshipEvidence || null;
+  const relationshipReadTitle = relReadTitle(relationshipType, relationshipSpecific);
   const duoFlags = normalizeRedFlags(ai?.redFlags).length ? normalizeRedFlags(ai?.redFlags) : s.redFlags;
   const evidenceTimeline = normalizeTimeline(ai?.evidenceTimeline).length ? normalizeTimeline(ai?.evidenceTimeline) : s.evidenceTimeline;
   const toxicityReport = ai?.toxicityReport || s.toxicityReport;
@@ -5643,7 +5788,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
 
     <Shell sec="ai" prog={16} total={TOTAL} feedback={feedback("What's really going on", 16)}>
       <T>{t("What's really going on")}</T>
-      <AICard label={t(relReadLabel(relationshipType))} value={ai?.relationshipSummary} loading={aiLoading} />
+      <AICard label={t(relationshipReadTitle)} value={ai?.relationshipSummary} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
@@ -5661,6 +5806,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
       <T>{t("Relationship reading")}</T>
       <Big>{relationshipStatus}</Big>
       <AICard label={t("Observed pattern")} value={relationshipStatusWhy} loading={aiLoading && !relationshipStatusWhy} />
+      {relationshipEvidence && <AICard label="Why this label" value={relationshipEvidence} loading={false} />}
       <AICard label={t("Concrete example")} value={statusEvidence} loading={aiLoading && !statusEvidence} />
       <Nav back={back} next={next} showBack={false} />
     </Shell>,
@@ -5691,7 +5837,7 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
     <Shell sec="ai" prog={5} total={TOTAL} feedback={feedback("Tension snapshot", 5)}>
       <T>{t("Tension snapshot")}</T>
       <AICard label={t("Most tense moment")} value={ai?.tensionMoment} loading={aiLoading} />
-      <AICard label={t(relReadLabel(relationshipType))} value={ai?.relationshipSummary} loading={aiLoading} />
+      <AICard label={t(relationshipReadTitle)} value={ai?.relationshipSummary} loading={aiLoading} />
       <Nav back={back} next={next} />
     </Shell>,
 
@@ -6468,6 +6614,26 @@ function relReadLabel(relType) {
     friend:    "Friendship read",
     colleague: "Work dynamic",
   }[relType] || "Relationship read";
+}
+
+function relReadTitle(relType, specificRelationship = null) {
+  const specific = String(specificRelationship || "").trim().toLowerCase();
+  if (/spouse/.test(specific)) return "Marriage dynamic";
+  if (/partner/.test(specific)) return "Partnership read";
+  if (/dating/.test(specific)) return "Dating dynamic";
+  if (/ex/.test(specific)) return "Ex dynamic";
+  if (/father and child/.test(specific)) return "Father-child dynamic";
+  if (/mother and child/.test(specific)) return "Mother-child dynamic";
+  if (/siblings/.test(specific)) return "Sibling dynamic";
+  if (/cousins/.test(specific)) return "Cousin dynamic";
+  if (/grandparent and grandchild/.test(specific)) return "Grandparent dynamic";
+  if (/aunt\/uncle and niece\/nephew/.test(specific)) return "Extended family dynamic";
+  if (/best friends/.test(specific)) return "Best-friend dynamic";
+  if (/close friends/.test(specific)) return "Friendship read";
+  if (/boss and employee/.test(specific)) return "Boss-work dynamic";
+  if (/colleagues/.test(specific)) return "Work dynamic";
+  if (/family members/.test(specific)) return "Family dynamic";
+  return relReadLabel(relType);
 }
 
 function hasAcceptedCurrentTerms(user) {
@@ -7324,7 +7490,8 @@ function buildFeedbackSummary(feedbackRow, resultRow, viewLang = "en") {
         pushSummaryRow(rows, "Drama starter", ai.dramaStarter);
         pushSummaryRow(rows, "How", ai.dramaContext);
       } else if (card === 16) {
-        pushSummaryRow(rows, relReadLabel(ai.relationshipType), ai.relationshipSummary);
+        pushSummaryRow(rows, relReadTitle(ai.relationshipType, ai.relationshipSpecific), ai.relationshipSummary);
+        pushSummaryRow(rows, "Detected relationship", ai.relationshipSpecific ? `${ai.relationshipSpecific}${ai.relationshipConfidence ? ` (${ai.relationshipConfidence} confidence)` : ""}` : "");
       } else if (card === 17) {
         pushSummaryRow(rows, "Vibe", ai.vibeOneLiner);
       } else if (card >= DUO_CASUAL_SCREENS + 1) {
@@ -8262,9 +8429,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
     } catch (error) {
       console.error(`Analysis failed for report "${type}" [lang=${chatLang}]`, error);
       const fallbackPhase = math?.isGroup ? "select" : "relationship";
-      const msg = String(error?.message || "").includes("timed out")
-        ? "The AI took too long to answer. Please try again."
-        : "The AI analysis didn't come through. Please try again.";
+      const msg = userFacingAnalysisError(error);
       setAnalysisError(msg);
       setAiLoading(false);
       setPhase(fallbackPhase);

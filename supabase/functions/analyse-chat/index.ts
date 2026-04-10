@@ -1,10 +1,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "https://wrapchat.vercel.app",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://wrapchat.vercel.app",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://wrapchat.vercel.app";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -125,6 +138,7 @@ Rewrite that output into valid JSON that follows the original instructions exact
 }
 
 serve(async (req) => {
+  const CORS = corsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS });
   }
