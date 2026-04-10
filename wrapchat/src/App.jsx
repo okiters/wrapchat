@@ -2881,7 +2881,7 @@ function localStats(messages) {
   messages.forEach(({body}) => {
     if (/media omitted|image omitted|video omitted|voice omitted|audio omitted|<media|<attached/i.test(body) || body.startsWith("http")) return;
     body.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,"").split(/\s+/).forEach(w => {
-      if (w.length>2 && !TOKEN_STOP_WORDS.has(w) && !/^\d+$/.test(w)) wordFreq[w]=(wordFreq[w]||0)+1;
+      if (w.length>2 && !TOKEN_STOP_WORDS.has(w) && !TOKEN_WA_NOISE_WORDS.has(w) && !/^\d+$/.test(w)) wordFreq[w]=(wordFreq[w]||0)+1;
     });
   });
   const topWords = Object.entries(wordFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
@@ -3418,8 +3418,9 @@ function extractClaudePayload(raw) {
 }
 
 const CORE_ANALYSIS_VERSION = 2;
-const LOCAL_STATS_VERSION = 2;
-const CORE_ANALYSIS_CACHE_VERSION = 2;
+const LOCAL_STATS_VERSION = 3;
+const CORE_ANALYSIS_CACHE_VERSION = 3;
+const APP_BUILD_ID = "2026.04.10-3";
 const CORE_A_MAX_TOKENS = 2600;
 const CORE_B_MAX_TOKENS = 2600;
 
@@ -4809,6 +4810,20 @@ function Shell({ sec, prog, total, children, feedback=null }) {
         flexDirection: "column",
         fontFamily: "system-ui, sans-serif",
       }}>
+        <div style={{
+          position: "absolute",
+          left: 12,
+          bottom: 10,
+          zIndex: 12,
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          color: "rgba(255,255,255,0.28)",
+          pointerEvents: "none",
+          textTransform: "uppercase",
+        }}>
+          build {APP_BUILD_ID}
+        </div>
         {/* ── STATIC CHROME — never moves ── */}
         {/* Thin progress bar at very top */}
         <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(255,255,255,0.12)", zIndex:5 }}>
