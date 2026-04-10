@@ -2260,6 +2260,10 @@ const STOP_WORDS = new Set([
   "edited","forwarded","forwarded many times",
   "call","voice","omitted","missed","missed call","voice call",
   "voice message","call omitted","missed voice","missed video","waiting","ringing",
+  "click back","answered other","other device","called back",
+  "no answer","declined","cancelled","incoming call","outgoing call",
+  "missed group call","group call","tap to call back","tap to video call back",
+  "answered","incoming","outgoing","tap",
 
   // ── WhatsApp UI — Turkish ──
   "görüntü silindi","video silindi","ses silindi","belge silindi",
@@ -2268,42 +2272,56 @@ const STOP_WORDS = new Set([
   "arama","sesli","atlandı","cevapsız","sesli arama","görüntülü arama",
   "sesli mesaj","arama atlandı","cevapsız arama","bekliyor","çalıyor",
   "sesli not","görüntülü not",
+  "gelen arama","giden arama","grup araması","cevaplandı","reddedildi",
+  "iptal edildi","geri ara","yanıt yok","başka cihaz","geri aramak için dokun",
 
   // ── WhatsApp UI — Spanish ──
   "imagen omitida","video omitido","audio omitido","documento omitido",
   "ubicación omitida","este mensaje fue eliminado","editado","reenviado",
   "llamada","voz","omitido","perdida","llamada perdida","llamada de voz",
   "mensaje de voz","nota de voz","llamada omitida","esperando","sonando",
+  "llamada entrante","llamada saliente","llamada grupal","contestado","rechazada",
+  "cancelada","sin respuesta","otro dispositivo","toca para volver a llamar",
 
   // ── WhatsApp UI — Portuguese ──
   "imagem ocultada","vídeo ocultado","áudio ocultado","documento ocultado",
   "esta mensagem foi apagada","editada","encaminhada",
   "chamada","voz","omitido","perdida","chamada perdida","chamada de voz",
   "mensagem de voz","nota de voz","chamada omitida","aguardando","chamando",
+  "chamada recebida","chamada efetuada","chamada em grupo","atendida","recusada",
+  "cancelada","sem resposta","outro dispositivo","toque para ligar de volta",
 
   // ── WhatsApp UI — French ──
   "image omise","vidéo omise","audio omis","document omis",
   "ce message a été supprimé","modifié","transféré",
   "appel","voix","omis","manqué","appel manqué","appel vocal",
   "message vocal","note vocale","appel omis","en attente","sonnerie",
+  "appel entrant","appel sortant","appel de groupe","répondu","refusé",
+  "annulé","sans réponse","autre appareil","appuyez pour rappeler",
 
   // ── WhatsApp UI — German ──
   "bild weggelassen","video weggelassen","audio weggelassen","dokument weggelassen",
   "diese nachricht wurde gelöscht","bearbeitet","weitergeleitet",
   "anruf","sprache","weggelassen","verpasst","verpasster anruf","sprachanruf",
   "sprachnachricht","sprachnotiz","anruf weggelassen","wartend","klingelt",
+  "eingehender anruf","ausgehender anruf","gruppenanruf","angenommen","abgelehnt",
+  "abgebrochen","keine antwort","anderes gerät","tippen um zurückzurufen",
 
   // ── WhatsApp UI — Italian ──
   "immagine omessa","video omesso","audio omesso","documento omesso",
   "questo messaggio è stato eliminato","modificato","inoltrato",
   "chiamata","voce","omessa","persa","chiamata persa","chiamata vocale",
   "messaggio vocale","nota vocale","chiamata omessa","in attesa","squillando",
+  "chiamata in arrivo","chiamata in uscita","chiamata di gruppo","risposto","rifiutata",
+  "annullata","nessuna risposta","altro dispositivo","tocca per richiamare",
 
   // ── WhatsApp UI — Arabic ──
   "تم حذف هذه الرسالة","صورة محذوفة","فيديو محذوف","صوت محذوف",
   "مستند محذوف","تم التعديل","تمت إعادة التوجيه",
   "مكالمة","صوت","محذوف","فائتة","مكالمة فائتة","مكالمة صوتية",
   "رسالة صوتية","مكالمة محذوفة","في الانتظار","يرن",
+  "مكالمة واردة","مكالمة صادرة","مكالمة جماعية","تم الرد","مرفوضة",
+  "ملغاة","لا إجابة","جهاز آخر","اضغط للرد",
 ]);
 
 const TOKEN_STOP_WORDS = new Set(
