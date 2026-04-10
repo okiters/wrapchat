@@ -2354,57 +2354,86 @@ const LAUGH_RE = new RegExp(
   "i"
 );
 
-const RELATION_SIGNALS = [
-  {
-    key: "romantic",
-    re: /\b(babe|baby|bb|darling|my love|love you|luv you|sweetheart|honey|dear|sevgilim|aşkım|askım|canım|canim|tatlım|tatlim|bebeğim|bebegim|mi amor|mi vida|cariño|carino|te quiero|te amo|meu amor|minha vida|querido|querida|habibi|habibti|حبيبي|حبيبتي|mon amour|ma chérie|ma cherie|mon chéri|mon cheri|liebling|schatzi|mein schatz|amore mio|tesoro)\b/i,
-  },
-  {
-    key: "mother",
-    re: /\b(mom|mum|mama|mother|anne|annem|anneciğim|anneciim|mamá|mama|mãe|mamaí|أمي|ummi|maman|mère|mere|mama|mutter|mutti|mamma|madre)\b/i,
-  },
-  {
-    key: "father",
-    re: /\b(dad|dada|daddy|father|baba|babam|babaciğim|papá|papa|pai|أبي|abi|papa|père|pere|papa|vater|vati|papà|padre)\b/i,
-  },
-  {
-    key: "sibling",
-    re: /\b(sis|bro|brother|sister|kardeş|kardesim|ablam|abla|ağabey|agabey|hermano|hermana|irmão|irmã|أخي|أختي|frère|frere|sœur|soeur|bruder|schwester|fratello|sorella)\b/i,
-  },
-  {
-    key: "cousin",
-    re: /\b(cousin|kuzen|kuzenim|primo|prima|cousin|عمي|ابن عمي|cousin|cousin|cousine|vetter|kusine|cugino|cugina)\b/i,
-  },
-  {
-    key: "aunt",
-    re: /\b(aunt|auntie|teyze|hala|tía|tia|خالتي|عمتي|tante|tante|tante|zia)\b/i,
-  },
-  {
-    key: "uncle",
-    re: /\b(uncle|amca|dayı|dayi|tío|tio|عمي|خالي|oncle|onkel|zio)\b/i,
-  },
-  {
-    key: "friend",
-    re: /\b(bestie|dude|mate|homie|kanka|knk|amigo|amiga|colega|صاحبي|صديقي|pote|parceiro|ami|amie|copain|copine|Kumpel|alter|amico|amica)\b/i,
-  },
-];
+
 
 function detectRelationship(messages) {
-  const counts = {};
-  const sample = messages.slice(0, 800);
-  for (const msg of sample) {
+  const RELATION_SIGNALS = {
+    daughter: /\b(kızım|kızımı|kızımsın|my daughter|ma fille|meine tochter|mia figlia|mi hija|minha filha|ابنتي)\b/i,
+    son: /\b(oğlum|oğlumsun|my son|mon fils|mein sohn|mio figlio|mi hijo|meu filho|ابني)\b/i,
+    mother: /\b(annem|anneciğim|mom|mum|mama|mother|anne|mamá|mãe|أمي|maman|mutter|mamma|madre)\b/i,
+    father: /\b(babam|babaciğim|dad|daddy|father|baba|papá|pai|أبي|papa|vater|papà|padre)\b/i,
+    sister: /\b(ablam|kız kardeşim|sis|sister|hermana|irmã|أختي|sœur|schwester|sorella)\b/i,
+    brother: /\b(ağabeyim|kardeşim|bro|brother|hermano|irmão|أخي|frère|bruder|fratello)\b/i,
+    cousin: /\b(kuzenimi|kuzenimsin|kuzenim|cousin|primo|prima|عمي|cousine|vetter|kusine|cugino|cugina)\b/i,
+    aunt: /\b(teyzem|halam|aunt|auntie|tía|tia|خالتي|عمتي|tante|zia)\b/i,
+    uncle: /\b(amcam|dayım|uncle|tío|tio|عمي|خالي|oncle|onkel|zio)\b/i,
+    romantic: /\b(sevgilim|aşkım|canım|tatlım|bebeğim|babe|baby|darling|my love|amor|querido|querida|habibi|habibti|mon amour|liebling|amore)\b/i,
+    friend: /\b(arkadaşım|dostum|bestie|best friend|amigo|amiga|ami|freund|amico)\b/i,
+    colleague: /\b(iş arkadaşım|meslektaşım|colleague|coworker|collègue|kollege|collega)\b/i,
+    boss: /\b(müdürüm|patronum|boss|manager|chef|vorgesetzter|capo)\b/i,
+  };
+
+  const snippets = [];
+  const sample = messages.slice(0, 1200);
+
+  for (let i = 0; i < sample.length; i++) {
+    const msg = sample[i];
     if (!msg.body || /^<(Voice|Media) omitted>$/.test(msg.body)) continue;
-    for (const { key, re } of RELATION_SIGNALS) {
+
+    for (const [key, re] of Object.entries(RELATION_SIGNALS)) {
       if (re.test(msg.body)) {
-        counts[key] = (counts[key] || 0) + 1;
+        const start = Math.max(0, i - 2);
+        const end = Math.min(sample.length - 1, i + 2);
+        const context = sample.slice(start, end + 1)
+          .map(m => `${m.name}: ${m.body}`)
+          .join("\n");
+        snippets.push({ key, context });
+        break;
       }
     }
+
+    if (snippets.length >= 15) break;
   }
-  if (!Object.keys(counts).length) return null;
-  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  const confidence = top[1] >= 4 ? "high" : top[1] >= 2 ? "medium" : "low";
-  if (confidence === "low") return null;
-  return { detected: top[0], confidence, counts };
+
+  if (!snippets.length) return null;
+  return snippets;
+}
+
+async function confirmRelationship(snippets, names, userSelectedType) {
+  if (!snippets || !snippets.length) return null;
+
+  const snippetText = snippets
+    .map((s, i) => `SNIPPET ${i + 1} (keyword: ${s.key}):\n${s.context}`)
+    .join("\n\n");
+
+  const system = `You are a relationship analyst. You will be shown short excerpts from a WhatsApp chat between ${names[0]} and ${names[1]}. Your only job is to determine the actual relationship between these two specific people based on the evidence.
+
+CRITICAL RULES:
+- A keyword like "kızım" or "cousin" appearing in a message does NOT automatically mean the two chat participants have that relationship. It might refer to a third person entirely.
+- Only confirm a relationship label if you see the keyword being used to DIRECTLY ADDRESS the other chat participant, or if context makes it unambiguous that the keyword describes their relationship.
+- Examples of direct address: "sen benim kuzenimsin", "kızım sen nasılsın", "hey sis"
+- Examples of third party reference: "kuzenim geldi", "my cousin called", "ablam söyledi" — these do NOT confirm the relationship between the two chat participants.
+- The user selected "${userSelectedType}" as the relationship type. Use this as a strong prior — only override it if you see direct and unambiguous evidence.
+
+Return ONLY a JSON object with no extra text:
+{
+  "confirmedRelationship": "one of: romantic / mother / father / sister / brother / cousin / aunt / uncle / friend / colleague / boss / unknown",
+  "confidence": "high / medium / low",
+  "reasoning": "one sentence explaining the key evidence",
+  "endearmentWarning": "if any keyword appears to be used as a term of endearment rather than a literal title, name it here — e.g. 'kızım is used as affection not literal daughter'. Otherwise null."
+}`;
+
+  const userContent = `Here are excerpts from a chat between ${names[0]} and ${names[1]}. The user selected relationship type is "${userSelectedType}". Confirm or correct the relationship label based only on direct addressing evidence:\n\n${snippetText}`;
+
+  try {
+    const raw = await callClaude(system, userContent, 300, "relationship");
+    const text = raw?.content?.[0]?.text || raw?.choices?.[0]?.message?.content || "";
+    const clean = text.replace(/```json|```/g, "").trim();
+    return JSON.parse(clean);
+  } catch (e) {
+    console.warn("[confirmRelationship] failed:", e);
+    return null;
+  }
 }
 
 const DUO_CONTENT_SCREENS = 20;
@@ -3153,8 +3182,12 @@ function scoreMessages(messages) {
     // in the next 1–3 messages. Preserving these windows (with their tail) lets
     // Claude see exactly whose line made someone laugh — not just what sounds funny.
     for (let j = i + 1; j <= Math.min(i + 3, messages.length - 1); j++) {
-      if (messages[j].name !== msg.name && LAUGH_RE.test(messages[j].body)) {
-        score += 5; tags.push("laugh-trigger");
+      const reactionBody = messages[j].body || "";
+      if (messages[j].name !== msg.name && LAUGH_RE.test(reactionBody)) {
+        const isCapslockMash = /\b[ŞSKDGJFHBNMZXCVWQÇÖÜİ]{4,}\b/.test(reactionBody);
+        const boost = isCapslockMash ? 8 : 5;
+        score += boost;
+        tags.push(isCapslockMash ? "laugh-trigger-hard" : "laugh-trigger");
         break;
       }
     }
@@ -3431,7 +3464,7 @@ function extractClaudePayload(raw) {
 const CORE_ANALYSIS_VERSION = 2;
 const LOCAL_STATS_VERSION = 3;
 const CORE_ANALYSIS_CACHE_VERSION = 3;
-const APP_BUILD_ID = "2026.04.10-4";
+const APP_BUILD_ID = "2026.04.10-5";
 const CORE_A_MAX_TOKENS = 2600;
 const CORE_B_MAX_TOKENS = 2600;
 
@@ -3449,16 +3482,28 @@ function buildLangInstruction(chatLang) {
   return `\n\nOUTPUT LANGUAGE: Write all free-text fields (sentences, summaries, descriptions, examples, context, verdicts, reasons, and analysis) in ${label}. The JSON structure and all key names must remain exactly as specified in the schema.\n\nThe following fields are schema-critical control tokens — reproduce them EXACTLY as listed here, with zero translation:\n- "language" (careStyle): must be one of exactly: Words of Affirmation / Acts of Service / Receiving Gifts / Quality Time / Physical Touch / Mixed\n- "depthChange": must be one of exactly: deeper / shallower / about the same\n- "trajectory": must be one of exactly: closer / drifting / stable\n- "type" (energy): must be one of exactly: net positive / mixed / net draining\n- "dramaStarter": a first name as written in the chat, or exactly "Shared", or exactly "None clearly identified"\n- "toxicPerson": a first name as written in the chat, or exactly "Tie", or exactly "None clearly identified"\n- "funniestPerson": a first name as written in the chat, or exactly "None clearly identified"\n- "kindestPerson": a first name as written in the chat, or exactly "None clearly identified"\n- "whoChangedMore": a first name as written in the chat, or exactly "Both equally"\n- "powerHolder": a first name as written in the chat, or exactly "Balanced"\n- "person" in promise/apology fields: a first name as written in the chat, or exactly "None clearly identified"\n- All "name" fields: the exact first name as it appears in the chat\nDo NOT translate, paraphrase, or modify these control tokens under any circumstances. All descriptive text fields — everything else — must be in ${label}.`;
 }
 
-function buildAnalystSystemPrompt(role, relationshipType, extraRules = "", chatLang = "en") {
-  return `PRIORITY RULES — READ THESE FIRST, THEY OVERRIDE EVERYTHING ELSE:
+function buildAnalystSystemPrompt(role, relationshipType, extraRules = "", chatLang = "en", relationshipLine = "") {
+  return `PRIORITY RULES — READ FIRST, OVERRIDE EVERYTHING ELSE:
 
-1. FUNNY ATTRIBUTION: When person B reacts with a laugh (😂, lol, lmao, haha, 'im dead', 💀, 🤣, keyboard mash like 'skdjfhsdf') immediately after a line from person A — the funny person is person A. Never attribute humour to the person who is laughing. The reactor is the audience, not the comedian.
+1. RELATIONSHIP LABEL: ${relationshipLine || `Use the user-selected relationship type "${relationshipType}". Never override it. Cousins are not father-daughter. Friends are not partners. Use only the confirmed label — never infer relationship from tone, warmth, or emoji use.`}
 
-2. DIRECTION OF ACTIONS: The actor is always the sender of that exact message line. If Ozge sends a birthday message, Ozge is being kind. If Aslı sends a laugh reaction, Aslı is the audience. Never reverse who did what to whom.
+2. FUNNY ATTRIBUTION — LAUGH TYPES:
+   Keyboard mashes (random consonant clusters like 'skdjfhsdf', 'ŞUHAJDADGHKFD', 'fjdksj') are LAUGH REACTIONS, not jokes. They mean the person is laughing.
+   UPPERCASE keyboard mashes (e.g. 'ŞUHAJDADGHKFD', 'SKDJFHDF') = extremely hard laughter.
+   lowercase keyboard mashes (e.g. 'skdjfhsdf') = regular laughter.
+   😂 💀 🤣 lol lmao haha 'im dead' = laugh reactions.
+   The FUNNY PERSON is whoever sent the line that triggered the laugh reaction — never the person doing the laughing.
+   If Aslı sends 'ŞUHAJDADGHKFD' after Ozge's message, Ozge is funny. Aslı is the audience.
 
-3. RELATIONSHIP LABEL: You will be told the relationship type. Never override it. Cousins are not father-daughter. Friends are not partners. Use only the confirmed label — never infer relationship from tone, warmth, or emoji use.
+3. DIRECTION OF ACTIONS: The actor is always the sender of that exact message line. Never reverse who did what to whom.
 
-4. GEOGRAPHY: Never claim participants live in different countries, cities, or continents unless the chat explicitly states this. Do not infer distance from the fact that they use WhatsApp or video call.
+4. SIGNATURE PHRASES: signaturePhrases must be actual repeated text phrases or expressions — never emojis alone, never keyboard mashes, never laugh sounds. Only real words or short sentences that a person uses repeatedly.
+
+5. DRAMA SCOPE: dramaStarter and dramaContext must consider ALL drama in the chat — not just conflict between the two participants. This includes personal dramas they share with each other about third parties, work stress, relationship issues, life problems. The drama starter is whoever brings drama into the conversation most often, regardless of whether it is directed at the other person.
+
+6. TRANSLATION: Never translate quoted messages. Reproduce all quotes exactly as written in the chat in their original language. Do not add translations in parentheses.
+
+7. GEOGRAPHY: Never claim participants live in different cities, countries or continents unless the chat explicitly and literally states this.
 
 You are WrapChat, ${role}. Be specific, grounded, and evidence-led. Reference real patterns, real phrases, and real moments from the chat instead of generic observations. Be conservative before singling out one person: if the evidence is mixed, close, or mostly based on tone, prefer balanced labels like "Tie", "Shared", "Balanced", or "None clearly identified" instead of over-assigning blame. Do not pile onto the loudest or most active person unless multiple distinct examples support it. Keep the tone honest but not cruel, mocking, or absolute. Avoid repetitive wording across fields: if two answers overlap, make them distinct in angle and concrete detail rather than repeating the same judgment. When negative and positive evidence coexist, acknowledge both. Return ONLY valid JSON with no markdown fences or explanation outside the JSON.${buildRelationshipContextBlock(relationshipType)}${extraRules ? ` ${extraRules}` : ""}${buildLangInstruction(chatLang)}`;
 }
@@ -3994,11 +4039,13 @@ function hasMeaningfulAnalysisResult(type, result) {
 
 async function generateCoreAnalysisA(messages, math, relationshipType, chatLang = "en") {
   const chatText = buildSampleText(messages);
-  const detectedRel = detectRelationship(messages);
-  const relationshipLabel = detectedRel?.detected || null;
-  const relationshipLine = detectedRel
-    ? `Chat signal analysis detected they address each other as ${detectedRel.detected} (${detectedRel.confidence} confidence). Use "${detectedRel.detected}" when describing their relationship — never substitute "friend", "partner", or any other relationship word unless directly quoting the chat.`
-    : `No strong relational address terms were detected in the chat. Use the user-selected type "${relationshipType}" as the relationship label.`;
+  const relSnippets = detectRelationship(messages);
+  const relConfirmation = relSnippets ? await confirmRelationship(relSnippets, math.names || [], relationshipType) : null;
+  const confirmedRel = relConfirmation?.confirmedRelationship || relationshipType;
+  const relConfidence = relConfirmation?.confidence || "low";
+  const relReasoning = relConfirmation?.reasoning || "";
+  const endearmentWarning = relConfirmation?.endearmentWarning || null;
+  const relationshipLine = `CONFIRMED RELATIONSHIP: The two participants in this chat are ${confirmedRel} (confidence: ${relConfidence}). ${relReasoning} ${endearmentWarning ? `IMPORTANT ENDEARMENT WARNING: ${endearmentWarning} — do not interpret this word as a literal family title.` : ""} Never use any other relationship label anywhere in any field. Never say father/daughter, parent/child, or any other relationship word unless it exactly matches the confirmed label above.`;
   const names = math.names || [];
   const isGroup = math.isGroup;
   const personCount = Math.min(names.length || 0, isGroup ? Math.min(names.length || 0, 6) : 2);
@@ -4090,7 +4137,8 @@ async function generateCoreAnalysisA(messages, math, relationshipType, chatLang 
     "a sharp, observant chat analyst building a canonical core-analysis object that later reports will reuse",
     relationshipType,
     `CORE-A SCOPE: relationship dynamic, communication patterns, funny moments, kindness moments, energy, love language, and growth trajectory. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. You will also receive EARLY and RECENT contiguous snapshots; use those specifically for growth/change fields, and use the event windows for specific moments and recurring patterns. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: Whenever you see a laugh reaction (😂, lol, lmao, 'im dead', 💀, 🤣, haha, or similar) from person B immediately following a line from person A, the funny person is person A — the one whose line caused the reaction. Never attribute humour to the person who is laughing. This rule applies everywhere in the chat, regardless of window label. RELATIONSHIP LANGUAGE: The user selected relationship type is "${relationshipType}". ${relationshipLine} Never infer or override the relationship type from tone, emoji use, or affection level alone — a warm message between cousins does not make them romantic partners, a casual message between partners does not make them friends. Always use the confirmed relationship label when describing who did something to whom. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and energy/love-language reads, the actor is the sender of that exact line. For all "name" fields return ONLY the person's first name, with no explanation. Each timestamp already includes the day of week — read it directly and never calculate it yourself. Only report findings you can directly cite from the chat — if evidence is weak, use "None clearly identified". QUOTE RULE: For these fields specifically — sweetMoment, tensionMoment, biggestTopic, dramaContext, toxicityReport, mostLovingMoment, mostEnergising, mostDraining — always try to include a short real quote from the chat inline within the sentence if one exists. Do not translate the quote — reproduce it exactly as written in the chat, in its original language. Format it naturally inside the sentence like: ('exact quote here'). Only skip the quote if no specific line clearly supports the finding. SUMMARY FIELD RULES: vibeOneLiner must capture the dominant emotional tone of the entire chat — never base it on a single moment, window, or exchange. insideJoke must be a recurring reference that appears in multiple windows — if you only saw it once, use 'None clearly identified'. biggestTopic must be the most consistently recurring subject across the full history, not the most dramatic single event. For all three fields: if you cannot confirm recurrence across multiple windows, do not claim it. When quoting messages in any language, quote them as-is — do not translate them. ALL PARTICIPANTS IN THIS CHAT: ${names.slice(0, isGroup ? names.length : 2).join(", ")}. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"} only — one entry per slotted participant. Participants not in the people array may still appear as senders in the windows. Track their behaviour for shared fields (dramaStarter, toxicPerson, funniestPerson, kindestPerson, etc.) but do not create people entries for them. Never fold an unslotted participant's actions into a slotted participant's entry.`,
-    chatLang
+    chatLang,
+    relationshipLine
   );
 
   const userContent = `Here is a ${isGroup ? "group" : "two-person"} WhatsApp chat between ${names.slice(0, 6).join(", ")}. The full chat has ${math.totalMessages.toLocaleString()} messages. ${math.totalMessages > 10000 ? `This is a very large chat — every summary field (especially vibeOneLiner, biggestTopic, insideJoke) must reflect dominant patterns that recur across the full history. A single window is a tiny fraction of the whole. Never let one moment, joke, or exchange define a summary field. Weight only what appears repeatedly across multiple windows.` : ""} The content below is divided into ISOLATED WINDOWS from across the full history — each labelled ━━━ WINDOW N/N · date · type ━━━. Windows are non-contiguous excerpts; do not infer connections between separate windows. Every line shows the speaker: [timestamp] SpeakerName: body — assign all quotes and actions only to the name on that specific line.
@@ -4114,13 +4162,10 @@ ${fields}`;
   return normalizeCoreAnalysisA(raw, math, relationshipType);
 }
 
-async function generateCoreAnalysisB(messages, math, relationshipType, chatLang = "en") {
+async function generateCoreAnalysisB(messages, math, relationshipType, chatLang = "en", confirmedRel = null, relConfidence = "low", relReasoning = "", endearmentWarning = null) {
   const chatText = buildSampleText(messages);
-  const detectedRel = detectRelationship(messages);
-  const relationshipLabel = detectedRel?.detected || null;
-  const relationshipLine = detectedRel
-    ? `Chat signal analysis detected they address each other as ${detectedRel.detected} (${detectedRel.confidence} confidence). Use "${detectedRel.detected}" when describing their relationship — never substitute "friend", "partner", or any other relationship word unless directly quoting the chat.`
-    : `No strong relational address terms were detected in the chat. Use the user-selected type "${relationshipType}" as the relationship label.`;
+  const _confirmedRel = confirmedRel || relationshipType;
+  const relationshipLine = `CONFIRMED RELATIONSHIP: The two participants in this chat are ${_confirmedRel} (confidence: ${relConfidence}). ${relReasoning} ${endearmentWarning ? `IMPORTANT ENDEARMENT WARNING: ${endearmentWarning} — do not interpret this word as a literal family title.` : ""} Never use any other relationship label anywhere in any field. Never say father/daughter, parent/child, or any other relationship word unless it exactly matches the confirmed label above.`;
   const names = math.names || [];
   const personCount = Math.min(names.length || 0, 2);
   const fields = `{
@@ -4188,7 +4233,8 @@ async function generateCoreAnalysisB(messages, math, relationshipType, chatLang 
     "a careful risk, conflict, and accountability analyst building the canonical core-b object",
     relationshipType,
     `CORE-B SCOPE: toxicity, health scores, apology patterns, conflict patterns, power balance, red flag moments, and accountability. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — never connect separate windows unless the messages explicitly link them. SPEAKER ATTRIBUTION: Every line is [timestamp] SpeakerName: body — all behaviour belongs only to the sender on that exact line. RELATIONSHIP LANGUAGE: The user selected relationship type is "${relationshipType}". ${relationshipLine} Never infer or override the relationship type from tone, emoji use, or affection level alone. Always use the confirmed relationship label when describing who did something to whom. Be conservative: one or two examples do not prove a stable pattern. If the balance is mixed, prefer "Balanced", "Tie", or "None clearly identified" over forcing one villain. For accountability: a promise is BROKEN only if there is clear evidence it was never fulfilled or the person explicitly backed out. A promise fulfilled late is still KEPT. Do not count vague ideas like "we should hang out sometime" as promises. Never combine two separate events into one story. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"}, with one people entry per participant in that subset.`,
-    chatLang
+    chatLang,
+    relationshipLine
   );
 
   const userContent = `Here is a WhatsApp chat between ${names.slice(0, 6).join(", ")} (${math.totalMessages.toLocaleString()} messages total). The content below is ISOLATED WINDOWS from across the full history. Do not connect events across windows unless the messages explicitly link them. Every line shows the speaker: [timestamp] SpeakerName: body.
@@ -5263,11 +5309,10 @@ function Words({ words, bigrams }) {
   const combined=[...top5w.map(([w,c])=>({w,c,bi:false})),...top5b.map(([w,c])=>({w,c,bi:true}))];
   return (
     <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:4 }}>
-      {combined.map(({w,c,bi},i)=>(
-        <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background: i<3 ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)", borderRadius:14, opacity: bi ? 0.75 : 1 }}>
+      {combined.map(({w,c},i)=>(
+        <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background: i<3 ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)", borderRadius:14 }}>
           <span style={{ width:26, fontSize:14, flexShrink:0 }}>{M[i]||i+1}</span>
           <span style={{ flex:1, fontWeight:700, color:"#fff", fontSize:15, letterSpacing:-0.2 }}>{w}</span>
-          {bi && <span style={{ fontSize:10, color:"rgba(255,255,255,0.4)", fontWeight:600, letterSpacing:"0.05em", textTransform:"uppercase", marginRight:4 }}>2-word</span>}
           <span style={{ fontSize:13, color:"rgba(255,255,255,0.55)", fontWeight:600 }}>{c.toLocaleString()}x</span>
         </div>
       ))}
