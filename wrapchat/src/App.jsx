@@ -3778,6 +3778,78 @@ function deriveAccountaReportFromCore(core, math, relationshipType) {
   }, relationshipType, core);
 }
 
+function hasMeaningfulString(value) {
+  const text = String(value || "").trim();
+  return Boolean(text && text !== "—" && text !== "..." && text !== "…");
+}
+
+function hasMeaningfulAnalysisResult(type, result) {
+  if (!result || typeof result !== "object") return false;
+
+  switch (type) {
+    case "general":
+      return [
+        result.vibeOneLiner,
+        result.biggestTopic,
+        result.ghostContext,
+        result.funniestReason,
+        result.dramaContext,
+        result.relationshipSummary,
+        result.groupDynamic,
+        result.tensionMoment,
+        result.sweetMoment,
+      ].some(hasMeaningfulString);
+    case "toxicity":
+      return [
+        result.verdict,
+        result.conflictPattern,
+        result.powerBalance,
+        result.apologiesLeader?.context,
+        result.apologiesOther?.context,
+        ...(result.redFlagMoments || []).flatMap(item => [item?.description, item?.quote]),
+        ...(result.healthScores || []).map(item => item?.detail),
+      ].some(hasMeaningfulString);
+    case "lovelang":
+      return [
+        result.personA?.examples,
+        result.personB?.examples,
+        result.mismatch,
+        result.mostLovingMoment,
+        result.compatibilityRead,
+      ].some(hasMeaningfulString);
+    case "growth":
+      return [
+        result.thenDepth,
+        result.nowDepth,
+        result.whoChangedHow,
+        result.topicsAppeared,
+        result.topicsDisappeared,
+        result.trajectoryDetail,
+        result.arcSummary,
+      ].some(hasMeaningfulString);
+    case "accounta":
+      return [
+        result.personA?.detail,
+        result.personB?.detail,
+        result.notableBroken?.promise,
+        result.notableKept?.promise,
+        result.overallVerdict,
+      ].some(hasMeaningfulString);
+    case "energy":
+      return [
+        result.personA?.goodNews,
+        result.personA?.venting,
+        result.personB?.goodNews,
+        result.personB?.venting,
+        result.mostEnergising,
+        result.mostDraining,
+        result.compatibility,
+      ].some(hasMeaningfulString);
+    default:
+      return false;
+  }
+}
+
 async function generateCoreAnalysisA(messages, math, relationshipType, chatLang = "en") {
   const chatText = buildSampleText(messages);
   const detectedRel = detectRelationship(messages);
@@ -7908,7 +7980,11 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
       }
     }
 
-    return pipeline.derive(core, math, relType);
+    const derived = pipeline.derive(core, math, relType);
+    if (!hasMeaningfulAnalysisResult(type, derived)) {
+      throw new Error("AI returned an empty analysis");
+    }
+    return derived;
   };
 
   // Run AI analysis with the selected report type and relationship type
