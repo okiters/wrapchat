@@ -3855,7 +3855,7 @@ const LOCAL_STATS_VERSION = 3;
 const CORE_ANALYSIS_CACHE_VERSION = 4;
 const CORE_A_MAX_TOKENS = 2600;
 const CORE_B_MAX_TOKENS = 2600;
-const HOMEPAGE_VERSION = "1234";
+const HOMEPAGE_VERSION = "67534";
 
 function buildRelationshipContextBlock(relType) {
   const relCtx = relContextStr(relType);
@@ -7407,7 +7407,7 @@ function AdminLocked({ onBack }) {
       <div style={{ background:"rgba(0,0,0,0.25)", borderRadius:24, padding:"28px 24px", textAlign:"center", width:"100%" }}>
         <div style={{ fontSize:36, lineHeight:1 }}>🔒</div>
         <div style={{ fontSize:14, color:"rgba(255,255,255,0.58)", marginTop:12, lineHeight:1.7 }}>
-          This inbox is only visible to the configured admin email.
+          This panel is only visible to the configured admin email.
         </div>
       </div>
       <Btn onClick={onBack}>← Back</Btn>
@@ -7415,14 +7415,29 @@ function AdminLocked({ onBack }) {
   );
 }
 
-function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin, uploadError = "", onClearError }) {
+function Upload({
+  onParsed,
+  onLogout,
+  onHistory,
+  onAdmin,
+  canAdmin,
+  uploadError = "",
+  uploadInfo = "",
+  credits = null,
+  hideCredits = false,
+  onClearError,
+}) {
   const { uiLangPref, updateUiLangPref } = useUILanguage();
   const t = useT();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const showAdminEntry = Boolean(onAdmin) && ADMIN_EMAILS.length > 0;
+  const showAdminEntry = Boolean(onAdmin) && canAdmin;
   const uploadInputId = "wrapchat-upload-input";
   const displayErr = err || uploadError;
+  const displayInfo = uploadInfo || (!hideCredits && credits === 0 ? OUT_OF_CREDITS_MESSAGE : "");
+  const creditLabel = !hideCredits && Number.isInteger(credits) && credits > 0
+    ? `${credits} credit${credits === 1 ? "" : "s"}`
+    : "";
 
   const handle = async file => {
     if (!file) return;
@@ -7479,7 +7494,44 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin, uploadError 
       </label>
       <input id={uploadInputId} type="file" accept=".txt,.zip,text/plain,application/zip" style={{ display:"none" }} onChange={e => handle(e.target.files[0])} />
       {displayErr && <div style={{ fontSize:13, color:"#FFB090", marginTop:8, textAlign:"center", background:"rgba(200,60,20,0.2)", padding:"10px 16px", borderRadius:16, width:"100%" }}>{displayErr}</div>}
+      {displayInfo && (
+        <div
+          style={{
+            fontSize:13,
+            color:"rgba(255,255,255,0.82)",
+            marginTop:8,
+            textAlign:"center",
+            background:"rgba(74,30,160,0.22)",
+            border:"1px solid rgba(160,138,240,0.22)",
+            padding:"11px 16px",
+            borderRadius:16,
+            width:"100%",
+            lineHeight:1.6,
+          }}
+        >
+          {displayInfo}
+        </div>
+      )}
       <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:8, textAlign:"center" }}>{t("Group or duo detected automatically. Your chat is analysed by AI and never stored. Only results are saved.")}</div>
+      {creditLabel && (
+        <div
+          style={{
+            fontSize:12,
+            color:"rgba(255,244,214,0.88)",
+            marginTop:10,
+            textAlign:"center",
+            background:"rgba(255,214,120,0.14)",
+            border:"1px solid rgba(255,214,120,0.22)",
+            borderRadius:999,
+            padding:"8px 14px",
+            fontWeight:800,
+            boxShadow:"0 6px 18px rgba(0,0,0,0.08)",
+            alignSelf:"center",
+          }}
+        >
+          {creditLabel}
+        </div>
+      )}
       <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap", width:"100%", marginTop:4 }}>
         {onHistory && (
           <button onClick={onHistory} className="wc-btn" style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:999, color:"rgba(255,255,255,0.72)", fontSize:12, cursor:"pointer", padding:"8px 14px", fontWeight:700, letterSpacing:0.1 }}>
@@ -7502,7 +7554,7 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin, uploadError 
               letterSpacing:0.1,
             }}
           >
-            {t("Feedback Inbox")}
+            Admin
           </button>
         )}
         {onLogout && (
@@ -7680,6 +7732,61 @@ function Slide({ children, dir, id }) {
       {children}
     </SlideContext.Provider>
   );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CREDITS
+// ─────────────────────────────────────────────────────────────────
+const OUT_OF_CREDITS_MESSAGE = "You've used all your credits. More coming soon — stay tuned.";
+
+function parseCreditBalance(value) {
+  const candidate = (
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value.balance ?? value.new_balance ?? value.credit_balance ?? value.credits ?? null)
+      : value
+  );
+
+  if (candidate == null) return null;
+
+  const parsed = Number.parseInt(String(candidate), 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+async function getUserCredits() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("credits")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return parseCreditBalance(data);
+}
+
+async function deductUserCredit() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user) return null;
+
+  const { data, error } = await supabase.rpc("deduct_credit", { p_user_id: user.id });
+  if (error) throw error;
+  return parseCreditBalance(data);
+}
+
+async function initialiseUserCredits(userEmail = null) {
+  const existingBalance = await getUserCredits();
+  if (existingBalance !== null) return existingBalance;
+
+  const { error } = await supabase.functions.invoke("initialise-credits", {
+    body: { email: userEmail ?? null },
+  });
+  if (error) throw error;
+
+  return await getUserCredits();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -7903,7 +8010,7 @@ function buildFeedbackSummary(feedbackRow, resultRow, viewLang = "en") {
   return rows;
 }
 
-function AdminFeedbackInbox({ onBack }) {
+function AdminFeedbackTab() {
   const [rows, setRows] = useState(null);
   const [resultsById, setResultsById] = useState({});
   const [err, setErr] = useState("");
@@ -7966,11 +8073,10 @@ function AdminFeedbackInbox({ onBack }) {
   };
 
   return (
-    <Shell sec="upload" prog={0} total={0}>
-      {/* Header */}
+    <>
       <div style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1 }}>
-          Feedback Inbox
+          Feedback
         </div>
         <div
           style={{
@@ -7988,12 +8094,6 @@ function AdminFeedbackInbox({ onBack }) {
           {rows === null ? "Loading…" : `${rows.length} report${rows.length !== 1 ? "s" : ""}`}
         </div>
       </div>
-
-      {!ADMIN_EMAILS.length && (
-        <div style={{ fontSize:12, color:"#FFB090", background:"rgba(200,60,20,0.15)", border:"1px solid rgba(200,60,20,0.3)", padding:"10px 14px", borderRadius:14, width:"100%", lineHeight:1.6 }}>
-          Set <code>VITE_ADMIN_EMAIL</code> in <code>.env</code> to unlock admin access.
-        </div>
-      )}
 
       {rows === null && !err && (
         <div style={{ width:"100%", display:"flex", justifyContent:"center", padding:"32px 0" }}><Dots /></div>
@@ -8021,7 +8121,6 @@ function AdminFeedbackInbox({ onBack }) {
           const translatedResultRow = hasTranslation && baseResultRow
             ? { ...baseResultRow, result_data: getDisplayResultData(baseResultRow.result_data, translatedLang) }
             : null;
-          const resultRow = selectedLang === "en" || !translatedResultRow ? englishResultRow : translatedResultRow;
           const englishSummaryRows = buildFeedbackSummary(row, englishResultRow, "en");
           const translatedSummaryRows = translatedResultRow ? buildFeedbackSummary(row, translatedResultRow, translatedLang) : [];
           const summaryRows = selectedLang === "en" || !translatedResultRow ? englishSummaryRows : translatedSummaryRows;
@@ -8166,6 +8265,232 @@ function AdminFeedbackInbox({ onBack }) {
           );
         })}
       </div>
+    </>
+  );
+}
+
+function AdminUsersTab() {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+  const [busyById, setBusyById] = useState({});
+  const [amountById, setAmountById] = useState({});
+  const [noticeById, setNoticeById] = useState({});
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      setErr("");
+      const { data, error } = await supabase.rpc("admin_list_user_credits");
+      if (!alive) return;
+      if (error) {
+        console.error("Admin users load failed", error);
+        setErr(error.message || "Couldn't load users right now.");
+        setRows([]);
+        return;
+      }
+      setRows((data || []).map(row => ({
+        user_id: row.user_id,
+        email: row.email || "No email",
+        balance: Number.parseInt(String(row.balance ?? 0), 10) || 0,
+      })));
+    };
+
+    load();
+    return () => { alive = false; };
+  }, []);
+
+  const setAmount = (userId, value) => {
+    setAmountById(prev => ({ ...prev, [userId]: value }));
+  };
+
+  const addCredits = async (userId) => {
+    const rawValue = amountById[userId] ?? "1";
+    const amount = Number.parseInt(String(rawValue), 10);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setNoticeById(prev => ({ ...prev, [userId]: "Enter a positive amount." }));
+      return;
+    }
+
+    setBusyById(prev => ({ ...prev, [userId]: true }));
+    setNoticeById(prev => ({ ...prev, [userId]: "" }));
+
+    const { data, error } = await supabase.rpc("admin_add_credits", {
+      p_user_id: userId,
+      p_amount: amount,
+    });
+
+    if (error) {
+      console.error("Admin add credits failed", error);
+      setNoticeById(prev => ({ ...prev, [userId]: error.message || "Couldn't add credits right now." }));
+      setBusyById(prev => ({ ...prev, [userId]: false }));
+      return;
+    }
+
+    const updatedBalance = Number.parseInt(String(data ?? 0), 10) || 0;
+    setRows(prev => (prev || []).map(row => (
+      row.user_id === userId
+        ? { ...row, balance: updatedBalance }
+        : row
+    )));
+    setAmountById(prev => ({ ...prev, [userId]: "1" }));
+    setNoticeById(prev => ({ ...prev, [userId]: "Added." }));
+    setBusyById(prev => ({ ...prev, [userId]: false }));
+  };
+
+  return (
+    <>
+      <div style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1 }}>
+          Users
+        </div>
+        <div
+          style={{
+            background:"rgba(255,255,255,0.07)",
+            border:"1px solid rgba(255,255,255,0.12)",
+            borderRadius:999,
+            color:"rgba(255,255,255,0.68)",
+            fontSize:12,
+            padding:"7px 12px",
+            fontWeight:700,
+            letterSpacing:0.08,
+            whiteSpace:"nowrap",
+          }}
+        >
+          {rows === null ? "Loading…" : `${rows.length} user${rows.length !== 1 ? "s" : ""}`}
+        </div>
+      </div>
+
+      {rows === null && !err && (
+        <div style={{ width:"100%", display:"flex", justifyContent:"center", padding:"32px 0" }}><Dots /></div>
+      )}
+      {err && (
+        <div style={{ fontSize:13, color:"#FFB090", background:"rgba(200,60,20,0.15)", border:"1px solid rgba(200,60,20,0.3)", padding:"10px 14px", borderRadius:14, width:"100%", textAlign:"center" }}>{err}</div>
+      )}
+      {rows?.length === 0 && !err && (
+        <div style={{ width:"100%", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20, padding:"32px 20px", textAlign:"center" }}>
+          <div style={{ fontSize:14, color:"rgba(255,255,255,0.45)", lineHeight:1.6 }}>No users yet.</div>
+        </div>
+      )}
+
+      <div style={{ width:"100%", flex:1, minHeight:0, display:"flex", flexDirection:"column", gap:12, overflowY:"auto", paddingRight:2, paddingBottom:4, alignSelf:"stretch" }}>
+        {rows?.map(row => {
+          const inputValue = amountById[row.user_id] ?? "1";
+          const notice = noticeById[row.user_id] || "";
+          const busy = !!busyById[row.user_id];
+
+          return (
+            <div key={row.user_id} style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20, padding:"14px 16px", display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize:15, fontWeight:800, color:"#fff", letterSpacing:-0.2, lineHeight:1.35, wordBreak:"break-word" }}>{row.email}</div>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", marginTop:5 }}>Current credits: {row.balance}</div>
+                </div>
+                <div style={{ background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:999, padding:"6px 10px", fontSize:12, fontWeight:700, color:"#fff", whiteSpace:"nowrap" }}>
+                  {row.balance} credit{row.balance === 1 ? "" : "s"}
+                </div>
+              </div>
+
+              <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={inputValue}
+                  onChange={e => setAmount(row.user_id, e.target.value)}
+                  style={{
+                    width:88,
+                    background:"rgba(0,0,0,0.22)",
+                    border:"1px solid rgba(255,255,255,0.12)",
+                    borderRadius:12,
+                    padding:"10px 12px",
+                    fontSize:14,
+                    color:"#fff",
+                    outline:"none",
+                    fontFamily:"inherit",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => addCredits(row.user_id)}
+                  disabled={busy}
+                  className="wc-btn"
+                  style={{
+                    background:"rgba(255,255,255,0.10)",
+                    border:"1px solid rgba(255,255,255,0.16)",
+                    borderRadius:999,
+                    color:"#fff",
+                    fontSize:12,
+                    cursor:busy ? "default" : "pointer",
+                    padding:"10px 14px",
+                    fontWeight:700,
+                    letterSpacing:0.1,
+                    opacity:busy ? 0.6 : 1,
+                  }}
+                >
+                  {busy ? "Adding…" : "Add credits"}
+                </button>
+                {notice && (
+                  <div style={{ fontSize:12, color:notice === "Added." ? "rgba(176,244,200,0.9)" : "#FFB090" }}>
+                    {notice}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function AdminPanel({ onBack }) {
+  const [tab, setTab] = useState("feedback");
+  const tabs = [
+    { id: "feedback", label: "Feedback" },
+    { id: "users", label: "Users" },
+  ];
+
+  return (
+    <Shell sec="upload" prog={0} total={0}>
+      <div style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+        <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:-1, lineHeight:1.1 }}>
+          Admin
+        </div>
+      </div>
+
+      {!ADMIN_EMAILS.length && (
+        <div style={{ fontSize:12, color:"#FFB090", background:"rgba(200,60,20,0.15)", border:"1px solid rgba(200,60,20,0.3)", padding:"10px 14px", borderRadius:14, width:"100%", lineHeight:1.6 }}>
+          Set <code>VITE_ADMIN_EMAIL</code> in <code>.env</code> to unlock admin access.
+        </div>
+      )}
+
+      <div style={{ display:"flex", background:"rgba(0,0,0,0.25)", borderRadius:50, padding:4, width:"100%", gap:4 }}>
+        {tabs.map(item => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setTab(item.id)}
+            className="wc-btn"
+            style={{
+              flex:1,
+              border:"none",
+              borderRadius:46,
+              padding:"10px 0",
+              fontSize:13,
+              fontWeight:700,
+              cursor:"pointer",
+              transition:"all 0.2s",
+              background: tab === item.id ? "rgba(255,255,255,0.18)" : "transparent",
+              color: tab === item.id ? "#fff" : "rgba(255,255,255,0.38)",
+              letterSpacing:0.1,
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "feedback" ? <AdminFeedbackTab /> : <AdminUsersTab />}
 
       <Btn onClick={onBack}>← Back</Btn>
     </Shell>
@@ -8378,6 +8703,7 @@ function MyResults({ onBack, onRestoreResult }) {
 export default function App({ pendingImportedChat = null, onPendingImportedChatConsumed = () => {} }) {
   const [phase,            setPhase]            = useState("auth");
   const [authedUser,       setAuthedUser]       = useState(null);
+  const [credits,          setCredits]          = useState(null);
   const [messages,         setMessages]         = useState(null);
   const [math,             setMath]             = useState(null);
   const [ai,               setAi]               = useState(null);
@@ -8404,13 +8730,46 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
   const [feedbackBusy,     setFeedbackBusy]     = useState(false);
   const [feedbackThanks,   setFeedbackThanks]   = useState(false);
   const [uploadError,      setUploadError]      = useState("");
+  const [uploadInfo,       setUploadInfo]       = useState("");
   const [analysisError,    setAnalysisError]    = useState("");
   const consumedImportRef = useRef(null);
   const resolvedUiLang = resolveUiLang(uiLangPref, detectedLang?.code);
+  const authedIsAdmin = isAdminUser(authedUser);
 
   useEffect(() => {
     setUiLangPref(normalizeUiLangPref(authedUser?.user_metadata?.ui_language));
   }, [authedUser]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!authedUser) {
+      setCredits(null);
+      setUploadInfo("");
+      return undefined;
+    }
+
+    if (authedIsAdmin) {
+      setCredits(null);
+      setUploadInfo("");
+      return undefined;
+    }
+
+    (async () => {
+      try {
+        const balance = await getUserCredits();
+        if (cancelled) return;
+        setCredits(balance);
+        if (typeof balance === "number" && balance > 0) setUploadInfo("");
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Credits load failed", error);
+        setCredits(null);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [authedIsAdmin, authedUser]);
 
   const updateUiLangPref = async (pref) => {
     const nextPref = normalizeUiLangPref(pref);
@@ -8552,6 +8911,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
   // Called when onboarding completes → proceed to terms acceptance
   const onOnboarded = (pref = "english") => {
     const nextPref = normalizeUiLangPref(pref);
+    const userEmail = authedUser?.email || null;
     setUiLangPref(nextPref);
     setAuthedUser(prev => (
       prev
@@ -8562,11 +8922,21 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
     setDir("fwd");
     setPhase("terms");
     setSid(s => s + 1);
+
+    void (async () => {
+      try {
+        const balance = await initialiseUserCredits(userEmail);
+        setCredits(balance);
+      } catch (error) {
+        console.error("Initial credits setup failed", error);
+      }
+    })();
   };
 
   // Called when terms are accepted → proceed to upload
   const onAcceptedTerms = () => {
     setUploadError("");
+    setUploadInfo("");
     setAnalysisError("");
     setStep(0);
     setDir("fwd");
@@ -8586,6 +8956,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
     setFeedbackTarget(null); setFeedbackChoice(""); setFeedbackNote(""); setFeedbackBusy(false); setFeedbackThanks(false);
     setChatLang("en"); setDetectedLang(null);
     setUploadError("");
+    setUploadInfo("");
     setAnalysisError("");
     setStep(0); setDir("fwd"); setSid(s => s+1);
   };
@@ -8593,6 +8964,7 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
   // Step 1: file parsed → check thresholds, cap large groups, compute local stats, detect language
   const onParsed = ({ messages: msgs, tooShort }) => {
     setUploadError("");
+    setUploadInfo("");
     setAnalysisError("");
     if (tooShort) {
       setPhase("tooshort");
@@ -8678,6 +9050,28 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
   // Run AI analysis with the selected report type and relationship type
   const runAnalysis = async (type, relType) => {
     setAnalysisError("");
+    if (!authedIsAdmin) {
+      let availableCredits = credits;
+      try {
+        availableCredits = await getUserCredits();
+        setCredits(availableCredits);
+      } catch (error) {
+        console.error("Credit check failed", error);
+        availableCredits = null;
+        setCredits(null);
+      }
+
+      if (availableCredits == null || availableCredits <= 0) {
+        setUploadInfo(OUT_OF_CREDITS_MESSAGE);
+        setStep(0);
+        setDir("bk");
+        setPhase("upload");
+        setSid(s => s + 1);
+        return;
+      }
+    }
+
+    setUploadInfo("");
     setStep(0);
     setPhase("loading");
     setSid(s => s+1);
@@ -8724,6 +9118,16 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
     setPhase("results");
     setStep(0);
     setSid(s => s+1);
+    if (!authedIsAdmin) {
+      void (async () => {
+        try {
+          const nextBalance = await deductUserCredit();
+          setCredits(nextBalance);
+        } catch (error) {
+          console.error("Credit deduction failed", error);
+        }
+      })();
+    }
   };
 
   // Step 2: user picks a report → for duo chats, show relationship screen first
@@ -8903,12 +9307,12 @@ export default function App({ pendingImportedChat = null, onPendingImportedChatC
   if (phase === "admin") return (
     withUiLanguage(<Slide dir="fwd" id={sid}>
       {isAdminUser(authedUser)
-        ? <AdminFeedbackInbox onBack={() => { setPhase("upload"); setSid(s => s+1); }} onLogout={logout} />
+        ? <AdminPanel onBack={() => { setPhase("upload"); setSid(s => s+1); }} onLogout={logout} />
         : <AdminLocked onBack={() => { setPhase("upload"); setSid(s => s+1); }} />}
     </Slide>)
   );
   if (phase === "history")  return withUiLanguage(<Slide dir="fwd" id={sid}><MyResults onBack={() => { setPhase("upload"); setSid(s => s+1); }} onRestoreResult={onRestoreResult} /></Slide>);
-  if (phase === "upload")   return withUiLanguage(<Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={isAdminUser(authedUser)} uploadError={uploadError} onClearError={() => setUploadError("")} /></Slide>);
+  if (phase === "upload")   return withUiLanguage(<Slide dir="fwd" id={sid}><Upload onParsed={onParsed} onLogout={logout} onHistory={() => { setPhase("history"); setSid(s => s+1); }} onAdmin={() => { setPhase("admin"); setSid(s => s+1); }} canAdmin={authedIsAdmin} uploadError={uploadError} uploadInfo={uploadInfo} credits={credits} hideCredits={authedIsAdmin} onClearError={() => setUploadError("")} /></Slide>);
   if (phase === "tooshort") return withUiLanguage(<Slide dir="fwd" id={sid}><TooShort onBack={() => { setPhase("upload"); setSid(s => s+1); }} /></Slide>);
   if (phase === "select") return (
     withUiLanguage(<Slide dir="fwd" id={sid}>
