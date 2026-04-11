@@ -7410,7 +7410,9 @@ function AdminLocked({ onBack }) {
           This panel is only visible to the configured admin email.
         </div>
       </div>
-      <Btn onClick={onBack}>← Back</Btn>
+      <div style={{ width:"100%", display:"flex", justifyContent:"center", marginTop:8 }}>
+        <Btn onClick={onBack}>← Back</Btn>
+      </div>
     </Shell>
   );
 }
@@ -8108,7 +8110,7 @@ function AdminFeedbackTab() {
         </div>
       )}
 
-      <div style={{ width:"100%", flex:1, minHeight:0, display:"flex", flexDirection:"column", gap:12, overflowY:"auto", paddingRight:2, paddingBottom:4, alignSelf:"stretch" }}>
+      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:12, maxHeight:"58vh", overflowY:"auto", paddingRight:2, paddingBottom:4, alignSelf:"stretch" }}>
         {rows?.map(row => {
           const baseResultRow = resultsById[row.result_id];
           const resultData = baseResultRow?.result_data;
@@ -8372,7 +8374,7 @@ function AdminUsersTab() {
         </div>
       )}
 
-      <div style={{ width:"100%", flex:1, minHeight:0, display:"flex", flexDirection:"column", gap:12, overflowY:"auto", paddingRight:2, paddingBottom:4, alignSelf:"stretch" }}>
+      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:12, maxHeight:"58vh", overflowY:"auto", paddingRight:2, paddingBottom:4, alignSelf:"stretch" }}>
         {rows?.map(row => {
           const inputValue = amountById[row.user_id] ?? "1";
           const notice = noticeById[row.user_id] || "";
