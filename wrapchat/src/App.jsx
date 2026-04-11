@@ -2374,64 +2374,147 @@ const LAUGH_RE = new RegExp(
 
 
 
-function detectRelationship(messages) {
-  const RELATION_SIGNALS = {
-    daughter: /\b(kızım|kızımı|kızımsın|my daughter|ma fille|meine tochter|mia figlia|mi hija|minha filha|ابنتي)\b/i,
-    son: /\b(oğlum|oğlumsun|my son|mon fils|mein sohn|mio figlio|mi hijo|meu filho|ابني)\b/i,
-    mother: /\b(annem|anneciğim|mom|mum|mama|mother|anne|mamá|mãe|أمي|maman|mutter|mamma|madre)\b/i,
-    father: /\b(babam|babaciğim|dad|daddy|father|baba|papá|pai|أبي|papa|vater|papà|padre)\b/i,
-    grandmother: /\b(anneannem|babaanne(m)?|grandma|grandmother|abuela|avó|جدتي|grand[- ]m[eè]re|großmutter|nonna)\b/i,
-    grandfather: /\b(dedem|dedeciğim|grandpa|granddad|grandfather|abuelo|avô|جدي|grand[- ]p[eè]re|großvater|nonno)\b/i,
-    sister: /\b(ablam|kız kardeşim|sis|sister|hermana|irmã|أختي|sœur|schwester|sorella)\b/i,
-    brother: /\b(ağabeyim|kardeşim|bro|brother|hermano|irmão|أخي|frère|bruder|fratello)\b/i,
-    cousin: /\b(kuzenimi|kuzenimsin|kuzenim|cousin|primo|prima|عمي|cousine|vetter|kusine|cugino|cugina)\b/i,
-    aunt: /\b(teyzem|halam|aunt|auntie|tía|tia|خالتي|عمتي|tante|zia)\b/i,
-    uncle: /\b(amcam|dayım|uncle|tío|tio|عمي|خالي|oncle|onkel|zio)\b/i,
-    husband: /\b(kocam|eşim|husband|hubby|my husband|esposo|marido|زوجي|mari|ehemann|marito)\b/i,
-    wife: /\b(karım|eşim|wife|wifey|my wife|esposa|زوجتي|femme|ehefrau|moglie)\b/i,
-    boyfriend: /\b(erkek arkadaşım|boyfriend|novio|namorado|petit ami|freund|ragazzo|حبيبي)\b/i,
-    girlfriend: /\b(kız arkadaşım|girlfriend|novia|namorada|petite amie|freundin|ragazza|حبيبتي)\b/i,
-    romantic: /\b(sevgilim|aşkım|canım|tatlım|bebeğim|babe|baby|darling|my love|amor|querido|querida|habibi|habibti|mon amour|liebling|amore)\b/i,
-    friend: /\b(arkadaşım|dostum|bestie|best friend|amigo|amiga|ami|freund|amico)\b/i,
-    colleague: /\b(iş arkadaşım|meslektaşım|colleague|coworker|collègue|kollege|collega)\b/i,
-    boss: /\b(müdürüm|patronum|boss|manager|chef|vorgesetzter|capo)\b/i,
-  };
+const RELATIONSHIP_SIGNAL_LIMIT = 16;
+const RELATIONSHIP_SIGNAL_PER_LABEL_LIMIT = 4;
+const RELATIONSHIP_SIGNAL_DEFS = [
+  { key: "father", category: "family", specificRelationship: "father and child", re: /\b(baba|babam|babamsın|babaciğim|babacım|dad|daddy|father|papá|pai|أبي|papa|vater|papà|padre)\b/i },
+  { key: "mother", category: "family", specificRelationship: "mother and child", re: /\b(anne|annem|annemsin|anneciğim|annecim|mom|mum|mama|mother|mamá|mãe|أمي|maman|mutter|mamma|madre)\b/i },
+  { key: "grandparent", category: "family", specificRelationship: "grandparent and grandchild", re: /\b(anneannem|babaanne(m)?|dedem|dedeciğim|grandma|grandmother|grandpa|granddad|grandfather|abuela|abuelo|avó|avô|جدتي|جدي|grand[- ]m[eè]re|grand[- ]p[eè]re|großmutter|großvater|nonna|nonno)\b/i },
+  { key: "sibling", category: "family", specificRelationship: "siblings", re: /\b(kız kardeşim|erkek kardeşim|sister|brother|hermana|hermano|irmã|irmão|أختي|أخي|sœur|frère|schwester|bruder|sorella|fratello)\b/i },
+  { key: "cousin", category: "family", specificRelationship: "cousins", re: /\b(kuzi+|kuzim|kuzenimi|kuzenimsin|kuzenim|kuzeniz|kuzen|cousin|cousins|cousing|primo|prima|cousine|vetter|kusine|cugino|cugina)\b/i },
+  { key: "aunt-uncle", category: "family", specificRelationship: "aunt/uncle and niece/nephew", re: /\b(teyzem|halam|amcam|dayım|aunt|auntie|uncle|tía|tia|tío|tio|خالتي|عمتي|عمي|خالي|tante|oncle|onkel|zia|zio)\b/i },
+  { key: "spouse", category: "partner", specificRelationship: "spouses", re: /\b(kocam|karım|eşim|husband|hubby|my husband|wife|wifey|my wife|spouse|esposo|marido|esposa|زوجي|زوجتي|mari|femme|ehemann|ehefrau|marito|moglie)\b/i },
+  { key: "partner", category: "partner", specificRelationship: "partners", re: /\b(partner|sevgilim|my partner|mon partenaire|compañero|companheiro)\b/i },
+  { key: "dating", category: "dating", specificRelationship: "dating", re: /\b(erkek arkadaşım|kız arkadaşım|boyfriend|girlfriend|seeing each other|date|dating|novio|novia|namorado|namorada|petit ami|petite amie|ragazzo|ragazza)\b/i },
+  { key: "ex", category: "ex", specificRelationship: "exes", re: /\b(ex|exim|eski sevgili|former partner|old boyfriend|old girlfriend)\b/i },
+  { key: "best-friend", category: "friend", specificRelationship: "best friends", re: /\b(best friend|bestie|bff)\b/i },
+  { key: "friend", category: "friend", specificRelationship: "close friends", re: /\b(arkadaşım|friend|friends|amigo|amiga|ami|amico|amica)\b/i },
+  { key: "boss", category: "colleague", specificRelationship: "boss and employee", re: /\b(müdürüm|patronum|boss|manager|chef|vorgesetzter|capo)\b/i },
+  { key: "colleague", category: "colleague", specificRelationship: "colleagues", re: /\b(iş arkadaşım|meslektaşım|colleague|coworker|co-worker|collègue|kollege|collega)\b/i },
+];
 
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function shouldScanRelationshipSignal(selectedCategory, signalCategory) {
+  const category = normalizeSelectedRelationshipType(selectedCategory || "other");
+  if (!category || category === "other" || category === "unknown") return true;
+  return category === signalCategory;
+}
+
+function getRelationshipUsageHint(body, matchedText) {
+  const text = String(body || "");
+  const token = String(matchedText || "").trim();
+  if (!token) return "unclear";
+
+  const escaped = escapeRegex(token);
+  const directAddressRe = new RegExp(`^\\s*(?:hey|hi|ya|yo|ah|ayy)?\\s*${escaped}(?:[\\s,!?]|$)`, "i");
+  const directAddressEndRe = new RegExp(`(?:^|[\\s,!?])${escaped}[.!?]*\\s*$`, "i");
+  const identityRe = new RegExp(`\\b(you(?:'re| are)?|sen(?:in)?|sana|seni|siz(?:in)?|u)\\b.{0,18}${escaped}|${escaped}.{0,18}\\b(you(?:'re| are)?|sen(?:in)?|sana|seni|siz(?:in)?|u)\\b`, "i");
+  const possessiveBeforeRe = new RegExp(`\\b(my|our|his|her|their|benim|bizim|onun)\\s+${escaped}\\b`, "i");
+  const explicitPairRe = new RegExp(`\\b(my|benim)\\s+${escaped}\\b.{0,18}\\b(you|u|sen|sın|sin|sun|sün)\\b|\\b(you(?:'re| are)?|sen(?:in)?|siz(?:in)?)\\b.{0,18}\\b(my|benim)\\s+${escaped}\\b`, "i");
+  const thirdPartyVerbRe = new RegExp(`\\b${escaped}\\b.{0,24}\\b(called|came|said|told|arrived|yazdı|geldi|aradı|dedi|söyledi)\\b`, "i");
+  const shortAddressLike = text.length <= 40 && new RegExp(`\\b${escaped}\\b`, "i").test(text) && !possessiveBeforeRe.test(text);
+
+  if (directAddressRe.test(text) || directAddressEndRe.test(text) || identityRe.test(text) || explicitPairRe.test(text) || shortAddressLike) {
+    return "likely direct address";
+  }
+  if (possessiveBeforeRe.test(text) || thirdPartyVerbRe.test(text)) return "likely third-party mention";
+  return "unclear from this line alone";
+}
+
+function relationshipUsagePriority(usageHint) {
+  switch (String(usageHint || "").toLowerCase()) {
+    case "likely direct address":
+      return 3;
+    case "unclear from this line alone":
+      return 2;
+    case "likely third-party mention":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function detectRelationship(messages, userSelectedCategory = null) {
   const snippets = [];
-  const sample = messages.slice(0, 1600);
 
-  for (let i = 0; i < sample.length; i++) {
-    const msg = sample[i];
-    if (!msg.body || /^<(Voice|Media) omitted>$/.test(msg.body)) continue;
+  for (let i = 0; i < messages.length; i += 1) {
+    const msg = messages[i];
+    if (!msg?.body || /^<(Voice|Media) omitted>$/.test(msg.body)) continue;
 
-    for (const [key, re] of Object.entries(RELATION_SIGNALS)) {
-      if (re.test(msg.body)) {
-        const start = Math.max(0, i - 2);
-        const end = Math.min(sample.length - 1, i + 2);
-        const context = sample.slice(start, end + 1)
-          .map(m => `[${formatEvidenceDate(m.date)}] ${m.name}: ${m.body}`)
-          .join("\n");
-        snippets.push({
-          key,
-          speaker: msg.name,
-          date: formatEvidenceDate(msg.date),
-          quote: cleanQuote(msg.body, 120),
-          context,
-        });
-        break;
-      }
+    for (const def of RELATIONSHIP_SIGNAL_DEFS) {
+      if (!shouldScanRelationshipSignal(userSelectedCategory, def.category)) continue;
+      const match = msg.body.match(def.re);
+      if (!match?.[0]) continue;
+
+      const start = Math.max(0, i - 2);
+      const end = Math.min(messages.length - 1, i + 2);
+      const matchedText = match[0];
+      const usageHint = getRelationshipUsageHint(msg.body, matchedText);
+      const context = messages.slice(start, end + 1)
+        .map(m => `[${formatEvidenceDate(m.date)}] ${m.name}: ${m.body}`)
+        .join("\n");
+
+      snippets.push({
+        key: def.key,
+        category: def.category,
+        specificRelationship: def.specificRelationship,
+        matchedText,
+        usageHint,
+        speaker: msg.name,
+        date: formatEvidenceDate(msg.date),
+        quote: cleanQuote(msg.body, 120),
+        context,
+        index: i,
+      });
     }
-
-    if (snippets.length >= 18) break;
   }
 
   if (!snippets.length) return null;
-  return snippets;
+
+  const ranked = snippets
+    .sort((a, b) => {
+      const priorityDiff = relationshipUsagePriority(b.usageHint) - relationshipUsagePriority(a.usageHint);
+      if (priorityDiff) return priorityDiff;
+      const cousinBoostA = a.specificRelationship === "cousins" ? 1 : 0;
+      const cousinBoostB = b.specificRelationship === "cousins" ? 1 : 0;
+      if (cousinBoostA !== cousinBoostB) return cousinBoostB - cousinBoostA;
+      if (a.specificRelationship !== b.specificRelationship) {
+        return a.specificRelationship.localeCompare(b.specificRelationship);
+      }
+      return a.index - b.index;
+    });
+
+  const selected = [];
+  const perLabelCounts = new Map();
+
+  for (const snippet of ranked) {
+    const labelKey = snippet.specificRelationship;
+    const used = perLabelCounts.get(labelKey) || 0;
+    if (used >= RELATIONSHIP_SIGNAL_PER_LABEL_LIMIT) continue;
+    perLabelCounts.set(labelKey, used + 1);
+    selected.push(snippet);
+    if (selected.length >= RELATIONSHIP_SIGNAL_LIMIT) break;
+  }
+
+  return selected.map(({ index, ...snippet }) => snippet);
 }
 
 const RELATIONSHIP_CONTEXT_CACHE = new Map();
 
+function normalizeSelectedRelationshipType(value) {
+  const label = String(value || "").trim().toLowerCase();
+  if (!label) return "other";
+  if (label === "related") return "family";
+  return ["partner", "dating", "ex", "family", "friend", "colleague", "other", "unknown"].includes(label)
+    ? label
+    : label;
+}
+
 function defaultSpecificRelationship(userSelectedType) {
+  const type = normalizeSelectedRelationshipType(userSelectedType);
   return {
     partner: "partners",
     dating: "dating",
@@ -2440,22 +2523,47 @@ function defaultSpecificRelationship(userSelectedType) {
     friend: "close friends",
     colleague: "colleagues",
     other: "someone they know",
-  }[userSelectedType] || "someone they know";
+  }[type] || "someone they know";
+}
+
+function allowedSpecificRelationships(category) {
+  const type = normalizeSelectedRelationshipType(category);
+  return {
+    partner: ["spouses", "partners"],
+    dating: ["dating"],
+    ex: ["exes"],
+    family: [
+      "father and child",
+      "mother and child",
+      "siblings",
+      "cousins",
+      "grandparent and grandchild",
+      "aunt/uncle and niece/nephew",
+      "family members",
+    ],
+    friend: ["best friends", "close friends"],
+    colleague: ["boss and employee", "colleagues"],
+    other: ["someone they know"],
+    unknown: ["someone they know"],
+  }[type] || ["someone they know"];
 }
 
 function inferRelationshipCategoryFromSpecific(specific, fallback = "other") {
   const label = String(specific || "").toLowerCase();
-  if (!label) return fallback;
+  const safeFallback = normalizeSelectedRelationshipType(fallback);
+  if (!label) return safeFallback;
   if (/partner|spouse|dating|ex/.test(label)) return /ex/.test(label) ? "ex" : (/dating/.test(label) ? "dating" : "partner");
   if (/friend/.test(label)) return "friend";
   if (/colleague|boss|employee|coworker|work/.test(label)) return "colleague";
   if (/father|mother|sibling|cousin|grandparent|aunt|uncle|family/.test(label)) return "family";
-  return fallback;
+  return safeFallback;
 }
 
 function normalizeRelationshipCategory(value, fallback = "other") {
   const label = String(value || "").trim().toLowerCase();
-  if (!label) return fallback;
+  const safeFallback = normalizeSelectedRelationshipType(fallback);
+  if (!label) return safeFallback;
+  if (label === "related") return "family";
   if (["partner", "dating", "ex", "family", "friend", "colleague", "other", "unknown"].includes(label)) return label;
   if (/partner|spouse|wife|husband/.test(label)) return "partner";
   if (/dating|boyfriend|girlfriend/.test(label)) return "dating";
@@ -2463,13 +2571,14 @@ function normalizeRelationshipCategory(value, fallback = "other") {
   if (/friend/.test(label)) return "friend";
   if (/colleague|coworker|boss|employee|work/.test(label)) return "colleague";
   if (/family|father|mother|sibling|cousin|grandparent|aunt|uncle/.test(label)) return "family";
-  return fallback;
+  return safeFallback;
 }
 
 function normalizeRelationshipSpecificLabel(value, fallbackCategory = "other") {
   const raw = String(value || "").trim();
   const label = raw.toLowerCase();
-  if (!label) return defaultSpecificRelationship(fallbackCategory);
+  const safeFallback = normalizeSelectedRelationshipType(fallbackCategory);
+  if (!label) return defaultSpecificRelationship(safeFallback);
   if (/father|dad/.test(label) && (/child|daughter|son/.test(label) || label === "father")) return "father and child";
   if (/mother|mom|mum/.test(label) && (/child|daughter|son/.test(label) || label === "mother")) return "mother and child";
   if (/grandmother|grandfather|grandma|grandpa|grandparent/.test(label)) return "grandparent and grandchild";
@@ -2485,40 +2594,145 @@ function normalizeRelationshipSpecificLabel(value, fallbackCategory = "other") {
   if (/boyfriend|girlfriend|dating|seeing each other/.test(label)) return "dating";
   if (/ex/.test(label)) return "exes";
   if (/family/.test(label)) return "family members";
-  if (/other|unclear|unknown/.test(label)) return defaultSpecificRelationship(fallbackCategory);
+  if (/other|unclear|unknown/.test(label)) return defaultSpecificRelationship(safeFallback);
   return raw;
 }
 
+function coerceRelationshipCategory(value, userSelectedType, fallback = "other") {
+  const selected = normalizeSelectedRelationshipType(userSelectedType);
+  if (["partner", "dating", "ex", "family", "friend", "colleague", "other"].includes(selected)) {
+    return selected;
+  }
+  return normalizeRelationshipCategory(value, fallback);
+}
+
+function coerceRelationshipSpecificLabel(value, category) {
+  const lockedCategory = normalizeSelectedRelationshipType(category);
+  const normalized = normalizeRelationshipSpecificLabel(value, lockedCategory);
+
+  switch (lockedCategory) {
+    case "partner":
+      return normalized === "spouses" ? "spouses" : "partners";
+    case "dating":
+      return "dating";
+    case "ex":
+      return "exes";
+    case "family":
+      return [
+        "father and child",
+        "mother and child",
+        "siblings",
+        "cousins",
+        "grandparent and grandchild",
+        "aunt/uncle and niece/nephew",
+        "family members",
+      ].includes(normalized) ? normalized : "family members";
+    case "friend":
+      return normalized === "best friends" ? "best friends" : "close friends";
+    case "colleague":
+      return normalized === "boss and employee" ? "boss and employee" : "colleagues";
+    case "other":
+    case "unknown":
+    default:
+      return "someone they know";
+  }
+}
+
+function defaultRelationshipStatusLabel(category, specificRelationship) {
+  const specific = coerceRelationshipSpecificLabel(specificRelationship, category);
+  return {
+    spouses: "Spouses",
+    partners: "Partners",
+    dating: "Dating",
+    exes: "Exes",
+    "father and child": "Father and child",
+    "mother and child": "Mother and child",
+    siblings: "Siblings",
+    cousins: "Cousins",
+    "grandparent and grandchild": "Grandparent and grandchild",
+    "aunt/uncle and niece/nephew": "Aunt/uncle and niece/nephew",
+    "family members": "Family members",
+    "best friends": "Best friends",
+    "close friends": "Close friends",
+    "boss and employee": "Boss and employee",
+    colleagues: "Colleagues",
+    "someone they know": "Someone they know",
+  }[specific] || "Someone they know";
+}
+
+function sanitizeRelationshipStatus(value, category, specificRelationship) {
+  const text = String(value || "").trim();
+  const label = text.toLowerCase();
+  const lockedCategory = normalizeSelectedRelationshipType(category);
+  const fallback = defaultRelationshipStatusLabel(lockedCategory, specificRelationship);
+
+  if (!text) return fallback;
+
+  switch (lockedCategory) {
+    case "family":
+      return /(family|father|mother|parent|sibling|brother|sister|cousin|grandparent|grandma|grandpa|aunt|uncle|niece|nephew|dad|mom|mum)/.test(label) ? text : fallback;
+    case "partner":
+      return /(partner|spouse|married|husband|wife)/.test(label) ? text : fallback;
+    case "dating":
+      return /(dating|seeing each other|seeing|boyfriend|girlfriend|romantic|situationship|talking stage)/.test(label) ? text : fallback;
+    case "ex":
+      return /\bex\b|former/.test(label) ? text : "Exes";
+    case "friend":
+      return /(friend|bestie|platonic)/.test(label) ? text : fallback;
+    case "colleague":
+      return /(colleague|cowork|co-worker|boss|employee|work)/.test(label) ? text : fallback;
+    case "other":
+    case "unknown":
+    default:
+      return text || fallback;
+  }
+}
+
 function buildRelationshipLine(relationshipContext, userSelectedType) {
-  const category = relationshipContext?.category || userSelectedType || "other";
-  const specific = relationshipContext?.specificRelationship || defaultSpecificRelationship(category);
+  const category = coerceRelationshipCategory(relationshipContext?.category, userSelectedType, userSelectedType || "other");
+  const specific = coerceRelationshipSpecificLabel(
+    relationshipContext?.specificRelationship || defaultSpecificRelationship(category),
+    category
+  );
   const confidence = relationshipContext?.confidence || "low";
-  const reasoning = relationshipContext?.reasoning || `Use the user-selected relationship type "${userSelectedType}" unless direct wording in the chat makes the relationship more specific.`;
+  const reasoning = relationshipContext?.reasoning || `Use the user-selected relationship type "${userSelectedType}" as a hard boundary. Only refine within that category; never switch into a different one.`;
   const evidence = relationshipContext?.evidence ? `Strongest evidence: ${relationshipContext.evidence}.` : "";
   const warning = relationshipContext?.endearmentWarning
     ? `IMPORTANT ENDEARMENT WARNING: ${relationshipContext.endearmentWarning} — do not interpret that word as a literal family title.`
     : "";
-  return `CONFIRMED RELATIONSHIP: Describe the two participants as ${specific} (category: ${category}, confidence: ${confidence}). ${reasoning} ${evidence} ${warning} Never replace this with a different family or romance label unless the confirmed wording above already says so.`;
+  return `CONFIRMED RELATIONSHIP: Describe the two participants as ${specific} (category: ${category}, confidence: ${confidence}). ${reasoning} ${evidence} ${warning} The user-selected category is the top-priority boundary. Never replace it with a different romance, family, friendship, or work label.`;
 }
 
 async function confirmRelationship(snippets, names, userSelectedType) {
   if (!snippets || !snippets.length || names.length < 2) return null;
+  const selectedCategory = normalizeSelectedRelationshipType(userSelectedType || "other");
+  const allowedSpecifics = allowedSpecificRelationships(selectedCategory);
 
   const snippetText = snippets
-    .map((s, i) => `SNIPPET ${i + 1} (signal: ${s.key} | ${s.date} | ${s.speaker})\nTrigger line: "${s.quote}"\n${s.context}`)
+    .map((s, i) => [
+      `SNIPPET ${i + 1}`,
+      `Matched relationship word: "${s.matchedText}"`,
+      `Suggested category: ${s.category}`,
+      `Suggested specific label: ${s.specificRelationship}`,
+      `Usage hint: ${s.usageHint}`,
+      `Signal line (${s.date} | ${s.speaker}): "${s.quote}"`,
+      "Nearby chat context:",
+      s.context,
+    ].join("\n"))
     .join("\n\n");
 
-  const system = `You are a relationship analyst. You will be shown short excerpts from a WhatsApp chat between ${names[0]} and ${names[1]}. Your only job is to determine the actual relationship between these two specific people based on the evidence.
+  const system = `You are a relationship analyst. You will be shown short excerpts from a WhatsApp chat between ${names[0]} and ${names[1]}. Your only job is to determine the most specific relationship label for these two specific people from relationship call-names used inside the chat.
 
 CRITICAL RULES:
-- A keyword like "kızım" or "cousin" appearing in a message does NOT automatically mean the two chat participants have that relationship. It might refer to a third person entirely.
-- Only confirm a relationship label if you see the keyword being used to DIRECTLY ADDRESS the other chat participant, or if context makes it unambiguous that the keyword describes their relationship.
-- Examples of direct address: "sen benim kuzenimsin", "kızım sen nasılsın", "hey sis"
-- Examples of third party reference: "kuzenim geldi", "my cousin called", "ablam söyledi" — these do NOT confirm the relationship between the two chat participants.
-- The user selected "${userSelectedType}" as the relationship type. Use this as a strong prior.
-- If the user selected "family", prefer a specific family label like father and child / cousins / siblings / grandparent and grandchild when the wording supports it.
-- If the user selected "partner", prefer "spouses" when the wording clearly says husband/wife, otherwise "partners".
-- Only override the user's broad category if the chat evidence is direct and unambiguous.
+- The snippets were selected only because they contain relationship call-names like dad, cousin, husband, friend, boss, and similar labels.
+- A relationship word does NOT automatically prove the relationship between the two chat participants. It may refer to a third person.
+- Direct addressing matters most. Examples: "dad, where are you?", "you are my cousin", "goodnight husband".
+- Third-party references do NOT confirm the relationship. Examples: "my cousin called", "dad said that", "my friend is coming".
+- Use the nearby context to decide whether the matched word is being used for the other participant or for someone else.
+- The user selected "${selectedCategory}" as the relationship category. Stay inside that category. Do not switch to a different category.
+- Allowed specific labels inside "${selectedCategory}": ${allowedSpecifics.join(" / ")}.
+- Pick the most specific allowed label only when the wording supports it. Otherwise fall back to the broadest allowed label for that category.
+- Confidence should be "high" only for explicit direct-address evidence or repeated unambiguous evidence. Use "medium" for decent but not perfect support. Use "low" if the evidence is thin or mostly indirect.
 
 Return ONLY a JSON object with no extra text:
 {
@@ -2530,7 +2744,7 @@ Return ONLY a JSON object with no extra text:
   "endearmentWarning": "if any keyword appears to be used as a term of endearment rather than a literal title, name it here — e.g. 'kızım is used as affection not literal daughter'. Otherwise null."
 }`;
 
-  const userContent = `Here are excerpts from a chat between ${names[0]} and ${names[1]}. The user selected relationship type is "${userSelectedType}". Confirm or correct the relationship label based only on direct addressing evidence:\n\n${snippetText}`;
+  const userContent = `Here are relationship-call snippets from a chat between ${names[0]} and ${names[1]}. The user selected relationship type is "${selectedCategory}". Use these snippets to confirm the most specific relationship label inside that category.\n\n${snippetText}`;
 
   try {
     const raw = await callClaude(system, userContent, 300, "relationship");
@@ -2547,9 +2761,10 @@ Return ONLY a JSON object with no extra text:
 
 async function resolveRelationshipContext(messages, names, userSelectedType) {
   if (!Array.isArray(messages) || messages.length < 2 || !Array.isArray(names) || names.length < 2) return null;
+  const selectedCategory = normalizeSelectedRelationshipType(userSelectedType || "other");
 
   const cacheKey = [
-    userSelectedType || "other",
+    selectedCategory,
     names.slice(0, 2).join("|"),
     messages.length,
     +messages[0]?.date || 0,
@@ -2560,19 +2775,31 @@ async function resolveRelationshipContext(messages, names, userSelectedType) {
     return RELATIONSHIP_CONTEXT_CACHE.get(cacheKey);
   }
 
-  const snippets = detectRelationship(messages);
-  const raw = snippets ? await confirmRelationship(snippets, names, userSelectedType) : null;
-  const category = normalizeRelationshipCategory(
+  const snippets = detectRelationship(messages, userSelectedType);
+  if (!snippets?.length) {
+    RELATIONSHIP_CONTEXT_CACHE.set(cacheKey, null);
+    return null;
+  }
+
+  const raw = await confirmRelationship(snippets, names, userSelectedType);
+  const rawCategory = normalizeRelationshipCategory(
     raw?.category,
-    inferRelationshipCategoryFromSpecific(raw?.specificRelationship, userSelectedType || "other")
+    inferRelationshipCategoryFromSpecific(raw?.specificRelationship, selectedCategory)
   );
+  const category = coerceRelationshipCategory(rawCategory, selectedCategory, selectedCategory);
+  const normalizedSpecific = normalizeRelationshipSpecificLabel(raw?.specificRelationship, category);
+  const specificRelationship = coerceRelationshipSpecificLabel(raw?.specificRelationship, category);
+  const categoryWasCoerced = rawCategory !== category;
+  const specificWasCoerced = normalizedSpecific !== specificRelationship;
   const context = {
     category,
-    specificRelationship: normalizeRelationshipSpecificLabel(raw?.specificRelationship, category),
+    specificRelationship,
     confidence: ["high", "medium", "low"].includes(String(raw?.confidence || "").toLowerCase())
       ? String(raw.confidence).toLowerCase()
       : (snippets?.length ? "medium" : "low"),
-    reasoning: String(raw?.reasoning || "").trim(),
+    reasoning: categoryWasCoerced || specificWasCoerced
+      ? `The user selected "${selectedCategory}" as the relationship category, so the analysis stays in that category and describes them as ${specificRelationship}.`
+      : String(raw?.reasoning || `The strongest relationship call-name snippets fit ${specificRelationship} inside the selected ${selectedCategory} category.`).trim(),
     evidence: String(raw?.evidence || snippets?.[0]?.quote || "").trim(),
     endearmentWarning: raw?.endearmentWarning ? String(raw.endearmentWarning).trim() : null,
   };
@@ -3625,14 +3852,15 @@ function extractClaudePayload(raw) {
 
 const CORE_ANALYSIS_VERSION = 2;
 const LOCAL_STATS_VERSION = 3;
-const CORE_ANALYSIS_CACHE_VERSION = 3;
+const CORE_ANALYSIS_CACHE_VERSION = 4;
 const CORE_A_MAX_TOKENS = 2600;
 const CORE_B_MAX_TOKENS = 2600;
+const HOMEPAGE_VERSION = "1234";
 
 function buildRelationshipContextBlock(relType) {
   const relCtx = relContextStr(relType);
   return relCtx
-    ? ` RELATIONSHIP CONTEXT: ${relCtx}. Frame all analysis, tone, and language accordingly. Do not label a partner dynamic as friendship or chosen family. Do not label a family dynamic as romantic.`
+    ? ` RELATIONSHIP CONTEXT: ${relCtx}. Frame all analysis, tone, and language accordingly. Treat the user-selected relationship category as a hard boundary. Do not label a partner dynamic as friendship or chosen family. Do not label a family dynamic as romantic. Do not label an ex dynamic as family, friendship, or current romance.`
     : "";
 }
 
@@ -3826,6 +4054,21 @@ function normalizeCoreAnalysisA(raw, math, relationshipType, relationshipContext
   const meta = source.meta && typeof source.meta === "object" ? source.meta : {};
   const shared = source.shared && typeof source.shared === "object" ? source.shared : {};
   const growth = shared.growth && typeof shared.growth === "object" ? shared.growth : {};
+  const lockedRelationshipCategory = coerceRelationshipCategory(
+    relationshipContext?.category,
+    relationshipType,
+    relationshipContext?.category || relationshipType || "other"
+  );
+  const lockedRelationshipSpecific = coerceRelationshipSpecificLabel(
+    relationshipContext?.specificRelationship,
+    lockedRelationshipCategory
+  );
+  const sanitizedRelationshipStatus = sanitizeRelationshipStatus(
+    shared.relationshipStatus,
+    lockedRelationshipCategory,
+    lockedRelationshipSpecific
+  );
+  const relationshipStatusWasAdjusted = sanitizedRelationshipStatus !== strOr(shared.relationshipStatus);
   const inputPeople = Array.isArray(source.people) ? source.people : [];
   const expectedPeople = Math.max(
     inputPeople.length,
@@ -3843,8 +4086,8 @@ function normalizeCoreAnalysisA(raw, math, relationshipType, relationshipContext
     meta: {
       confidenceNote: strOr(meta.confidenceNote),
       dominantTone: strOr(meta.dominantTone),
-      relationshipCategory: relationshipContext?.category || relationshipType || null,
-      relationshipSpecific: strOr(relationshipContext?.specificRelationship, defaultSpecificRelationship(relationshipContext?.category || relationshipType || "other")),
+      relationshipCategory: lockedRelationshipCategory || null,
+      relationshipSpecific: lockedRelationshipSpecific,
       relationshipConfidence: strOr(relationshipContext?.confidence, "low"),
       relationshipReasoning: strOr(relationshipContext?.reasoning),
       relationshipEvidence: strOr(relationshipContext?.evidence),
@@ -3860,9 +4103,13 @@ function normalizeCoreAnalysisA(raw, math, relationshipType, relationshipContext
       dramaStarter: strOr(shared.dramaStarter),
       dramaContext: strOr(shared.dramaContext),
       signaturePhrases: cleanStringArray(shared.signaturePhrases, 2),
-      relationshipStatus: strOr(shared.relationshipStatus),
-      relationshipStatusWhy: strOr(shared.relationshipStatusWhy),
-      statusEvidence: strOr(shared.statusEvidence),
+      relationshipStatus: sanitizedRelationshipStatus,
+      relationshipStatusWhy: relationshipStatusWasAdjusted
+        ? strOr(relationshipContext?.reasoning, `Use the user-selected relationship type "${lockedRelationshipCategory}" as the framing for this chat.`)
+        : strOr(shared.relationshipStatusWhy),
+      statusEvidence: relationshipStatusWasAdjusted
+        ? strOr(shared.statusEvidence || relationshipContext?.evidence)
+        : strOr(shared.statusEvidence),
       toxicPerson: strOr(shared.toxicPerson),
       toxicReason: strOr(shared.toxicReason),
       toxicityReport: strOr(shared.toxicityReport),
@@ -3905,6 +4152,15 @@ function normalizeCoreAnalysisB(raw, math, relationshipType, relationshipContext
   const shared = source.shared && typeof source.shared === "object" ? source.shared : {};
   const toxicity = shared.toxicity && typeof shared.toxicity === "object" ? shared.toxicity : {};
   const accountability = shared.accountability && typeof shared.accountability === "object" ? shared.accountability : {};
+  const lockedRelationshipCategory = coerceRelationshipCategory(
+    relationshipContext?.category,
+    relationshipType,
+    relationshipContext?.category || relationshipType || "other"
+  );
+  const lockedRelationshipSpecific = coerceRelationshipSpecificLabel(
+    relationshipContext?.specificRelationship,
+    lockedRelationshipCategory
+  );
   const inputPeople = Array.isArray(source.people) ? source.people : [];
   const expectedPeople = Math.max(
     inputPeople.length,
@@ -3922,8 +4178,8 @@ function normalizeCoreAnalysisB(raw, math, relationshipType, relationshipContext
     meta: {
       confidenceNote: strOr(meta.confidenceNote),
       dominantTone: strOr(meta.dominantTone),
-      relationshipCategory: relationshipContext?.category || relationshipType || null,
-      relationshipSpecific: strOr(relationshipContext?.specificRelationship, defaultSpecificRelationship(relationshipContext?.category || relationshipType || "other")),
+      relationshipCategory: lockedRelationshipCategory || null,
+      relationshipSpecific: lockedRelationshipSpecific,
       relationshipConfidence: strOr(relationshipContext?.confidence, "low"),
       relationshipReasoning: strOr(relationshipContext?.reasoning),
       relationshipEvidence: strOr(relationshipContext?.evidence),
@@ -4251,13 +4507,13 @@ async function generateCoreAnalysisA(messages, math, relationshipType, chatLang 
     }
   ],
   "shared": {
-    "vibeOneLiner": "one punchy sentence capturing the whole chat's energy",
-    "biggestTopic": "1 sentence — the biggest recurring topic, very specific not generic",
-    "ghostContext": "1 sentence — explain the ghost pattern with real context",
+    "vibeOneLiner": "One punchy sentence that perfectly captures this chat's energy — something specific to THIS chat, not a generic description. Make it feel true.",
+    "biggestTopic": "1 sentence — the main recurring thing they actually talk about. Be very specific — not 'relationships and daily life' but something like 'Planning trips they never end up taking' or 'Ataberk's job situation and whether he should quit'.",
+    "ghostContext": "1 sentence — explain WHY the slower replier takes longer to respond, based on observable patterns in the chat such as time of day, topic avoidance, or mood. Do not repeat the numeric response time. Do not mention unanswered messages.",
     "funniestPerson": "ONLY the first name of the funniest person, or 'None clearly identified'",
-    "funniestReason": "1 short concrete example of the kind of line or moment they drop",
+    "funniestReason": "Give one specific example — describe the actual joke, line or moment from the chat that caused the other person to laugh. Do not reference the laugh reaction itself — reference what caused it. Complete this naturally as if starting with 'drops lines like...' and finish with the actual line. Under 20 words.",
     "dramaStarter": "ONLY a first name, 'Shared', or 'None clearly identified'",
-    "dramaContext": "1 sentence — how tension usually gets started, with real evidence",
+    "dramaContext": "1 sentence — how this person starts drama, with a specific real example from the chat showing exactly how they do it. Not a general description — a real moment. Format: describe what they do, then support with the actual trigger ('example quote').",
     "signaturePhrases": ["real phrase or expression person 1 uses a lot", "real phrase or expression person 2 uses a lot"],
     "relationshipStatus": "duo only: short relationship-status label, or 'None clearly identified'",
     "relationshipStatusWhy": "1 sentence — why that status fits, using objective evidence",
@@ -4275,20 +4531,20 @@ async function generateCoreAnalysisA(messages, math, relationshipType, chatLang 
       { "date": "exact or approximate date", "title": "short factual headline", "detail": "1 short factual detail with quote or clear paraphrase" },
       { "date": "exact or approximate date", "title": "short factual headline", "detail": "1 short factual detail with quote or clear paraphrase" }
     ],
-    "relationshipSummary": "2 sentences — honest read of the duo dynamic",
-    "groupDynamic": "2 sentences — honest read of the group dynamic",
-    "tensionMoment": "1 sentence — the most tense moment or recurring tension pattern",
+    "relationshipSummary": "2 sentences — honest, slightly perceptive read of the real dynamic. What is actually going on between these two? Be specific about the pattern, not just the label.",
+    "groupDynamic": "2 sentences — honest, slightly perceptive read of this group's energy. What is the actual dynamic? Be specific about who does what and what the group runs on.",
+    "tensionMoment": "1 sentence — the single most tense moment or exchange in the chat. Describe what happened and support with at least one real quote from that moment.",
     "kindestPerson": "ONLY a first name — the warmest/caring person, or 'None clearly identified'",
-    "sweetMoment": "1 sentence — a specific, concrete sweet moment",
+    "sweetMoment": "1 sentence — describe a specific, concrete sweet moment with actual detail. Name names, reference what was actually said or done and why it mattered in that moment. Example of good format: 'When Ozge stayed up until 2am talking Ataberk through his anxiety about the flight, offering to call the airline herself.' Not: 'They were very supportive of each other.' Kindness means genuine effort, emotional support, practical help, or going out of their way — not a routine affectionate expression.",
     "mostMissed": "group only: ONLY a first name, or 'None clearly identified'",
-    "insideJoke": "group only: 1 sentence — recurring joke, meme or reference",
-    "hypePersonReason": "group only: 1 sentence — why this person is the group's hype",
+    "insideJoke": "group only: 1 sentence — a recurring joke, meme, reference, or expression that keeps coming back in the chat. Must appear in at least two separate windows. Quote the actual phrase or expression exactly as it appears in the chat.",
+    "hypePersonReason": "group only: 1 sentence — specifically how this person energises the group, with a real example of the kind of thing they say or do. Not generic — something that actually appears in the chat.",
     "loveLanguageMismatch": "2 sentences — how their care styles align or mismatch in practice",
-    "mostLovingMoment": "1 sentence — the most genuinely warm/loving moment with specific detail",
+    "mostLovingMoment": "1 sentence — the most genuinely warm or loving moment in the chat. Describe what happened and who was involved, with the actual message or action as evidence.",
     "compatibilityScore": [1-10],
     "compatibilityRead": "1 sentence — love-language compatibility summary",
-    "mostEnergising": "1 sentence — the most energising moment in the chat",
-    "mostDraining": "1 sentence — the most draining moment or pattern, with specific detail",
+    "mostEnergising": "1 sentence — the single most energising moment or exchange. Describe what happened and quote the line that best captures it.",
+    "mostDraining": "1 sentence — the single most draining moment or recurring pattern. Describe what happened and quote the line that best illustrates it.",
     "energyCompatibility": "1 sentence — how their energy styles work together (or don't)",
     "growth": {
       "thenDepth": "2 sentences describing the conversation style and topics in the EARLY snapshot",
@@ -4308,7 +4564,7 @@ async function generateCoreAnalysisA(messages, math, relationshipType, chatLang 
   const system = buildAnalystSystemPrompt(
     "a sharp, observant chat analyst building a canonical core-analysis object that later reports will reuse",
     relationshipType,
-    `CORE-A SCOPE: relationship dynamic, communication patterns, funny moments, kindness moments, energy, love language, and growth trajectory. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. You will also receive EARLY and RECENT contiguous snapshots; use those specifically for growth/change fields, and use the event windows for specific moments and recurring patterns. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: Whenever you see a laugh reaction (😂, lol, lmao, 'im dead', 💀, 🤣, haha, or similar) from person B immediately following a line from person A, the funny person is person A — the one whose line caused the reaction. Never attribute humour to the person who is laughing. This rule applies everywhere in the chat, regardless of window label. RELATIONSHIP LANGUAGE: The user selected relationship type is "${relationshipType}". ${relationshipLine} Never infer or override the relationship type from tone, emoji use, or affection level alone — a warm message between cousins does not make them romantic partners, a casual message between partners does not make them friends. Always use the confirmed relationship label when describing who did something to whom. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and energy/love-language reads, the actor is the sender of that exact line. For all "name" fields return ONLY the person's first name, with no explanation. Each timestamp already includes the day of week — read it directly and never calculate it yourself. Only report findings you can directly cite from the chat — if evidence is weak, use "None clearly identified". QUOTE RULE: For these fields specifically — sweetMoment, tensionMoment, biggestTopic, dramaContext, toxicityReport, mostLovingMoment, mostEnergising, mostDraining — always try to include a short real quote from the chat inline within the sentence if one exists. Do not translate the quote — reproduce it exactly as written in the chat, in its original language. Format it naturally inside the sentence like: ('exact quote here'). Only skip the quote if no specific line clearly supports the finding. SUMMARY FIELD RULES: vibeOneLiner must capture the dominant emotional tone of the entire chat — never base it on a single moment, window, or exchange. insideJoke must be a recurring reference that appears in multiple windows — if you only saw it once, use 'None clearly identified'. biggestTopic must be the most consistently recurring subject across the full history, not the most dramatic single event. For all three fields: if you cannot confirm recurrence across multiple windows, do not claim it. When quoting messages in any language, quote them as-is — do not translate them. ALL PARTICIPANTS IN THIS CHAT: ${names.slice(0, isGroup ? names.length : 2).join(", ")}. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"} only — one entry per slotted participant. Participants not in the people array may still appear as senders in the windows. Track their behaviour for shared fields (dramaStarter, toxicPerson, funniestPerson, kindestPerson, etc.) but do not create people entries for them. Never fold an unslotted participant's actions into a slotted participant's entry.`,
+    `CORE-A SCOPE: relationship dynamic, communication patterns, funny moments, kindness moments, energy, love language, and growth trajectory. WINDOW FORMAT: The chat is delivered as isolated windows separated by ━━━ headers — each window is a non-contiguous excerpt from the full history. Never connect or combine events from different windows unless the messages themselves explicitly link them. You will also receive EARLY and RECENT contiguous snapshots; use those specifically for growth/change fields, and use the event windows for specific moments and recurring patterns. SPEAKER ATTRIBUTION: Every message line is formatted as [timestamp] SpeakerName: body — the name before the colon is always and only the sender. Assign every quote, action, and behaviour to the name shown on that exact line. Never swap or infer the sender. FUNNY ATTRIBUTION: Whenever you see a laugh reaction (😂, lol, lmao, 'im dead', 💀, 🤣, haha, or similar) from person B immediately following a line from person A, the funny person is person A — the one whose line caused the reaction. Never attribute humour to the person who is laughing. This rule applies everywhere in the chat, regardless of window label. RELATIONSHIP LANGUAGE: The user selected relationship type is "${relationshipType}". ${relationshipLine} Never infer or override the relationship type from tone, emoji use, or affection level alone — a warm message between cousins does not make them romantic partners, a casual message between partners does not make them friends. Always use the confirmed relationship label when describing who did something to whom. DIRECTION OF ACTIONS: For sweetMoment, kindestPerson, and energy/love-language reads, the actor is the sender of that exact line. For all "name" fields return ONLY the person's first name, with no explanation. Each timestamp already includes the day of week — read it directly and never calculate it yourself. Only report findings you can directly cite from the chat — if evidence is weak, use "None clearly identified". QUOTE RULE: For funniestReason, sweetMoment, dramaContext, tensionMoment, mostLovingMoment, mostEnergising, mostDraining, hypePersonReason, insideJoke, and ghostContext — find the actual line from the chat that best illustrates the finding and include it as supporting evidence. The format is: your sentence describing what happened or the pattern, then the supporting quote in parentheses at the end like this: ('exact quote here'). The sentence must be meaningful on its own — the quote supports it, not replaces it. Do not explain or translate the quote after the closing parenthesis. If no specific supporting line exists in the windows for a field, write the sentence without a quote rather than inventing one. Do not translate quotes — reproduce them exactly as written in their original language. SUMMARY FIELD RULES: vibeOneLiner must capture the dominant emotional tone of the entire chat — never base it on a single moment, window, or exchange. insideJoke must be a recurring reference that appears in multiple windows — if you only saw it once, use 'None clearly identified'. biggestTopic must be the most consistently recurring subject across the full history, not the most dramatic single event. For all three fields: if you cannot confirm recurrence across multiple windows, do not claim it. When quoting messages in any language, quote them as-is — do not translate them. ALL PARTICIPANTS IN THIS CHAT: ${names.slice(0, isGroup ? names.length : 2).join(", ")}. Make the people array follow the provided name order for the first ${personCount || 1} participant${personCount === 1 ? "" : "s"} only — one entry per slotted participant. Participants not in the people array may still appear as senders in the windows. Track their behaviour for shared fields (dramaStarter, toxicPerson, funniestPerson, kindestPerson, etc.) but do not create people entries for them. Never fold an unslotted participant's actions into a slotted participant's entry.`,
     chatLang,
     relationshipLine
   );
@@ -5587,7 +5843,11 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
   const relationshipStatusWhy = ai?.relationshipStatusWhy || s.relationshipStatusWhy;
   const statusEvidence = ai?.statusEvidence || s.statusEvidence;
   const relationshipSpecific = ai?.relationshipSpecific || null;
+  const relationshipConfidence = ai?.relationshipConfidence || null;
   const relationshipEvidence = ai?.relationshipEvidence || null;
+  const relationshipDetectedLabel = relationshipSpecific
+    ? `${relationshipSpecific}${relationshipConfidence ? ` (${relationshipConfidence} confidence)` : ""}`
+    : null;
   const relationshipReadTitle = relReadTitle(relationshipType, relationshipSpecific);
   const duoFlags = normalizeRedFlags(ai?.redFlags).length ? normalizeRedFlags(ai?.redFlags) : s.redFlags;
   const evidenceTimeline = normalizeTimeline(ai?.evidenceTimeline).length ? normalizeTimeline(ai?.evidenceTimeline) : s.evidenceTimeline;
@@ -5805,6 +6065,13 @@ function DuoScreen({ s, ai, aiLoading, step, back, next, mode, relationshipType,
     <Shell sec="ai" prog={1} total={TOTAL} feedback={feedback("Relationship reading", 1)}>
       <T>{t("Relationship reading")}</T>
       <Big>{relationshipStatus}</Big>
+      {relationshipDetectedLabel && (
+        <AICard
+          label="Detected relationship"
+          value={relationshipDetectedLabel}
+          loading={aiLoading && !relationshipDetectedLabel}
+        />
+      )}
       <AICard label={t("Observed pattern")} value={relationshipStatusWhy} loading={aiLoading && !relationshipStatusWhy} />
       {relationshipEvidence && <AICard label="Why this label" value={relationshipEvidence} loading={false} />}
       <AICard label={t("Concrete example")} value={statusEvidence} loading={aiLoading && !statusEvidence} />
@@ -7243,6 +7510,9 @@ function Upload({ onParsed, onLogout, onHistory, onAdmin, canAdmin, uploadError 
             {t("Log out")}
           </button>
         )}
+      </div>
+      <div style={{ fontSize:10, color:"rgba(255,255,255,0.24)", marginTop:14, textAlign:"center", letterSpacing:"0.12em", textTransform:"uppercase" }}>
+        Version {HOMEPAGE_VERSION}
       </div>
     </Shell>
   );
