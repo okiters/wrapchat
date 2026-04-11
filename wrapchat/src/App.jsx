@@ -7565,9 +7565,6 @@ function Upload({
           </button>
         )}
       </div>
-      <div style={{ fontSize:10, color:"rgba(255,255,255,0.24)", marginTop:14, textAlign:"center", letterSpacing:"0.12em", textTransform:"uppercase" }}>
-        Version {HOMEPAGE_VERSION}
-      </div>
     </Shell>
   );
 }
