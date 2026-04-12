@@ -7037,7 +7037,12 @@ function Auth() {
 
   return (
     <Shell sec="upload" prog={0} total={0}>
-      <BrandLockup subtitle="Your chats, unwrapped." subtitleMarginBottom={4} />
+      <BrandLockup
+        logoSrc={wrapchatLogoTransparent}
+        logoSize={72}
+        subtitle="Your chats, unwrapped."
+        subtitleMarginBottom={8}
+      />
 
       {/* Tab toggle */}
       <div style={{ display:"flex", background:"rgba(0,0,0,0.25)", borderRadius:50, padding:4, width:"100%", gap:4 }}>
