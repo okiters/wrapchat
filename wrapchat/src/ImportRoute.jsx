@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import BrandLockup from "./BrandLockup";
 import { processImportedChatFile } from "./import/fileProcessing";
 import {
   clearSharedFileFromServiceWorker,
@@ -165,10 +166,11 @@ export default function ImportRoute({ onComplete, onCancel }) {
         }
       `}</style>
       <div style={CARD_STYLE}>
-        <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: -2.4, textAlign: "center" }}>WrapChat</div>
-        <div style={{ marginTop: 8, fontSize: 15, color: "rgba(255,255,255,0.6)", textAlign: "center" }}>
-          Your chat, ready to read.
-        </div>
+        <BrandLockup
+          titleSize={42}
+          titleLetterSpacing={-2.4}
+          subtitle="Your chat, ready to read."
+        />
 
         <div
           style={{

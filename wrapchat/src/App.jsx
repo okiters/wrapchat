@@ -3,6 +3,7 @@ import html2canvas from "html2canvas";
 import { supabase } from "./supabase";
 import { processImportedChatFile } from "./import/fileProcessing";
 import { MIN_MESSAGES } from "./import/whatsappParser";
+import BrandLockup, { wrapchatLogoTransparent } from "./BrandLockup";
 import partnerIcon from "../../assets/partner.svg";
 import datingIcon from "../../assets/dating.svg";
 import exIcon from "../../assets/ex.svg";
@@ -7036,8 +7037,7 @@ function Auth() {
 
   return (
     <Shell sec="upload" prog={0} total={0}>
-      <div style={{ fontSize:44, fontWeight:800, color:"#fff", letterSpacing:-3, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
-      <div style={{ fontSize:15, color:"rgba(255,255,255,0.5)", marginBottom:4, textAlign:"center", fontWeight:500 }}>Your chats, unwrapped.</div>
+      <BrandLockup subtitle="Your chats, unwrapped." subtitleMarginBottom={4} />
 
       {/* Tab toggle */}
       <div style={{ display:"flex", background:"rgba(0,0,0,0.25)", borderRadius:50, padding:4, width:"100%", gap:4 }}>
@@ -7382,7 +7382,7 @@ function TermsFlow({ onAccepted, onLogout }) {
 function TooShort({ onBack }) {
   return (
     <Shell sec="upload" prog={0} total={1}>
-      <div style={{ fontSize:44, fontWeight:800, color:"#fff", letterSpacing:-3, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
+      <BrandLockup />
       <div style={{ background:"rgba(0,0,0,0.25)", borderRadius:24, padding:"32px 24px", textAlign:"center", width:"100%" }}>
         <div style={{ fontSize:40, lineHeight:1 }}>🤐</div>
         <div style={{ fontSize:22, fontWeight:800, color:"#fff", letterSpacing:-0.5, marginTop:14, lineHeight:1.2 }}>
@@ -7455,8 +7455,12 @@ function Upload({
   };
   return (
     <Shell sec="upload" prog={0} total={1}>
-      <div style={{ fontSize:44, fontWeight:800, color:"#fff", letterSpacing:-3, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
-      <div style={{ fontSize:15, color:"rgba(255,255,255,0.5)", marginBottom:8, textAlign:"center", fontWeight:500 }}>{t("Your chats, unwrapped.")}</div>
+      <BrandLockup
+        logoSrc={wrapchatLogoTransparent}
+        logoSize={72}
+        subtitle={t("Your chats, unwrapped.")}
+        subtitleMarginBottom={8}
+      />
       <div style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
         <div style={{ fontSize:11, color:"rgba(255,255,255,0.34)", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>{t("UI language")}</div>
         {["english", "auto"].map(option => {
@@ -7579,7 +7583,7 @@ function Loading({ math, reportType }) {
   const label = REPORT_TYPES.find(r => r.id === reportType)?.label || "Analysis";
   return (
     <Shell sec="upload" prog={tick+1} total={LOADING_STEPS.length}>
-      <div style={{ fontSize:44, fontWeight:800, color:"#fff", letterSpacing:-3, lineHeight:1, textAlign:"center", width:"100%" }}>WrapChat</div>
+      <BrandLockup />
       <div style={{ fontSize:14, color:"rgba(255,255,255,0.45)", textAlign:"center", fontWeight:500 }}>
         {t(label)} · {math.totalMessages.toLocaleString()} {t("messages")}
       </div>
